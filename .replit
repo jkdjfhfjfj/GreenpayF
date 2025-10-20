@@ -1,2 +1,6 @@
+modules = ["nodejs-20"]
 [nix]
 packages = ["unzipNLS"]
+
+[agent]
+expertMode = true
