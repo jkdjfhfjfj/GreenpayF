@@ -9,17 +9,28 @@ export interface PaystackResponse {
 export class PaystackService {
   private secretKey: string;
   private baseUrl = 'https://api.paystack.co';
+  private isConfigured: boolean;
 
   constructor() {
     // Use KES-specific key if available, otherwise fallback to general key
     const secretKey = process.env.PAYSTACK_SECRET_KEY_KES || process.env.PAYSTACK_SECRET_KEY;
     if (!secretKey) {
-      throw new Error('Paystack secret key not provided');
+      console.warn('Paystack secret key not provided - payment features will be disabled');
+      this.isConfigured = false;
+      this.secretKey = '';
+    } else {
+      this.isConfigured = true;
+      this.secretKey = secretKey;
     }
-    this.secretKey = secretKey;
   }
 
   async initializePayment(email: string, amount: number, reference: string, currency: string = 'KES', phoneNumber?: string, callbackUrl?: string): Promise<PaystackResponse> {
+    if (!this.isConfigured) {
+      return {
+        status: false,
+        message: 'Paystack is not configured. Please add PAYSTACK_SECRET_KEY to environment variables.'
+      };
+    }
     try {
       const url = `${this.baseUrl}/transaction/initialize`;
       
