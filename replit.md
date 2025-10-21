@@ -9,6 +9,40 @@ Phone number formats: Users can enter phone numbers in multiple formats (7123456
 
 # Recent Changes (October 21, 2025)
 
+## Dual-Wallet Withdrawal and Admin Deposit Fixes
+- **Issue**: Withdrawal insufficient funds error due to USD/KES balance conflict; admin deposits always went to USD wallet
+- **Withdrawal Fix** (server/routes.ts):
+  - Fixed balance check to use correct wallet based on withdrawal currency
+  - KES withdrawals now check `kesBalance`, USD withdrawals check `balance`
+  - Balance calculation filters transactions by currency (only counts matching-currency transactions)
+  - Error response includes currency field for better clarity
+- **Admin Deposit Fix** (server/routes.ts):
+  - Added `currency` parameter to admin balance adjustment endpoint (defaults to USD for backward compatibility)
+  - Routes deposits to correct wallet: `kesBalance` for KES, `balance` for USD
+  - Transaction type changed from 'receive' to 'deposit' for admin deposits
+  - Transaction records now labeled with correct target currency
+- **Admin Panel UI** (client/src/components/admin/enhanced-user-management.tsx):
+  - Added currency selector dropdown (USD / KES) in balance adjustment form
+  - Display both USD and KES balances with color coding (blue for USD, green for KES)
+  - Form layout enhanced to 3-column grid (Action, Currency, Amount)
+  - Proper props threading for currency state management
+- **Impact**: 
+  - Users can now withdraw KES funds without "insufficient funds" errors
+  - Admins can deposit to either USD or KES wallet with proper transaction labeling
+  - Transaction log shows correct currency badges for all admin deposits
+
+## Number Formatting and Transaction Enhancement
+- **Comma Separators**: All balance displays now show comma-separated numbers (e.g., $1,234.56)
+  - Created `formatNumber()` utility function
+  - Applied throughout dashboard, transactions, and monthly summaries
+- **Currency Differentiation**: Transaction log uses color-coded badges
+  - Blue badges for USD transactions
+  - Green badges for KES transactions
+- **PDF Export**: Professional transaction statements with GreenPay branding
+  - jsPDF integration with auto-table support
+  - Includes user info, summary statistics, and formatted transaction table
+  - Downloads as "GreenPay_Statement_YYYY-MM-DD.pdf"
+
 ## Comprehensive SEO Optimization for Google Search Rankings
 - **Implementation**: Complete SEO infrastructure for maximum Google visibility and search rankings
 - **XML Sitemap** (16 URLs - 220% increase):
