@@ -17,6 +17,8 @@ GreenPay is a fintech mobile application designed for international money transf
 ## UI Modernization
 - **Bottom Navigation Redesign**: Updated to modern style with elevated center button for Send Money, featuring 5 navigation items (Home, History, Send, Card, Profile) with gradient purple styling
 - **Dashboard Restructure**: Redesigned with gradient header card, improved visual hierarchy, modern card-based layout for quick actions and services
+- **Icon Alignment Fixed**: Improved text and icon alignment across dashboard cards for better visual consistency
+- **Card Requirement Notifications**: Users without virtual cards now see "Card required" labels on disabled actions and receive helpful toast notifications when attempting to use send/receive/withdraw features
 - **Responsive Design**: Enhanced mobile-first experience with better spacing and visual appeal
 
 ## New Feature: Airtime Purchase

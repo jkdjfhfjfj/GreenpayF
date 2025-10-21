@@ -8,12 +8,14 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Notifications from "@/components/notifications";
 import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
   const [showBalance, setShowBalance] = useState(true);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const { user, logout, refreshUser } = useAuth();
+  const { toast } = useToast();
 
   // Refresh user data when dashboard loads to get latest balance
   useEffect(() => {
@@ -91,7 +93,8 @@ export default function DashboardPage() {
       color: "from-blue-500 to-blue-600",
       iconColor: "text-blue-600",
       bgColor: "bg-blue-50 dark:bg-blue-950/20",
-      disabled: !hasActiveVirtualCard
+      disabled: !hasActiveVirtualCard,
+      requiresCard: true
     },
     { 
       id: "receive", 
@@ -101,7 +104,8 @@ export default function DashboardPage() {
       color: "from-green-500 to-green-600",
       iconColor: "text-green-600",
       bgColor: "bg-green-50 dark:bg-green-950/20",
-      disabled: !hasActiveVirtualCard
+      disabled: !hasActiveVirtualCard,
+      requiresCard: true
     },
     { 
       id: "airtime", 
@@ -111,7 +115,8 @@ export default function DashboardPage() {
       color: "from-purple-500 to-purple-600",
       iconColor: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950/20",
-      disabled: !hasActiveVirtualCard
+      disabled: !hasActiveVirtualCard,
+      requiresCard: true
     },
     { 
       id: "deposit", 
@@ -121,9 +126,23 @@ export default function DashboardPage() {
       color: "from-orange-500 to-orange-600",
       iconColor: "text-orange-600",
       bgColor: "bg-orange-50 dark:bg-orange-950/20",
-      disabled: false
+      disabled: false,
+      requiresCard: false
     },
   ];
+
+  // Handle action click with card requirement check
+  const handleActionClick = (action: typeof quickActions[0]) => {
+    if (action.disabled && action.requiresCard) {
+      toast({
+        title: "Virtual Card Required",
+        description: "Please get a virtual card first to use this feature. Tap 'Get Card' below.",
+        variant: "default",
+      });
+      return;
+    }
+    setLocation(action.path);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -270,8 +289,7 @@ export default function DashboardPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 * index }}
                   whileTap={{ scale: action.disabled ? 1 : 0.95 }}
-                  onClick={() => !action.disabled && setLocation(action.path)}
-                  disabled={action.disabled}
+                  onClick={() => handleActionClick(action)}
                   className={`${action.bgColor} p-5 rounded-2xl border border-border hover:shadow-lg transition-all ${
                     action.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
                   }`}
@@ -279,7 +297,12 @@ export default function DashboardPage() {
                   <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 shadow-md`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <p className="font-semibold text-sm text-left">{action.label}</p>
+                  <div className="text-left">
+                    <p className="font-semibold text-sm">{action.label}</p>
+                    {action.disabled && action.requiresCard && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Card required</p>
+                    )}
+                  </div>
                 </motion.button>
               );
             })}
@@ -301,12 +324,14 @@ export default function DashboardPage() {
               data-testid="button-virtual-card"
             >
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center mb-3 shadow-md">
-                <span className="material-icons text-white text-2xl">credit_card</span>
+                <span className="material-icons text-white text-2xl leading-none">credit_card</span>
               </div>
-              <p className="font-semibold text-sm mb-1">Virtual Card</p>
-              <p className={`text-xs ${cardStatus === 'active' ? 'text-green-600' : 'text-amber-600'}`}>
-                {cardStatus === 'active' ? '● Active' : '● Inactive'}
-              </p>
+              <div className="text-left">
+                <p className="font-semibold text-sm mb-1">Virtual Card</p>
+                <p className={`text-xs ${cardStatus === 'active' ? 'text-green-600' : 'text-amber-600'}`}>
+                  {cardStatus === 'active' ? '● Active' : '● Inactive'}
+                </p>
+              </div>
             </motion.button>
 
             <motion.button
@@ -316,10 +341,12 @@ export default function DashboardPage() {
               data-testid="button-transactions"
             >
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center mb-3 shadow-md">
-                <span className="material-icons text-white text-2xl">receipt_long</span>
+                <span className="material-icons text-white text-2xl leading-none">receipt_long</span>
               </div>
-              <p className="font-semibold text-sm mb-1">History</p>
-              <p className="text-xs text-muted-foreground">{transactions.length} records</p>
+              <div className="text-left">
+                <p className="font-semibold text-sm mb-1">History</p>
+                <p className="text-xs text-muted-foreground">{transactions.length} records</p>
+              </div>
             </motion.button>
 
             <motion.button
@@ -328,10 +355,12 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center mb-3 shadow-md">
-                <span className="material-icons text-white text-2xl">currency_exchange</span>
+                <span className="material-icons text-white text-2xl leading-none">currency_exchange</span>
               </div>
-              <p className="font-semibold text-sm mb-1">Exchange</p>
-              <p className="text-xs text-muted-foreground">Multi-currency</p>
+              <div className="text-left">
+                <p className="font-semibold text-sm mb-1">Exchange</p>
+                <p className="text-xs text-muted-foreground">Multi-currency</p>
+              </div>
             </motion.button>
 
             <motion.button
@@ -341,10 +370,12 @@ export default function DashboardPage() {
               data-testid="button-support"
             >
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center mb-3 shadow-md">
-                <span className="material-icons text-white text-2xl">support_agent</span>
+                <span className="material-icons text-white text-2xl leading-none">support_agent</span>
               </div>
-              <p className="font-semibold text-sm mb-1">Support</p>
-              <p className="text-xs text-muted-foreground">24/7 help</p>
+              <div className="text-left">
+                <p className="font-semibold text-sm mb-1">Support</p>
+                <p className="text-xs text-muted-foreground">24/7 help</p>
+              </div>
             </motion.button>
           </div>
         </motion.div>
