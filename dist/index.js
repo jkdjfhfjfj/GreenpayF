@@ -6907,6 +6907,48 @@ async function registerRoutes(app2) {
       });
     }
   });
+  app2.get("/sitemap.xml", async (req, res) => {
+    try {
+      const baseUrl = "https://greenpay.world";
+      const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+      const publicPages = [
+        { url: "/", priority: "1.0", changefreq: "daily" },
+        { url: "/login", priority: "0.9", changefreq: "monthly" },
+        { url: "/signup", priority: "0.9", changefreq: "monthly" },
+        { url: "/auth/forgot-password", priority: "0.5", changefreq: "monthly" },
+        { url: "/status", priority: "0.7", changefreq: "daily" }
+      ];
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${publicPages.map((page) => `  <url>
+    <loc>${baseUrl}${page.url}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`).join("\n")}
+</urlset>`;
+      res.header("Content-Type", "application/xml");
+      res.send(sitemap);
+    } catch (error) {
+      console.error("Error generating sitemap:", error);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+  app2.get("/robots.txt", (req, res) => {
+    const robotsTxt = `User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+Allow: /auth/forgot-password
+Allow: /status
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://greenpay.world/sitemap.xml`;
+    res.header("Content-Type", "text/plain");
+    res.send(robotsTxt);
+  });
   const httpServer = createServer(app2);
   const wss = new WebSocketServer({ server: httpServer, path: "/ws/logs" });
   const logClients = /* @__PURE__ */ new Set();

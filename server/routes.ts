@@ -5174,6 +5174,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SEO - XML Sitemap for Google Search Console
+  app.get('/sitemap.xml', async (req, res) => {
+    try {
+      const baseUrl = 'https://greenpay.world';
+      const today = new Date().toISOString().split('T')[0];
+
+      // Define public pages that should be indexed by Google
+      const publicPages = [
+        { url: '/', priority: '1.0', changefreq: 'daily' },
+        { url: '/login', priority: '0.9', changefreq: 'monthly' },
+        { url: '/signup', priority: '0.9', changefreq: 'monthly' },
+        { url: '/auth/forgot-password', priority: '0.5', changefreq: 'monthly' },
+        { url: '/status', priority: '0.7', changefreq: 'daily' },
+      ];
+
+      // Generate XML sitemap
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${publicPages.map(page => `  <url>
+    <loc>${baseUrl}${page.url}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`).join('\n')}
+</urlset>`;
+
+      res.header('Content-Type', 'application/xml');
+      res.send(sitemap);
+    } catch (error) {
+      console.error('Error generating sitemap:', error);
+      res.status(500).send('Error generating sitemap');
+    }
+  });
+
+  // Robots.txt for search engines
+  app.get('/robots.txt', (req, res) => {
+    const robotsTxt = `User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+Allow: /auth/forgot-password
+Allow: /status
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://greenpay.world/sitemap.xml`;
+
+    res.header('Content-Type', 'text/plain');
+    res.send(robotsTxt);
+  });
+
   const httpServer = createServer(app);
 
   // Set up WebSocket server for real-time log streaming
