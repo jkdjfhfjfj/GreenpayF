@@ -9,6 +9,27 @@ Phone number formats: Users can enter phone numbers in multiple formats (7123456
 
 # Recent Changes (October 21, 2025)
 
+## KYC Status Display and Resubmission Improvements
+- **Issue**: Dashboard KYC banner showed generic message for all non-verified statuses; rejected users couldn't resubmit documents
+- **Solution**:
+  - **Dashboard Banner**: Three status-specific banners with appropriate colors and messages:
+    - Pending (blue): "Documents Under Review" - shows when KYC is awaiting admin verification
+    - Rejected (red): "Verification Failed" - prompts user to resubmit with clear CTA
+    - Not Submitted (amber): "Verify Your Identity" - initial KYC prompt
+  - **KYC Resubmission Flow**:
+    - Removed blocking screen for rejected users
+    - Added rejection notice banner showing admin-provided reason
+    - Users can now access form and upload new documents
+    - File validation ensures all documents uploaded before submission
+    - Step-by-step validation prevents skipping required uploads
+  - **File Upload Validation**:
+    - Step 2 validation: Must upload front and back documents to proceed
+    - Final validation: All three files (front, back, selfie) required for submission
+    - Clear error toasts guide users to upload missing documents
+- **Impact**: Better UX with clear status communication and seamless KYC resubmission for rejected users
+
+# Recent Changes (October 21, 2025)
+
 ## Phone Number Formatting Consistency Fix
 - **Issue**: Reset password returned "user not found" even though user exists
 - **Root Cause**: Phone numbers stored with + prefix (+254712345678) but formatPhoneNumber returned without + (254712345678), causing database lookup failures
