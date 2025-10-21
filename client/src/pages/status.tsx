@@ -5,16 +5,17 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, AlertCircle, RefreshCw, Activity } from "lucide-react";
 import { useLocation } from "wouter";
 
-interface ServiceStatus {
+interface FeatureStatus {
   status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
   message: string;
+  icon?: string;
 }
 
 interface SystemStatus {
   timestamp: string;
   overall: 'healthy' | 'degraded' | 'unhealthy';
-  services: {
-    [key: string]: ServiceStatus;
+  features: {
+    [key: string]: FeatureStatus;
   };
 }
 
@@ -52,14 +53,14 @@ export default function StatusPage() {
     }
   };
 
-  const serviceNames: { [key: string]: string } = {
-    database: 'Database',
-    objectStorage: 'Object Storage',
-    exchangeRate: 'Exchange Rate API',
-    statumAirtime: 'Airtime Service (Statum)',
-    paystack: 'Paystack Payments',
-    payHero: 'PayHero Payments',
-    whatsapp: 'WhatsApp Messaging',
+  const featureNames: { [key: string]: string } = {
+    accountAccess: 'Account Access',
+    fileUploads: 'Document Uploads',
+    currencyExchange: 'Currency Exchange',
+    airtimePurchase: 'Airtime Purchase',
+    moneyTransfers: 'Money Transfers',
+    virtualCards: 'Virtual Cards',
+    notifications: 'Notifications',
   };
 
   return (
@@ -70,10 +71,10 @@ export default function StatusPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Activity className="w-6 h-6" />
-              System Status
+              App Status
             </h1>
             <p className="text-sm text-gray-600 mt-1">
-              Real-time health monitoring of all services
+              Check if all features are working properly
             </p>
           </div>
           <Button 
@@ -109,9 +110,9 @@ export default function StatusPage() {
           </CardHeader>
         </Card>
 
-        {/* Services Status */}
+        {/* Features Status */}
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Service Components</h2>
+          <h2 className="text-lg font-semibold">App Features</h2>
           
           {isLoading ? (
             <Card>
@@ -122,24 +123,28 @@ export default function StatusPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : statusData?.services ? (
-            Object.entries(statusData.services).map(([key, service]) => (
+          ) : statusData?.features ? (
+            Object.entries(statusData.features).map(([key, feature]) => (
               <Card key={key} className="transition-all hover:shadow-md">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {getStatusIcon(service.status)}
+                      {feature.icon ? (
+                        <span className="text-2xl">{feature.icon}</span>
+                      ) : (
+                        getStatusIcon(feature.status)
+                      )}
                       <div>
                         <h3 className="font-semibold">
-                          {serviceNames[key] || key}
+                          {featureNames[key] || key}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          {service.message}
+                          {feature.message}
                         </p>
                       </div>
                     </div>
-                    <Badge variant={getStatusBadgeVariant(service.status)}>
-                      {service.status}
+                    <Badge variant={getStatusBadgeVariant(feature.status)}>
+                      {feature.status}
                     </Badge>
                   </div>
                 </CardContent>
@@ -165,7 +170,7 @@ export default function StatusPage() {
                 <p className="font-medium mb-1">Auto-refresh enabled</p>
                 <p>
                   This page automatically refreshes every 30 seconds to show the latest status.
-                  All services are continuously monitored for optimal performance.
+                  All app features are continuously monitored for optimal performance.
                 </p>
               </div>
             </div>
