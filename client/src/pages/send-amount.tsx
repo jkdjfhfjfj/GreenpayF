@@ -85,14 +85,14 @@ export default function SendAmountPage() {
 
   if (!selectedRecipient) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center page-with-topbar">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 page-with-topbar">
+    <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

@@ -23,11 +23,6 @@
   padding-bottom: 80px;
 }
 
-/* Add top padding for pages with fixed top bar */
-.page-with-topbar {
-  padding-top: 56px;
-}
-
 body, html {
   height: 100%;
   overflow-x: hidden;

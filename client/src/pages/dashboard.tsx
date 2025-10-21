@@ -147,7 +147,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 page-with-topbar">
+    <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -176,6 +176,15 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center space-x-2">
             <Notifications />
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation('/live-chat')}
+              className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+              title="Contact Support"
+              data-testid="button-support"
+            >
+              <span className="material-icons text-white text-xl">headset_mic</span>
+            </motion.button>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={toggleDarkMode}

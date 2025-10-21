@@ -64,7 +64,7 @@ export default function StatusPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 page-with-topbar">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-2xl mx-auto p-4 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

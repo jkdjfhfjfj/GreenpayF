@@ -97,7 +97,7 @@ export default function ReceiveMoneyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 page-with-topbar">
+    <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
