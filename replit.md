@@ -27,6 +27,24 @@ GreenPay is a fintech mobile application designed for international money transf
 - **Backend API**: New endpoint `/api/airtime/purchase` for processing airtime transactions
 - **Validation**: Supports purchases from $0.10 to $1000 USD
 - **Integration**: Added to dashboard quick actions and services menu
+- **KES-Only Requirement**: Updated to use KES balance exclusively; no virtual card required
+
+## Dual-Wallet System Implementation
+- **Database Schema**: Added `kesBalance` (decimal) and `hasReceivedWelcomeBonus` (boolean) fields to users table
+- **Wallet Switcher UI**: Dashboard toggle allowing users to switch between USD and KES wallet views
+- **Balance Display**: Shows active wallet balance prominently with "Other wallet" balance displayed below
+- **Welcome Bonus**: New users see notification about KES 10 welcome bonus (awaiting API integration for actual crediting)
+- **Exchange Page Enhancements**:
+  - Dual wallet balances displayed at top for easy reference
+  - Quick Convert presets: $5, $10, $20, $50, $100 buttons for rapid conversions
+  - Helpful tip directing users to convert USD to KES for airtime and withdrawals
+- **Currency Exchange Backend**:
+  - Updated `/api/exchange/convert` endpoint to atomically update both USD and KES balances
+  - Balance validation includes 1.5% exchange fee before conversion
+  - USD→KES: Deducts from USD balance, credits KES balance
+  - KES→USD: Deducts from KES balance, credits USD balance
+  - Clear error messages for insufficient funds
+- **Technical Debt**: Exchange endpoint uses read-modify-write pattern; should be wrapped in database transaction to prevent race conditions in production
 
 # User Preferences
 
