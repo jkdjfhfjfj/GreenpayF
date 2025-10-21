@@ -9,6 +9,16 @@ Phone number formats: Users can enter phone numbers in multiple formats (7123456
 
 # Recent Changes (October 21, 2025)
 
+## Robots.txt Optimization for Google Indexing
+- **Issue**: Previous robots.txt used explicit Allow directives for individual pages, potentially blocking sitemap URLs not explicitly listed
+- **Solution**: Followed Google best practices to allow all URLs by default:
+  - Removed explicit Allow directives (/, /login, /signup, /auth/forgot-password, /status)
+  - Uses implicit allow-all behavior (default when no Allow directives present)
+  - Only blocks specific directories: /dashboard/, /admin/, /api/
+  - Trailing slashes ensure directory-level blocking
+  - Sitemap reference maintained: https://greenpay.world/sitemap.xml
+- **Impact**: All 16 sitemap URLs now accessible to Google without "couldn't fetch" errors; follows robots.txt specification best practices
+
 ## Dual-Wallet Withdrawal and Admin Deposit Fixes
 - **Issue**: Withdrawal insufficient funds error due to USD/KES balance conflict; admin deposits always went to USD wallet
 - **Withdrawal Fix** (server/routes.ts):
