@@ -233,6 +233,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (req.session as any).userId = user.id;
           (req.session as any).user = { id: user.id, email: user.email };
 
+          // Save login history
+          storage.createLoginHistory({
+            userId: user.id,
+            ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'Unknown',
+            userAgent: req.headers['user-agent'] || 'Unknown',
+            deviceType: req.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop',
+            browser: req.headers['user-agent']?.split('/')[0] || 'Unknown',
+            location: (req.headers['cf-ipcountry'] as string) || 'Unknown',
+            status: 'success',
+          }).catch(err => console.error('Login history error:', err));
+
           // Send security notification
           notificationService.sendSecurityNotification(
             user.id,
@@ -335,6 +346,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Complete login - set session data
         (req.session as any).userId = user.id;
         (req.session as any).user = { id: user.id, email: user.email };
+        
+        // Save login history
+        storage.createLoginHistory({
+          userId: user.id,
+          ipAddress: loginIp || 'Unknown',
+          userAgent: req.headers['user-agent'] || 'Unknown',
+          deviceType: req.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop',
+          browser: req.headers['user-agent']?.split('/')[0] || 'Unknown',
+          location: loginLocation,
+          status: 'success',
+        }).catch(err => console.error('Login history error:', err));
         
         // Clear pending login data
         delete (req.session as any).pendingLoginUserId;
@@ -3488,6 +3510,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error retrieving user:", error);
       res.status(500).json({ error: "Failed to retrieve user data" });
+    }
+  });
+
+  // Get login history for a user
+  app.get("/api/users/:id/login-history", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      
+      const history = await storage.getLoginHistoryByUserId(id, limit);
+      res.json({ loginHistory: history });
+    } catch (error) {
+      console.error("Error retrieving login history:", error);
+      res.status(500).json({ error: "Failed to retrieve login history" });
     }
   });
 
