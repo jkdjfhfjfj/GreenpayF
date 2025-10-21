@@ -193,7 +193,7 @@ export default function LiveChatPage() {
 
   if (messagesLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center page-with-topbar">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full mx-auto"></div>
           <p className="text-muted-foreground">Loading chat...</p>
@@ -203,7 +203,7 @@ export default function LiveChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col page-with-topbar">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="bg-card border-b border-border sticky top-0 z-10 backdrop-blur-lg">
         <div className="flex items-center justify-between p-4">
