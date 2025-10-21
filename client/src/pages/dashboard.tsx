@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import Notifications from "@/components/notifications";
 import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatNumber } from "@/lib/formatters";
 
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
@@ -258,17 +259,17 @@ export default function DashboardPage() {
               <p className="text-3xl font-bold mb-2" data-testid="text-balance">
                 {showBalance 
                   ? activeWallet === 'USD' 
-                    ? `$${activeBalance.toFixed(2)}`
-                    : `KSh ${activeBalance.toFixed(2)}`
+                    ? `$${formatNumber(activeBalance)}`
+                    : `KSh ${formatNumber(activeBalance)}`
                   : "••••••"}
               </p>
               {/* Show other wallet balance and exchange button */}
               <div className="flex items-center justify-between">
                 <p className="text-white/60 text-xs">
                   {activeWallet === 'USD' ? (
-                    <>Other: KSh {showBalance ? kesBalance.toFixed(2) : '••••'}</>
+                    <>Other: KSh {showBalance ? formatNumber(kesBalance) : '••••'}</>
                   ) : (
-                    <>Other: ${showBalance ? usdBalance.toFixed(2) : '••••'}</>
+                    <>Other: ${showBalance ? formatNumber(usdBalance) : '••••'}</>
                   )}
                 </p>
                 <motion.button

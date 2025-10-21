@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { formatNumber, getCurrencySymbol } from "@/lib/formatters";
 
 type TransactionFilter = "all" | "sent" | "received" | "pending";
 
@@ -70,17 +71,6 @@ export default function TransactionsPage() {
   const getAmountPrefix = (type: string, status: string) => {
     if (status === "failed") return "";
     return type === "send" || type === "withdraw" || type === "card_purchase" || type === "exchange" ? "-" : "+";
-  };
-
-  const getCurrencySymbol = (currency: string) => {
-    switch (currency?.toUpperCase()) {
-      case "KES":
-        return "KSh ";
-      case "USD":
-        return "$";
-      default:
-        return "$";
-    }
   };
 
   if (isLoading) {
@@ -153,9 +143,9 @@ export default function TransactionsPage() {
             {transactions.some((txn: any) => txn.currency?.toUpperCase() !== 'KES') && (
               <div className="mb-2">
                 <p className="text-xl font-bold text-primary" data-testid="text-monthly-total-usd">
-                  ${transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES').reduce((total: number, txn: any) => 
+                  ${formatNumber(transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES').reduce((total: number, txn: any) => 
                     txn.status === 'completed' ? total + parseFloat(txn.amount) : total, 0
-                  ).toFixed(2)}
+                  ))}
                 </p>
               </div>
             )}
@@ -163,9 +153,9 @@ export default function TransactionsPage() {
             {transactions.some((txn: any) => txn.currency?.toUpperCase() === 'KES') && (
               <div className="mb-2">
                 <p className="text-xl font-bold text-primary" data-testid="text-monthly-total-kes">
-                  KSh {transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES').reduce((total: number, txn: any) => 
+                  KSh {formatNumber(transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES').reduce((total: number, txn: any) => 
                     txn.status === 'completed' ? total + parseFloat(txn.amount) : total, 0
-                  ).toFixed(2)}
+                  ))}
                 </p>
               </div>
             )}
@@ -272,19 +262,28 @@ export default function TransactionsPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-semibold ${
-                        transaction.status === "failed" 
-                          ? "text-muted-foreground" 
-                          : transaction.type === "send" || transaction.type === "withdraw" || transaction.type === "card_purchase" || transaction.type === "exchange"
-                          ? "text-destructive" 
-                          : "text-primary"
-                      }`} data-testid={`text-amount-${transaction.id}`}>
-                        {prefix}{getCurrencySymbol(transaction.currency)}{transaction.amount}
-                      </p>
+                      <div className="flex items-center justify-end space-x-2 mb-1">
+                        <p className={`font-semibold ${
+                          transaction.status === "failed" 
+                            ? "text-muted-foreground" 
+                            : transaction.type === "send" || transaction.type === "withdraw" || transaction.type === "card_purchase" || transaction.type === "exchange"
+                            ? "text-destructive" 
+                            : "text-primary"
+                        }`} data-testid={`text-amount-${transaction.id}`}>
+                          {prefix}{getCurrencySymbol(transaction.currency)}{formatNumber(transaction.amount)}
+                        </p>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                          transaction.currency?.toUpperCase() === 'KES' 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        }`}>
+                          {transaction.currency?.toUpperCase() || 'USD'}
+                        </span>
+                      </div>
                       <div className="flex items-center justify-end space-x-2">
                         {transaction.metadata?.convertedAmount && transaction.metadata?.targetCurrency && (
                           <span className="text-xs text-muted-foreground">
-                            ≈ {transaction.metadata.targetCurrency} {transaction.metadata.convertedAmount}
+                            ≈ {transaction.metadata.targetCurrency} {formatNumber(transaction.metadata.convertedAmount)}
                           </span>
                         )}
                         <span className={`text-xs capitalize ${getStatusColor(transaction.status)}`}>
