@@ -328,22 +328,57 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Welcome Bonus Notification - shown to new users who haven't received it */}
-        {!user?.hasReceivedWelcomeBonus && kesBalance === 0 && (
+        {/* Airtime Bonus - one-time claim for all users */}
+        {!user?.hasClaimedAirtimeBonus && (
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15 }}
-            className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 p-4 rounded-xl"
+            className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border border-purple-200 dark:border-purple-800 p-4 rounded-xl"
           >
-            <div className="flex items-center">
-              <Sparkles className="w-6 h-6 text-green-600 mr-3 flex-shrink-0 animate-pulse" />
-              <div className="flex-1">
-                <p className="font-bold text-green-900 dark:text-green-200 text-sm mb-1">🎉 Welcome Bonus Coming!</p>
-                <p className="text-xs text-green-700 dark:text-green-300">
-                  You'll receive KES 10 as a welcome gift! This will be credited to your KES wallet automatically.
-                </p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Sparkles className="w-6 h-6 text-purple-600 mr-3 flex-shrink-0 animate-pulse" />
+                <div className="flex-1">
+                  <p className="font-bold text-purple-900 dark:text-purple-200 text-sm mb-1">🎁 Free Airtime Bonus!</p>
+                  <p className="text-xs text-purple-700 dark:text-purple-300">
+                    Claim your one-time KES 15 airtime bonus now!
+                  </p>
+                </div>
               </div>
+              <Button
+                onClick={async () => {
+                  try {
+                    const response = await apiRequest("POST", "/api/airtime/claim-bonus", {
+                      userId: user?.id
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                      toast({
+                        title: "Bonus Claimed!",
+                        description: data.message,
+                      });
+                      refreshUser();
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: data.message,
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to claim bonus. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+              >
+                Claim Now
+              </Button>
             </div>
           </motion.div>
         )}
@@ -451,6 +486,20 @@ export default function DashboardPage() {
               <div className="text-left">
                 <p className="font-semibold text-sm mb-1">Support</p>
                 <p className="text-xs text-muted-foreground">24/7 help</p>
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/status")}
+              className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-3 shadow-md">
+                <span className="material-icons text-white text-2xl leading-none">health_and_safety</span>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-sm mb-1">System Status</p>
+                <p className="text-xs text-muted-foreground">Service health</p>
               </div>
             </motion.button>
           </div>
