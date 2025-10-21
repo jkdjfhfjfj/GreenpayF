@@ -5,7 +5,27 @@ GreenPay is a fintech mobile application for international money transfers, prim
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
-Phone numbers: Should start with 07 format (Kenya-specific)
+Phone number formats: Users can enter phone numbers in multiple formats (712345678, 0712345678, +254712345678, 254712345678, or 00254712345678). All formats are automatically normalized to +254XXXXXXXXX for database storage and consistent lookups across authentication flows.
+
+# Recent Changes (October 21, 2025)
+
+## Phone Number Formatting Consistency Fix
+- **Issue**: Reset password returned "user not found" even though user exists
+- **Root Cause**: Phone numbers stored with + prefix (+254712345678) but formatPhoneNumber returned without + (254712345678), causing database lookup failures
+- **Solution**:
+  - Updated `formatPhoneNumber()` to always return phone with + prefix (+254XXXXXXXXX)
+  - Added phone formatting to signup endpoint to ensure consistency
+  - Handles all input formats: +254xxx, 00254xxx, 0xxx, 254xxx, 7xxx, 1xxx
+  - Updated forgot-password placeholder for clarity
+- **Impact**: Forgot password flow now works correctly, users can enter phone in any format
+
+## Object Storage Result Unwrapping Fix  
+- **Issue**: File viewing was broken - `getMetadata()` doesn't exist in Replit Object Storage client
+- **Solution**: 
+  - Properly unwrap Result objects using `result.ok` and `result.value`
+  - Distinguish 404 (file not found) from 500 (storage error)
+  - Extension-based MIME type detection
+- **Impact**: Profile photos, KYC documents, and chat files now viewable
 
 # System Architecture
 
