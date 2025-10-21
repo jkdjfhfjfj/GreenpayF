@@ -4,6 +4,27 @@ GreenPay is a fintech mobile application designed for international money transf
 
 # Recent Changes (October 21, 2025)
 
+## Latest Updates
+
+### Document Viewing Fix
+- **Issue**: Users could upload KYC documents and profile photos but couldn't view them
+- **Root Cause**: Upload functions returned storage keys (e.g., `kyc/uuid.jpg`) instead of full URLs with `/objects/` prefix
+- **Solution**: Modified upload functions to return full URLs (`/objects/kyc/uuid.jpg`) that are directly accessible
+- **Affected Features**: KYC document uploads, profile photo uploads, chat file uploads
+
+### Status Page Redesign  
+- **Old Approach**: Showed admin-level services (Paystack, PayHero, WhatsApp APIs)
+- **New Approach**: Shows user-oriented app features with friendly descriptions
+- **Features Displayed**: 
+  - Account Access - Can you log in?
+  - Document Uploads - Can you upload files?
+  - Currency Exchange - Can you convert USD to KES?
+  - Airtime Purchase - Can you buy airtime?
+  - Money Transfers - Can you send/receive money?
+  - Virtual Cards - Can you purchase virtual cards?
+  - Notifications - Will you receive notifications?
+- **UI Improvements**: Added feature icons (📁, 💱, 📱, 💸, 💳, 🔔) and user-friendly messages
+
 ## Bug Fixes
 - **Double Login Issue**: Fixed authentication race condition by adding delay between state update and navigation to ensure authentication state synchronizes properly before redirecting users to dashboard
 
