@@ -73,8 +73,9 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
-  updateUserOtp(id: string, otpCode: string, otpExpiry: Date): Promise<User | undefined>;
+  updateUserOtp(id: string, otpCode: string | null, otpExpiry: Date | null): Promise<User | undefined>;
   verifyUserOtp(id: string, otpCode: string): Promise<boolean>;
+  updateUserPassword(id: string, hashedPassword: string): Promise<User | undefined>;
 
   // KYC operations
   createKycDocument(kyc: InsertKycDocument): Promise<KycDocument>;
@@ -945,7 +946,7 @@ export class MemStorage implements IStorage {
   async getSystemSetting(): Promise<SystemSetting | undefined> { return undefined; }
   async getSystemSettingsByCategory(): Promise<SystemSetting[]> { return []; }
   async setSystemSetting(): Promise<SystemSetting> { throw new Error('Not implemented'); }
-  async updateUserOtp(id: string, otpCode: string, otpExpiry: Date): Promise<User | undefined> {
+  async updateUserOtp(id: string, otpCode: string | null, otpExpiry: Date | null): Promise<User | undefined> {
     const user = this.users.get(id);
     if (user) {
       const updated = { ...user, otpCode, otpExpiry, updatedAt: new Date() };
@@ -969,6 +970,15 @@ export class MemStorage implements IStorage {
     }
     
     return false;
+  }
+  async updateUserPassword(id: string, hashedPassword: string): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (user) {
+      const updated = { ...user, password: hashedPassword, updatedAt: new Date() };
+      this.users.set(id, updated);
+      return updated;
+    }
+    return undefined;
   }
   async getPaymentRequest(id: string): Promise<PaymentRequest | undefined> { return this.paymentRequests.get(id); }
 
@@ -1030,7 +1040,7 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async updateUserOtp(id: string, otpCode: string, otpExpiry: Date): Promise<User | undefined> {
+  async updateUserOtp(id: string, otpCode: string | null, otpExpiry: Date | null): Promise<User | undefined> {
     const [user] = await db
       .update(users)
       .set({ otpCode, otpExpiry, updatedAt: new Date() })
@@ -1057,6 +1067,15 @@ export class DatabaseStorage implements IStorage {
     }
     
     return false;
+  }
+
+  async updateUserPassword(id: string, hashedPassword: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
   }
 
   async deleteUser(id: string): Promise<void> {

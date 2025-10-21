@@ -180,6 +180,7 @@ export default function LoginPage() {
                 </label>
                 <button
                   type="button"
+                  onClick={() => setLocation("/auth/forgot-password")}
                   className="text-sm text-primary hover:underline"
                   data-testid="button-forgot-password"
                 >
