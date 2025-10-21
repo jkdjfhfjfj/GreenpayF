@@ -144,7 +144,7 @@ export default function SendConfirmPage() {
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-muted-foreground">They receive</span>
-              <span className="font-semibold text-lg">₦{transferData.recipientAmount}</span>
+              <span className="font-semibold text-lg">{transferData.targetCurrency?.toUpperCase() === 'KES' ? 'KSh ' : '$'}{transferData.recipientAmount}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-muted-foreground">Transfer fee</span>
@@ -152,7 +152,7 @@ export default function SendConfirmPage() {
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-muted-foreground">Exchange rate</span>
-              <span className="font-medium">1 {transferData.currency?.toUpperCase() || 'USD'} = {transferData.exchangeRate.toLocaleString()} NGN</span>
+              <span className="font-medium">1 {transferData.currency?.toUpperCase() || 'USD'} = {transferData.exchangeRate.toLocaleString()} {transferData.targetCurrency?.toUpperCase() || 'KES'}</span>
             </div>
             <div className="flex justify-between items-center py-2">
               <span className="font-bold">Total to pay</span>

@@ -64,9 +64,8 @@ export default function DashboardPage() {
   // Get the active wallet balance based on selection
   const activeBalance = activeWallet === 'USD' ? usdBalance : kesBalance;
   
-  // Convert balance to other currencies using real rates for display
+  // Get exchange rates for display
   const rates = (exchangeRates as any)?.rates || {};
-  const balanceInNGN = rates.NGN ? (usdBalance * rates.NGN).toFixed(2) : '0.00';
   
   // Check user status
   const isKYCVerified = user?.kycStatus === 'verified';
