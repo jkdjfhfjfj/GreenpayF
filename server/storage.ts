@@ -27,6 +27,8 @@ import {
   type InsertSystemSetting,
   type SystemLog,
   type InsertSystemLog,
+  type ApiConfiguration,
+  type InsertApiConfiguration,
   type SupportTicket,
   type InsertSupportTicket,
   type SavingsGoal,
@@ -47,6 +49,7 @@ import {
   adminLogs,
   systemSettings,
   systemLogs,
+  apiConfigurations,
   supportTickets,
   savingsGoals,
   qrPayments,
@@ -178,6 +181,13 @@ export interface IStorage {
   getSystemSettingsByCategory(category: string): Promise<SystemSetting[]>;
   setSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
   updateSystemSetting(id: string, updates: Partial<SystemSetting>): Promise<SystemSetting | undefined>;
+
+  // API Configuration operations
+  getApiConfiguration(provider: string): Promise<ApiConfiguration | undefined>;
+  getAllApiConfigurations(): Promise<ApiConfiguration[]>;
+  createApiConfiguration(config: InsertApiConfiguration): Promise<ApiConfiguration>;
+  updateApiConfiguration(provider: string, updates: Partial<ApiConfiguration>): Promise<ApiConfiguration | undefined>;
+  deleteApiConfiguration(provider: string): Promise<void>;
 
   // Savings Goals operations
   createSavingsGoal(goal: InsertSavingsGoal): Promise<SavingsGoal>;
@@ -965,6 +975,13 @@ export class MemStorage implements IStorage {
   async createQRPayment(): Promise<QRPayment> { throw new Error('Not implemented'); }
   async getQRPaymentByCode(): Promise<QRPayment | undefined> { return undefined; }
   async updateQRPayment(): Promise<QRPayment | undefined> { return undefined; }
+
+  // API Configuration operations (stubs for MemStorage)
+  async getApiConfiguration(): Promise<ApiConfiguration | undefined> { return undefined; }
+  async getAllApiConfigurations(): Promise<ApiConfiguration[]> { return []; }
+  async createApiConfiguration(): Promise<ApiConfiguration> { throw new Error('Not implemented'); }
+  async updateApiConfiguration(): Promise<ApiConfiguration | undefined> { return undefined; }
+  async deleteApiConfiguration(): Promise<void> {}
 }
 
 // Database Storage Implementation
@@ -1469,6 +1486,45 @@ export class DatabaseStorage implements IStorage {
 
   async createSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting> {
     return await this.setSystemSetting(setting);
+  }
+
+  // API Configuration operations
+  async getApiConfiguration(provider: string): Promise<ApiConfiguration | undefined> {
+    const [config] = await db
+      .select()
+      .from(apiConfigurations)
+      .where(eq(apiConfigurations.provider, provider));
+    return config || undefined;
+  }
+
+  async getAllApiConfigurations(): Promise<ApiConfiguration[]> {
+    return await db
+      .select()
+      .from(apiConfigurations)
+      .orderBy(apiConfigurations.provider);
+  }
+
+  async createApiConfiguration(insertConfig: InsertApiConfiguration): Promise<ApiConfiguration> {
+    const [config] = await db
+      .insert(apiConfigurations)
+      .values(insertConfig)
+      .returning();
+    return config;
+  }
+
+  async updateApiConfiguration(provider: string, updates: Partial<ApiConfiguration>): Promise<ApiConfiguration | undefined> {
+    const [config] = await db
+      .update(apiConfigurations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(apiConfigurations.provider, provider))
+      .returning();
+    return config || undefined;
+  }
+
+  async deleteApiConfiguration(provider: string): Promise<void> {
+    await db
+      .delete(apiConfigurations)
+      .where(eq(apiConfigurations.provider, provider));
   }
 
   // Notification operations

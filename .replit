@@ -1,6 +1,7 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-20", "postgresql-16"]
 [nix]
 packages = ["unzipNLS"]
+channel = "stable-25_05"
 
 [agent]
 expertMode = true
@@ -36,7 +37,3 @@ externalPort = 80
 [[ports]]
 localPort = 36743
 externalPort = 3000
-
-[[ports]]
-localPort = 37553
-externalPort = 3001

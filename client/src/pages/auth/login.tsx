@@ -50,13 +50,16 @@ export default function LoginPage() {
         localStorage.setItem("otpPhone", data.phone);
         setLocation("/auth/otp-verification");
       } else {
-        // Direct login (shouldn't happen with new flow)
+        // Direct login (when messaging not configured)
         login(data.user);
         toast({
           title: "Welcome back!",
           description: "You have been successfully logged in.",
         });
-        setLocation("/dashboard");
+        // Use setTimeout to ensure state has updated before navigation
+        setTimeout(() => {
+          setLocation("/dashboard");
+        }, 100);
       }
     },
     onError: (error: any) => {

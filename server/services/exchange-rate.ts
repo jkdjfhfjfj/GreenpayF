@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { type IStorage } from '../storage';
 
 export interface ExchangeRate {
   base: string;
@@ -10,26 +11,49 @@ export interface ExchangeRate {
 export class ExchangeRateService {
   private apiKey?: string;
   private baseUrl = 'https://v6.exchangerate-api.com/v6';
+  private storage?: IStorage;
 
-  constructor() {
+  constructor(storage?: IStorage) {
+    this.storage = storage;
     this.apiKey = process.env.EXCHANGERATE_API_KEY;
     if (!this.apiKey) {
       console.warn('Exchange rate API key not configured - using fallback rates');
     }
   }
 
-  private hasApiKey(): boolean {
-    return !!this.apiKey;
+  private async getApiKey(): Promise<string | undefined> {
+    // First try to get from database if storage is available
+    if (this.storage) {
+      try {
+        const config = await this.storage.getApiConfiguration('exchange_rate');
+        if (config && config.isEnabled && config.apiKey) {
+          return config.apiKey;
+        }
+      } catch (error) {
+        console.error('Error fetching exchange rate config from database:', error);
+      }
+    }
+    
+    // Fall back to environment variable
+    return this.apiKey;
+  }
+
+  private async hasApiKey(): Promise<boolean> {
+    const key = await this.getApiKey();
+    return !!key;
   }
 
   async getExchangeRate(from: string, to: string): Promise<number> {
+    // Get API key from database or environment
+    const apiKey = await this.getApiKey();
+    
     // Use fallback rates if no API key is configured
-    if (!this.hasApiKey()) {
+    if (!apiKey) {
       return this.getFallbackRate(from, to);
     }
     
     try {
-      const url = `${this.baseUrl}/${this.apiKey}/pair/${from}/${to}`;
+      const url = `${this.baseUrl}/${apiKey}/pair/${from}/${to}`;
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -67,13 +91,16 @@ export class ExchangeRateService {
   }
 
   async getMultipleRates(base: string, targets: string[]): Promise<Record<string, number>> {
+    // Get API key from database or environment
+    const apiKey = await this.getApiKey();
+    
     // Use fallback rates if no API key is configured
-    if (!this.hasApiKey()) {
+    if (!apiKey) {
       return this.getMultipleFallbackRates(base, targets);
     }
     
     try {
-      const url = `${this.baseUrl}/${this.apiKey}/latest/${base}`;
+      const url = `${this.baseUrl}/${apiKey}/latest/${base}`;
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -116,4 +143,8 @@ export class ExchangeRateService {
   }
 }
 
+// Export a factory function instead of a singleton to allow passing storage
+export const createExchangeRateService = (storage?: IStorage) => new ExchangeRateService(storage);
+
+// Export default instance for backward compatibility
 export const exchangeRateService = new ExchangeRateService();

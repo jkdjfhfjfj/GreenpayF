@@ -10,7 +10,7 @@ import multer from "multer";
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import { whatsappService } from "./services/whatsapp";
-import { exchangeRateService } from "./services/exchange-rate";
+import { createExchangeRateService } from "./services/exchange-rate";
 import { payHeroService } from "./services/payhero";
 import { paystackService } from "./services/paystack";
 import { twoFactorService } from "./services/2fa";
@@ -1427,6 +1427,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Exchange rates API
+  // Create exchange rate service with storage for database-backed configuration
+  const exchangeRateService = createExchangeRateService(storage);
+  
   app.get("/api/exchange-rates/:from/:to", async (req, res) => {
     try {
       const { from, to } = req.params;
@@ -3362,6 +3365,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Setting creation error:', error);
       res.status(500).json({ message: "Failed to create setting" });
+    }
+  });
+
+  // API Configuration endpoints
+  app.get("/api/admin/api-configurations", requireAdminAuth, async (req, res) => {
+    try {
+      const configurations = await storage.getAllApiConfigurations();
+      res.json({ configurations });
+    } catch (error) {
+      console.error('API configurations fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch API configurations" });
+    }
+  });
+
+  app.get("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+    try {
+      const { provider } = req.params;
+      const configuration = await storage.getApiConfiguration(provider);
+      
+      if (!configuration) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+      
+      res.json({ configuration });
+    } catch (error) {
+      console.error('API configuration fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch API configuration" });
+    }
+  });
+
+  app.post("/api/admin/api-configurations", requireAdminAuth, async (req, res) => {
+    try {
+      const configData = req.body;
+      const configuration = await storage.createApiConfiguration(configData);
+      res.json({ configuration, message: "API configuration created successfully" });
+    } catch (error) {
+      console.error('API configuration creation error:', error);
+      res.status(500).json({ message: "Failed to create API configuration" });
+    }
+  });
+
+  app.put("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+    try {
+      const { provider } = req.params;
+      const updates = req.body;
+      
+      const configuration = await storage.updateApiConfiguration(provider, updates);
+      
+      if (!configuration) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+      
+      res.json({ configuration, message: "API configuration updated successfully" });
+    } catch (error) {
+      console.error('API configuration update error:', error);
+      res.status(500).json({ message: "Failed to update API configuration" });
+    }
+  });
+
+  app.delete("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+    try {
+      const { provider } = req.params;
+      await storage.deleteApiConfiguration(provider);
+      res.json({ message: "API configuration deleted successfully" });
+    } catch (error) {
+      console.error('API configuration deletion error:', error);
+      res.status(500).json({ message: "Failed to delete API configuration" });
     }
   });
 
