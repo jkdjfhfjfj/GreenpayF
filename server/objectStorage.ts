@@ -52,12 +52,21 @@ export class ObjectStorageService {
   async downloadFile(key: string): Promise<{ buffer: Buffer; contentType?: string }> {
     try {
       console.log(`📥 Downloading file from object storage: ${key}`);
-      const exists = await this.client.exists(key);
-      if (!exists) {
-        throw new ObjectNotFoundError();
+      
+      // Download file - properly unwrap Result
+      const downloadResult = await this.client.downloadAsBytes(key);
+      if (!downloadResult.ok) {
+        // Check if it's a file not found vs other error
+        const errorMessage = downloadResult.error?.message || '';
+        if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+          throw new ObjectNotFoundError();
+        }
+        console.error(`❌ Download failed:`, downloadResult.error);
+        throw new Error(`Failed to download file: ${errorMessage || 'Unknown error'}`);
       }
-
-      const buffer = await this.client.downloadAsBytes(key);
+      
+      // Convert to Buffer - value is already a Buffer
+      const buffer = downloadResult.value;
       
       // Determine content type from file extension
       const extension = key.split('.').pop()?.toLowerCase();
@@ -93,7 +102,7 @@ export class ObjectStorageService {
       
       console.log(`✅ File downloaded successfully: ${key} (${contentType})`);
       return {
-        buffer: Buffer.from(buffer),
+        buffer,
         contentType,
       };
     } catch (error) {
@@ -127,7 +136,8 @@ export class ObjectStorageService {
    */
   async fileExists(key: string): Promise<boolean> {
     try {
-      return await this.client.exists(key);
+      const result = await this.client.exists(key);
+      return result.ok && result.value === true;
     } catch (error) {
       console.error(`❌ Error checking file existence:`, error);
       return false;
@@ -211,7 +221,12 @@ export class ObjectStorageService {
   async listFiles(prefix: string): Promise<string[]> {
     try {
       console.log(`📋 Listing files with prefix: ${prefix}`);
-      const files = await this.client.list({ prefix });
+      const result = await this.client.list({ prefix });
+      if (!result.ok) {
+        console.error(`❌ List failed:`, result.error);
+        return [];
+      }
+      const files = result.value.map(obj => obj.key);
       console.log(`✅ Found ${files.length} files`);
       return files;
     } catch (error) {
