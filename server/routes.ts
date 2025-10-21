@@ -5256,7 +5256,6 @@ ${publicPages.map(page => `  <url>
   // Robots.txt for search engines
   app.get('/robots.txt', (req, res) => {
     const robotsTxt = `User-agent: *
-Disallow: /dashboard/
 Disallow: /admin/
 Disallow: /api/
 
