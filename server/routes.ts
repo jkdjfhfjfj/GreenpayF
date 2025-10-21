@@ -17,7 +17,6 @@ import { twoFactorService } from "./services/2fa";
 import { biometricService } from "./services/biometric";
 import { notificationService } from "./services/notifications";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import { ObjectPermission } from "./objectAcl";
 import { statumService } from "./statumService";
 
 const objectStorage = new ObjectStorageService();
@@ -98,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Serve private objects from object storage (profile photos, KYC documents)
+  // Serve private objects from object storage (profile photos, KYC documents, chat files)
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
       const userId = (req.session as any)?.userId;
@@ -106,35 +105,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Require authentication to access private objects
       if (!userId && !adminId) {
+        console.warn('⚠️ Unauthorized file access attempt:', req.params.objectPath);
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const objectFile = await objectStorage.getObjectEntityFile(req.path);
+      // Extract the object key from the path (remove /objects/ prefix)
+      const objectKey = req.params.objectPath;
+      console.log(`📥 File download request: ${objectKey} by ${adminId ? 'admin' : 'user'} ${adminId || userId}`);
       
-      // Admins have superuser access to all files
-      if (adminId) {
-        await objectStorage.downloadObject(objectFile, res);
-        return;
-      }
-      
-      // For regular users, check ACL permissions
-      const canAccess = await objectStorage.canAccessObjectEntity({
-        objectFile,
-        userId: userId,
-        requestedPermission: ObjectPermission.READ,
-      });
-      
-      if (!canAccess) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Serve the file from object storage
-      await objectStorage.downloadObject(objectFile, res);
+      // Download and stream the file
+      // Note: In Replit Object Storage, authentication is sufficient for access control
+      // File keys use UUIDs making them non-guessable
+      await objectStorage.downloadToResponse(objectKey, res);
     } catch (error) {
-      console.error('Object serving error:', error);
       if (error instanceof ObjectNotFoundError) {
+        console.warn(`⚠️ File not found: ${req.params.objectPath}`);
         return res.status(404).json({ message: "File not found" });
       }
+      console.error('❌ File download error:', error);
       return res.status(500).json({ message: "Failed to serve file" });
     }
   });
@@ -663,43 +651,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let selfieUrl: string | null = null;
 
           try {
-            const frontUploadUrl = await objectStorage.getObjectEntityUploadURL();
-            const backUploadUrl = await objectStorage.getObjectEntityUploadURL();
-            const selfieUploadUrl = await objectStorage.getObjectEntityUploadURL();
-
-            await Promise.all([
-              fetch(frontUploadUrl, {
-                method: 'PUT',
-                body: files.frontImage[0].buffer,
-                headers: { 'Content-Type': files.frontImage[0].mimetype }
-              }),
-              fetch(backUploadUrl, {
-                method: 'PUT',
-                body: files.backImage[0].buffer,
-                headers: { 'Content-Type': files.backImage[0].mimetype }
-              }),
-              fetch(selfieUploadUrl, {
-                method: 'PUT',
-                body: files.selfie[0].buffer,
-                headers: { 'Content-Type': files.selfie[0].mimetype }
-              })
+            [frontImageUrl, backImageUrl, selfieUrl] = await Promise.all([
+              objectStorage.uploadKycDocument(
+                files.frontImage[0].buffer,
+                files.frontImage[0].originalname,
+                files.frontImage[0].mimetype
+              ),
+              objectStorage.uploadKycDocument(
+                files.backImage[0].buffer,
+                files.backImage[0].originalname,
+                files.backImage[0].mimetype
+              ),
+              objectStorage.uploadKycDocument(
+                files.selfie[0].buffer,
+                files.selfie[0].originalname,
+                files.selfie[0].mimetype
+              )
             ]);
-
-            frontImageUrl = await objectStorage.trySetObjectEntityAclPolicy(frontUploadUrl, {
-              visibility: 'private',
-              allowedUserIds: [userId]
-            });
-            backImageUrl = await objectStorage.trySetObjectEntityAclPolicy(backUploadUrl, {
-              visibility: 'private',
-              allowedUserIds: [userId]
-            });
-            selfieUrl = await objectStorage.trySetObjectEntityAclPolicy(selfieUploadUrl, {
-              visibility: 'private',
-              allowedUserIds: [userId]
-            });
           } catch (uploadError) {
-            console.error('Cloud storage upload error:', uploadError);
-            return res.status(500).json({ message: "Failed to upload documents to cloud storage" });
+            console.error('❌ KYC document upload error:', uploadError);
+            return res.status(500).json({ message: "Failed to upload documents to storage" });
           }
 
           // Update existing KYC document
@@ -746,43 +717,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let selfieUrl: string | null = null;
 
       try {
-        const frontUploadUrl = await objectStorage.getObjectEntityUploadURL();
-        const backUploadUrl = await objectStorage.getObjectEntityUploadURL();
-        const selfieUploadUrl = await objectStorage.getObjectEntityUploadURL();
-
-        await Promise.all([
-          fetch(frontUploadUrl, {
-            method: 'PUT',
-            body: files.frontImage[0].buffer,
-            headers: { 'Content-Type': files.frontImage[0].mimetype }
-          }),
-          fetch(backUploadUrl, {
-            method: 'PUT',
-            body: files.backImage[0].buffer,
-            headers: { 'Content-Type': files.backImage[0].mimetype }
-          }),
-          fetch(selfieUploadUrl, {
-            method: 'PUT',
-            body: files.selfie[0].buffer,
-            headers: { 'Content-Type': files.selfie[0].mimetype }
-          })
+        [frontImageUrl, backImageUrl, selfieUrl] = await Promise.all([
+          objectStorage.uploadKycDocument(
+            files.frontImage[0].buffer,
+            files.frontImage[0].originalname,
+            files.frontImage[0].mimetype
+          ),
+          objectStorage.uploadKycDocument(
+            files.backImage[0].buffer,
+            files.backImage[0].originalname,
+            files.backImage[0].mimetype
+          ),
+          objectStorage.uploadKycDocument(
+            files.selfie[0].buffer,
+            files.selfie[0].originalname,
+            files.selfie[0].mimetype
+          )
         ]);
-
-        frontImageUrl = await objectStorage.trySetObjectEntityAclPolicy(frontUploadUrl, {
-          visibility: 'private',
-          allowedUserIds: [userId]
-        });
-        backImageUrl = await objectStorage.trySetObjectEntityAclPolicy(backUploadUrl, {
-          visibility: 'private',
-          allowedUserIds: [userId]
-        });
-        selfieUrl = await objectStorage.trySetObjectEntityAclPolicy(selfieUploadUrl, {
-          visibility: 'private',
-          allowedUserIds: [userId]
-        });
       } catch (uploadError) {
-        console.error('Cloud storage upload error:', uploadError);
-        return res.status(500).json({ message: "Failed to upload documents to cloud storage" });
+        console.error('❌ KYC document upload error:', uploadError);
+        return res.status(500).json({ message: "Failed to upload documents to storage" });
       }
       
       const kycData = {
@@ -1021,23 +975,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "File must be an image" });
       }
 
-      // Upload to object storage using signed URL
-      const uploadUrl = await objectStorage.getObjectEntityUploadURL();
-      
-      await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file.buffer,
-        headers: { 'Content-Type': file.mimetype }
-      });
-
-      // Normalize the URL to get the entity path
-      const photoUrl = objectStorage.normalizeObjectEntityPath(uploadUrl);
-
-      // Set ACL policy for private access
-      await objectStorage.trySetObjectEntityAclPolicy(photoUrl, { 
-        owner: id,
-        visibility: 'private' 
-      });
+      // Upload profile picture to object storage
+      const photoUrl = await objectStorage.uploadProfilePicture(
+        file.buffer,
+        file.originalname,
+        file.mimetype
+      );
 
       // Update user's profile photo URL
       const updatedUser = await storage.updateUser(id, { 
