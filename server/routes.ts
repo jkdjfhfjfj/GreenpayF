@@ -1842,26 +1842,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Real-time exchange and currency conversion
+  // Real-time exchange and currency conversion - supports dual wallet (USD/KES)
   app.post("/api/exchange/convert", async (req, res) => {
     try {
       const { amount, fromCurrency, toCurrency, userId } = req.body;
       
-      // Verify user has virtual card for exchanges
+      // Get user
       const user = await storage.getUser(userId);
-      if (!user?.hasVirtualCard) {
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify user has virtual card for exchanges
+      if (!user.hasVirtualCard) {
         return res.status(400).json({ message: "Virtual card required for currency exchanges" });
       }
 
+      const exchangeAmount = parseFloat(amount);
+      const fee = (exchangeAmount * 0.015).toFixed(2); // 1.5% exchange fee
+      const totalDeducted = exchangeAmount + parseFloat(fee);
+
+      // Get exchange rate
       const exchangeRate = await exchangeRateService.getExchangeRate(fromCurrency, toCurrency);
-      const convertedAmount = (parseFloat(amount) * exchangeRate).toFixed(2);
-      const fee = (parseFloat(amount) * 0.015).toFixed(2); // 1.5% exchange fee
+      const convertedAmount = (exchangeAmount * exchangeRate).toFixed(2);
+
+      // Handle dual wallet balance updates (USD <-> KES)
+      const currentUsdBalance = parseFloat(user.balance || "0");
+      const currentKesBalance = parseFloat(user.kesBalance || "0");
+      
+      let newUsdBalance = currentUsdBalance;
+      let newKesBalance = currentKesBalance;
+
+      // Check balance and update appropriate wallet
+      if (fromCurrency === 'USD' && toCurrency === 'KES') {
+        // Converting USD to KES
+        if (currentUsdBalance < totalDeducted) {
+          return res.status(400).json({ message: "Insufficient USD balance" });
+        }
+        newUsdBalance = currentUsdBalance - totalDeducted;
+        newKesBalance = currentKesBalance + parseFloat(convertedAmount);
+      } else if (fromCurrency === 'KES' && toCurrency === 'USD') {
+        // Converting KES to USD
+        if (currentKesBalance < totalDeducted) {
+          return res.status(400).json({ message: "Insufficient KES balance" });
+        }
+        newKesBalance = currentKesBalance - totalDeducted;
+        newUsdBalance = currentUsdBalance + parseFloat(convertedAmount);
+      } else {
+        // For other currency pairs, use USD balance
+        if (currentUsdBalance < totalDeducted) {
+          return res.status(400).json({ message: "Insufficient USD balance" });
+        }
+        newUsdBalance = currentUsdBalance - totalDeducted;
+      }
+
+      // Update user balances
+      await storage.updateUser(userId, {
+        balance: newUsdBalance.toFixed(2),
+        kesBalance: newKesBalance.toFixed(2)
+      });
       
       // Create exchange transaction
       const transaction = await storage.createTransaction({
         userId,
         type: "exchange",
-        amount,
+        amount: amount.toString(),
         currency: fromCurrency,
         status: "completed",
         fee,
