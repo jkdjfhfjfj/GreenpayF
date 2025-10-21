@@ -29,7 +29,7 @@ export default function KYCPage() {
   });
 
   // Get existing KYC data
-  const { data: kycData, isLoading: kycLoading } = useQuery({
+  const { data: kycData, isLoading: kycLoading } = useQuery<{ kyc: any }>({
     queryKey: ["/api/kyc", user?.id],
     enabled: !!user?.id,
   });
@@ -73,10 +73,21 @@ export default function KYCPage() {
   };
 
   const handleSubmit = () => {
+    // Validate personal information
     if (!formData.dateOfBirth || !formData.address) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate all required files are uploaded
+    if (!formData.frontImage || !formData.backImage || !formData.selfie) {
+      toast({
+        title: "Missing Documents",
+        description: "Please upload all required documents: front of document, back of document, and selfie",
         variant: "destructive",
       });
       return;
@@ -87,15 +98,26 @@ export default function KYCPage() {
     submitData.append("documentType", formData.documentType);
     submitData.append("dateOfBirth", formData.dateOfBirth);
     submitData.append("address", formData.address);
-    
-    if (formData.frontImage) submitData.append("frontImage", formData.frontImage);
-    if (formData.backImage) submitData.append("backImage", formData.backImage);
-    if (formData.selfie) submitData.append("selfie", formData.selfie);
+    submitData.append("frontImage", formData.frontImage);
+    submitData.append("backImage", formData.backImage);
+    submitData.append("selfie", formData.selfie);
 
     submitKYCMutation.mutate(submitData);
   };
 
   const nextStep = () => {
+    // Validate step 2 - ensure documents are uploaded before moving to step 3
+    if (currentStep === 2) {
+      if (!formData.frontImage || !formData.backImage) {
+        toast({
+          title: "Missing Documents",
+          description: "Please upload both front and back of your document before continuing",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     if (currentStep < 3) setCurrentStep(currentStep + 1);
   };
 
@@ -205,56 +227,8 @@ export default function KYCPage() {
     );
   }
 
-  // Handle rejected status - allow resubmission
-  if (kycData?.kyc && user?.kycStatus === "rejected") {
-    return (
-      <div className="min-h-screen bg-background pb-20">
-        <motion.div className="bg-card shadow-sm p-4 flex items-center elevation-1">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation("/settings")}
-            className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          >
-            arrow_back
-          </motion.button>
-          <h1 className="text-lg font-semibold">Identity Verification</h1>
-        </motion.div>
-
-        <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6"
-          >
-            <span className="material-icons text-4xl text-red-600">error_outline</span>
-          </motion.div>
-          <h2 className="text-2xl font-bold text-center mb-4">Verification Unsuccessful</h2>
-          <p className="text-muted-foreground text-center mb-6 max-w-sm">
-            Unfortunately, your KYC documents were not approved. Please review the reason below and resubmit.
-          </p>
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg mb-6 max-w-sm w-full">
-            <h3 className="font-medium text-red-800 dark:text-red-100 mb-2 flex items-center">
-              <span className="material-icons text-sm mr-2">warning</span>
-              Rejection Reason
-            </h3>
-            <p className="text-sm text-red-700 dark:text-red-300">
-              {kycData.kyc.rejectionReason || "Documents did not meet verification requirements. Please ensure they are clear and valid."}
-            </p>
-          </div>
-          <div className="flex gap-3 w-full max-w-sm">
-            <Button onClick={() => {
-              // Reset to allow resubmission
-              window.location.reload();
-            }} className="flex-1">
-              <span className="material-icons text-sm mr-2">refresh</span>
-              Resubmit Documents
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Show rejection notice if rejected - but still allow form access below
+  const showRejectionNotice = kycData?.kyc && user?.kycStatus === "rejected";
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -276,6 +250,30 @@ export default function KYCPage() {
       </motion.div>
 
       <div className="p-6">
+        {/* Rejection Notice - Show if documents were rejected */}
+        {showRejectionNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-xl mb-6"
+          >
+            <div className="flex items-start">
+              <span className="material-icons text-red-600 mr-3 mt-0.5">error_outline</span>
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-900 dark:text-red-200 mb-1">
+                  Previous Verification Unsuccessful
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mb-2">
+                  {kycData?.kyc?.rejectionReason || "Your previous documents did not meet verification requirements. Please ensure they are clear and valid."}
+                </p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                  Please resubmit new documents below
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Progress Bar */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
