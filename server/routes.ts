@@ -5256,13 +5256,8 @@ ${publicPages.map(page => `  <url>
   // Robots.txt for search engines
   app.get('/robots.txt', (req, res) => {
     const robotsTxt = `User-agent: *
-Allow: /
-Allow: /login
-Allow: /signup
-Allow: /auth/forgot-password
-Allow: /status
-Disallow: /dashboard
-Disallow: /admin
+Disallow: /dashboard/
+Disallow: /admin/
 Disallow: /api/
 
 Sitemap: https://greenpay.world/sitemap.xml`;
