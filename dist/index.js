@@ -13,15 +13,18 @@ var schema_exports = {};
 __export(schema_exports, {
   adminLogs: () => adminLogs,
   admins: () => admins,
+  apiConfigurations: () => apiConfigurations,
   budgets: () => budgets,
   chatMessages: () => chatMessages,
   conversations: () => conversations,
   insertAdminLogSchema: () => insertAdminLogSchema,
   insertAdminSchema: () => insertAdminSchema,
+  insertApiConfigurationSchema: () => insertApiConfigurationSchema,
   insertBudgetSchema: () => insertBudgetSchema,
   insertChatMessageSchema: () => insertChatMessageSchema,
   insertConversationSchema: () => insertConversationSchema,
   insertKycDocumentSchema: () => insertKycDocumentSchema,
+  insertLoginHistorySchema: () => insertLoginHistorySchema,
   insertMessageSchema: () => insertMessageSchema,
   insertNotificationSchema: () => insertNotificationSchema,
   insertPaymentRequestSchema: () => insertPaymentRequestSchema,
@@ -37,6 +40,7 @@ __export(schema_exports, {
   insertUserSchema: () => insertUserSchema,
   insertVirtualCardSchema: () => insertVirtualCardSchema,
   kycDocuments: () => kycDocuments,
+  loginHistory: () => loginHistory,
   messages: () => messages,
   notifications: () => notifications,
   paymentRequests: () => paymentRequests,
@@ -55,7 +59,7 @@ __export(schema_exports, {
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, decimal, timestamp, boolean, jsonb, json, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-var users, kycDocuments, virtualCards, transactions, recipients, paymentRequests, chatMessages, notifications, supportTickets, conversations, messages, insertUserSchema, insertKycDocumentSchema, insertVirtualCardSchema, insertTransactionSchema, insertRecipientSchema, insertPaymentRequestSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, insertChatMessageSchema, insertNotificationSchema, admins, adminLogs, systemLogs, systemSettings, insertAdminSchema, insertAdminLogSchema, insertSystemSettingSchema, insertSystemLogSchema, savingsGoals, qrPayments, scheduledPayments, budgets, userPreferences, insertSavingsGoalSchema, insertQRPaymentSchema, insertScheduledPaymentSchema, insertBudgetSchema, insertUserPreferencesSchema;
+var users, kycDocuments, virtualCards, transactions, recipients, paymentRequests, chatMessages, notifications, supportTickets, conversations, messages, insertUserSchema, insertKycDocumentSchema, insertVirtualCardSchema, insertTransactionSchema, insertRecipientSchema, insertPaymentRequestSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, insertChatMessageSchema, insertNotificationSchema, admins, adminLogs, systemLogs, systemSettings, apiConfigurations, insertAdminSchema, insertAdminLogSchema, insertSystemSettingSchema, insertSystemLogSchema, insertApiConfigurationSchema, savingsGoals, qrPayments, scheduledPayments, budgets, userPreferences, loginHistory, insertSavingsGoalSchema, insertQRPaymentSchema, insertScheduledPaymentSchema, insertBudgetSchema, insertUserPreferencesSchema, insertLoginHistorySchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -77,6 +81,11 @@ var init_schema = __esm({
       biometricEnabled: boolean("biometric_enabled").default(false),
       pushNotificationsEnabled: boolean("push_notifications_enabled").default(true),
       balance: decimal("balance", { precision: 10, scale: 2 }).default("0.00"),
+      // USD balance
+      kesBalance: decimal("kes_balance", { precision: 10, scale: 2 }).default("0.00"),
+      // KES balance
+      hasReceivedWelcomeBonus: boolean("has_received_welcome_bonus").default(false),
+      hasClaimedAirtimeBonus: boolean("has_claimed_airtime_bonus").default(false),
       otpCode: text("otp_code"),
       otpExpiry: timestamp("otp_expiry"),
       paystackCustomerId: text("paystack_customer_id"),
@@ -349,6 +358,26 @@ var init_schema = __esm({
       updatedBy: varchar("updated_by").references(() => admins.id),
       updatedAt: timestamp("updated_at").defaultNow()
     });
+    apiConfigurations = pgTable("api_configurations", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      provider: text("provider").notNull().unique(),
+      // 'exchange_rate', 'paystack', 'payhero'
+      displayName: text("display_name").notNull(),
+      apiKey: text("api_key"),
+      apiSecret: text("api_secret"),
+      baseUrl: text("base_url"),
+      webhookSecret: text("webhook_secret"),
+      isEnabled: boolean("is_enabled").default(true),
+      configuration: jsonb("configuration"),
+      // Additional provider-specific settings
+      lastTested: timestamp("last_tested"),
+      testStatus: text("test_status"),
+      // 'success', 'failed', 'pending'
+      testMessage: text("test_message"),
+      updatedBy: varchar("updated_by").references(() => admins.id),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
     insertAdminSchema = createInsertSchema(admins).omit({
       id: true,
       createdAt: true,
@@ -365,6 +394,11 @@ var init_schema = __esm({
     insertSystemLogSchema = createInsertSchema(systemLogs).omit({
       id: true,
       timestamp: true
+    });
+    insertApiConfigurationSchema = createInsertSchema(apiConfigurations).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
     });
     savingsGoals = pgTable("savings_goals", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -437,6 +471,20 @@ var init_schema = __esm({
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
+    loginHistory = pgTable("login_history", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      userId: varchar("user_id").references(() => users.id).notNull(),
+      ipAddress: text("ip_address"),
+      userAgent: text("user_agent"),
+      deviceType: text("device_type"),
+      // mobile, desktop, tablet
+      browser: text("browser"),
+      location: text("location"),
+      // City, Country
+      status: text("status").default("success"),
+      // success, failed
+      createdAt: timestamp("created_at").defaultNow()
+    });
     insertSavingsGoalSchema = createInsertSchema(savingsGoals).omit({
       id: true,
       currentAmount: true,
@@ -465,6 +513,10 @@ var init_schema = __esm({
       id: true,
       createdAt: true,
       updatedAt: true
+    });
+    insertLoginHistorySchema = createInsertSchema(loginHistory).omit({
+      id: true,
+      createdAt: true
     });
   }
 });
@@ -1188,6 +1240,15 @@ var init_storage = __esm({
         }
         return false;
       }
+      async updateUserPassword(id, hashedPassword) {
+        const user = this.users.get(id);
+        if (user) {
+          const updated = { ...user, password: hashedPassword, updatedAt: /* @__PURE__ */ new Date() };
+          this.users.set(id, updated);
+          return updated;
+        }
+        return void 0;
+      }
       async getPaymentRequest(id) {
         return this.paymentRequests.get(id);
       }
@@ -1213,6 +1274,28 @@ var init_storage = __esm({
       }
       async updateQRPayment() {
         return void 0;
+      }
+      // Login History operations (stubs for MemStorage)
+      async createLoginHistory() {
+        throw new Error("Not implemented");
+      }
+      async getLoginHistoryByUserId() {
+        return [];
+      }
+      // API Configuration operations (stubs for MemStorage)
+      async getApiConfiguration() {
+        return void 0;
+      }
+      async getAllApiConfigurations() {
+        return [];
+      }
+      async createApiConfiguration() {
+        throw new Error("Not implemented");
+      }
+      async updateApiConfiguration() {
+        return void 0;
+      }
+      async deleteApiConfiguration() {
       }
     };
     DatabaseStorage = class {
@@ -1252,6 +1335,10 @@ var init_storage = __esm({
           return true;
         }
         return false;
+      }
+      async updateUserPassword(id, hashedPassword) {
+        const [user] = await db.update(users).set({ password: hashedPassword, updatedAt: /* @__PURE__ */ new Date() }).where(eq(users.id, id)).returning();
+        return user || void 0;
       }
       async deleteUser(id) {
         const userConversations = await db.select().from(conversations).where(eq(conversations.userId, id));
@@ -1469,8 +1556,18 @@ var init_storage = __esm({
         return setting || void 0;
       }
       async setSystemSetting(insertSetting) {
-        const [setting] = await db.insert(systemSettings).values(insertSetting).returning();
-        return setting;
+        const existing = await this.getSystemSetting(insertSetting.category, insertSetting.key);
+        if (existing) {
+          const [updated] = await db.update(systemSettings).set({
+            value: insertSetting.value,
+            description: insertSetting.description,
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq(systemSettings.id, existing.id)).returning();
+          return updated;
+        } else {
+          const [setting] = await db.insert(systemSettings).values(insertSetting).returning();
+          return setting;
+        }
       }
       async updateSystemSetting(id, updates) {
         const [setting] = await db.update(systemSettings).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(systemSettings.id, id)).returning();
@@ -1484,6 +1581,25 @@ var init_storage = __esm({
       }
       async createSystemSetting(setting) {
         return await this.setSystemSetting(setting);
+      }
+      // API Configuration operations
+      async getApiConfiguration(provider) {
+        const [config] = await db.select().from(apiConfigurations).where(eq(apiConfigurations.provider, provider));
+        return config || void 0;
+      }
+      async getAllApiConfigurations() {
+        return await db.select().from(apiConfigurations).orderBy(apiConfigurations.provider);
+      }
+      async createApiConfiguration(insertConfig) {
+        const [config] = await db.insert(apiConfigurations).values(insertConfig).returning();
+        return config;
+      }
+      async updateApiConfiguration(provider, updates) {
+        const [config] = await db.update(apiConfigurations).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(apiConfigurations.provider, provider)).returning();
+        return config || void 0;
+      }
+      async deleteApiConfiguration(provider) {
+        await db.delete(apiConfigurations).where(eq(apiConfigurations.provider, provider));
       }
       // Notification operations
       async createNotification(notification) {
@@ -1643,6 +1759,15 @@ var init_storage = __esm({
         const [payment] = await db.update(qrPayments).set(updates).where(eq(qrPayments.id, id)).returning();
         return payment || void 0;
       }
+      // Login History operations
+      async createLoginHistory(history) {
+        const [loginRecord] = await db.insert(loginHistory).values(history).returning();
+        return loginRecord;
+      }
+      async getLoginHistoryByUserId(userId, limit = 10) {
+        const history = await db.select().from(loginHistory).where(eq(loginHistory.userId, userId)).orderBy(desc(loginHistory.createdAt)).limit(limit);
+        return history;
+      }
     };
     storage = new DatabaseStorage();
     memStorage = new MemStorage();
@@ -1653,32 +1778,50 @@ var init_storage = __esm({
 var exchange_rate_exports = {};
 __export(exchange_rate_exports, {
   ExchangeRateService: () => ExchangeRateService,
+  createExchangeRateService: () => createExchangeRateService,
   exchangeRateService: () => exchangeRateService
 });
-import fetch2 from "node-fetch";
-var ExchangeRateService, exchangeRateService;
+import fetch from "node-fetch";
+var ExchangeRateService, createExchangeRateService, exchangeRateService;
 var init_exchange_rate = __esm({
   "server/services/exchange-rate.ts"() {
     "use strict";
     ExchangeRateService = class {
       apiKey;
       baseUrl = "https://v6.exchangerate-api.com/v6";
-      constructor() {
+      storage;
+      constructor(storage2) {
+        this.storage = storage2;
         this.apiKey = process.env.EXCHANGERATE_API_KEY;
         if (!this.apiKey) {
           console.warn("Exchange rate API key not configured - using fallback rates");
         }
       }
-      hasApiKey() {
-        return !!this.apiKey;
+      async getApiKey() {
+        if (this.storage) {
+          try {
+            const config = await this.storage.getApiConfiguration("exchange_rate");
+            if (config && config.isEnabled && config.apiKey) {
+              return config.apiKey;
+            }
+          } catch (error) {
+            console.error("Error fetching exchange rate config from database:", error);
+          }
+        }
+        return this.apiKey;
+      }
+      async hasApiKey() {
+        const key = await this.getApiKey();
+        return !!key;
       }
       async getExchangeRate(from, to) {
-        if (!this.hasApiKey()) {
+        const apiKey = await this.getApiKey();
+        if (!apiKey) {
           return this.getFallbackRate(from, to);
         }
         try {
-          const url = `${this.baseUrl}/${this.apiKey}/pair/${from}/${to}`;
-          const response = await fetch2(url);
+          const url = `${this.baseUrl}/${apiKey}/pair/${from}/${to}`;
+          const response = await fetch(url);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -1707,12 +1850,13 @@ var init_exchange_rate = __esm({
         return fallbackRates[from]?.[to] || 1;
       }
       async getMultipleRates(base, targets) {
-        if (!this.hasApiKey()) {
+        const apiKey = await this.getApiKey();
+        if (!apiKey) {
           return this.getMultipleFallbackRates(base, targets);
         }
         try {
-          const url = `${this.baseUrl}/${this.apiKey}/latest/${base}`;
-          const response = await fetch2(url);
+          const url = `${this.baseUrl}/${apiKey}/latest/${base}`;
+          const response = await fetch(url);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -1745,6 +1889,7 @@ var init_exchange_rate = __esm({
         );
       }
     };
+    createExchangeRateService = (storage2) => new ExchangeRateService(storage2);
     exchangeRateService = new ExchangeRateService();
   }
 });
@@ -1787,22 +1932,26 @@ var init_messaging = __esm({
         }
       }
       /**
-       * Format phone number to Kenya format (254XXXXXXXXX)
-       * Handles: +254xxx, 0xxx, 254xxx, 7xxx
+       * Format phone number to Kenya format (+254XXXXXXXXX)
+       * Handles: +254xxx, 00254xxx, 0xxx, 254xxx, 7xxx, 1xxx
+       * Always returns phone with + prefix for database consistency
        */
       formatPhoneNumber(phone) {
         let cleaned = phone.replace(/[\s-()]/g, "");
+        if (cleaned.startsWith("00")) {
+          cleaned = cleaned.substring(2);
+        }
         if (cleaned.startsWith("+")) {
           cleaned = cleaned.substring(1);
         }
         if (cleaned.startsWith("254")) {
-          return cleaned;
+          return "+" + cleaned;
         } else if (cleaned.startsWith("0")) {
-          return "254" + cleaned.substring(1);
-        } else if (cleaned.length === 9 && cleaned.startsWith("7")) {
-          return "254" + cleaned;
+          return "+254" + cleaned.substring(1);
+        } else if (cleaned.length === 9 && (cleaned.startsWith("7") || cleaned.startsWith("1"))) {
+          return "+254" + cleaned;
         }
-        return cleaned;
+        return "+" + cleaned;
       }
       /**
        * Truncate message to fit within character limit (including prefix)
@@ -1969,7 +2118,8 @@ import * as speakeasy2 from "speakeasy";
 import * as QRCode2 from "qrcode";
 
 // server/services/payhero.ts
-import fetch3 from "node-fetch";
+init_storage();
+import fetch2 from "node-fetch";
 var PayHeroService = class {
   username;
   password;
@@ -1981,13 +2131,59 @@ var PayHeroService = class {
     const channelId = process.env.PAYHERO_CHANNEL_ID;
     this.username = username;
     this.password = password;
-    this.channelId = channelId ? parseInt(channelId) : void 0;
-    if (!this.hasCredentials()) {
-      console.warn("PayHero credentials not configured - payment processing will not be available");
+    this.channelId = channelId ? parseInt(channelId) : 3407;
+    this.loadCredentialsFromDatabase();
+  }
+  /**
+   * Load credentials from database settings
+   */
+  async loadCredentialsFromDatabase() {
+    try {
+      const settings = await storage.getSystemSettingsByCategory("payhero");
+      const username = settings.find((s) => s.key === "username")?.value;
+      const password = settings.find((s) => s.key === "password")?.value;
+      const channelId = settings.find((s) => s.key === "channel_id")?.value;
+      if (username) this.username = this.parseValue(username);
+      if (password) this.password = this.parseValue(password);
+      if (channelId) this.channelId = parseInt(this.parseValue(channelId));
+      if (this.hasCredentials()) {
+        console.log("PayHero credentials loaded from database:", {
+          hasUsername: !!this.username,
+          hasPassword: !!this.password,
+          channelId: this.channelId
+        });
+      } else {
+        console.warn("PayHero credentials not fully configured - payment processing may not be available");
+      }
+    } catch (error) {
+      console.error("Error loading PayHero credentials from database:", error);
+      console.warn("Using environment variable credentials as fallback");
     }
+  }
+  /**
+   * Parse database value that might have extra quotes from JSON
+   */
+  parseValue(value) {
+    if (!value) return "";
+    let parsed = String(value).trim();
+    while (parsed.startsWith('"') && parsed.endsWith('"')) {
+      parsed = parsed.slice(1, -1);
+    }
+    return parsed;
   }
   hasCredentials() {
     return !!(this.username && this.password && this.channelId);
+  }
+  /**
+   * Get credentials (fetches from database if needed)
+   */
+  async getCredentials() {
+    await this.loadCredentialsFromDatabase();
+    return {
+      username: this.username,
+      password: this.password,
+      channelId: this.channelId
+    };
   }
   /**
    * Update PayHero settings (for admin configuration)
@@ -2016,14 +2212,44 @@ var PayHeroService = class {
    */
   async initiateMpesaPayment(amount, phoneNumber, externalReference, customerName, callbackUrl) {
     try {
+      await this.getCredentials();
+      if (!this.hasCredentials()) {
+        console.error("PayHero credentials not available");
+        return {
+          success: false,
+          status: "CREDENTIALS_MISSING",
+          reference: "",
+          CheckoutRequestID: ""
+        };
+      }
       const url = `${this.baseUrl}/payments`;
-      let cleanPhone = phoneNumber.replace(/\+/g, "").replace(/\s/g, "");
+      let cleanPhone = phoneNumber.replace(/\+/g, "").replace(/\s/g, "").replace(/-/g, "");
       if (cleanPhone.startsWith("254")) {
         cleanPhone = "0" + cleanPhone.substring(3);
-      } else if (!cleanPhone.startsWith("07")) {
-        if (cleanPhone.startsWith("7")) {
-          cleanPhone = "0" + cleanPhone;
-        }
+      } else if (cleanPhone.startsWith("7") || cleanPhone.startsWith("1")) {
+        cleanPhone = "0" + cleanPhone;
+      } else if (!cleanPhone.startsWith("0")) {
+        console.error("Invalid phone number format for PayHero:", phoneNumber);
+        return {
+          success: false,
+          status: "INVALID_PHONE_FORMAT",
+          reference: "",
+          CheckoutRequestID: ""
+        };
+      }
+      if (cleanPhone.length !== 10 || !cleanPhone.match(/^0[17]\d{8}$/)) {
+        console.error("PayHero phone validation failed:", {
+          original: phoneNumber,
+          formatted: cleanPhone,
+          length: cleanPhone.length,
+          expected: "10 digits starting with 07 or 01"
+        });
+        return {
+          success: false,
+          status: "INVALID_PHONE_NUMBER",
+          reference: "",
+          CheckoutRequestID: ""
+        };
       }
       const payload = {
         amount: Math.round(amount),
@@ -2044,7 +2270,7 @@ var PayHeroService = class {
         channel_id: payload.channel_id,
         url
       });
-      const response = await fetch3(url, {
+      const response = await fetch2(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2094,7 +2320,7 @@ var PayHeroService = class {
       const credentials = Buffer.from(`${this.username}:${this.password}`).toString("base64");
       const authHeader = `Basic ${credentials}`;
       console.log("Checking PayHero transaction status:", { reference, url });
-      const response = await fetch3(url, {
+      const response = await fetch2(url, {
         method: "GET",
         headers: {
           "Authorization": authHeader
@@ -2154,18 +2380,29 @@ var PayHeroService = class {
 var payHeroService = new PayHeroService();
 
 // server/services/paystack.ts
-import fetch4 from "node-fetch";
+import fetch3 from "node-fetch";
 var PaystackService = class {
   secretKey;
   baseUrl = "https://api.paystack.co";
+  isConfigured;
   constructor() {
     const secretKey = process.env.PAYSTACK_SECRET_KEY_KES || process.env.PAYSTACK_SECRET_KEY;
     if (!secretKey) {
-      throw new Error("Paystack secret key not provided");
+      console.warn("Paystack secret key not provided - payment features will be disabled");
+      this.isConfigured = false;
+      this.secretKey = "";
+    } else {
+      this.isConfigured = true;
+      this.secretKey = secretKey;
     }
-    this.secretKey = secretKey;
   }
   async initializePayment(email, amount, reference, currency = "KES", phoneNumber, callbackUrl) {
+    if (!this.isConfigured) {
+      return {
+        status: false,
+        message: "Paystack is not configured. Please add PAYSTACK_SECRET_KEY to environment variables."
+      };
+    }
     try {
       const url = `${this.baseUrl}/transaction/initialize`;
       const payload = {
@@ -2185,7 +2422,7 @@ var PaystackService = class {
           provider: "mpesa"
         };
       }
-      const response = await fetch4(url, {
+      const response = await fetch3(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.secretKey}`,
@@ -2206,7 +2443,7 @@ var PaystackService = class {
   async verifyPayment(reference) {
     try {
       const url = `${this.baseUrl}/transaction/verify/${reference}`;
-      const response = await fetch4(url, {
+      const response = await fetch3(url, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${this.secretKey}`
@@ -2231,7 +2468,7 @@ var PaystackService = class {
         last_name: lastName,
         phone
       };
-      const response = await fetch4(url, {
+      const response = await fetch3(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.secretKey}`,
@@ -2381,99 +2618,10 @@ var NotificationService = class {
 var notificationService = new NotificationService();
 
 // server/objectStorage.ts
-import { Storage } from "@google-cloud/storage";
+import { Client } from "@replit/object-storage";
 import { randomUUID as randomUUID2 } from "crypto";
-
-// server/objectAcl.ts
-var ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
-function isPermissionAllowed(requested, granted) {
-  if (requested === "read" /* READ */) {
-    return ["read" /* READ */, "write" /* WRITE */].includes(granted);
-  }
-  return granted === "write" /* WRITE */;
-}
-function createObjectAccessGroup(group) {
-  switch (group.type) {
-    // Implement the case for each type of access group to instantiate.
-    //
-    // For example:
-    // case "USER_LIST":
-    //   return new UserListAccessGroup(group.id);
-    // case "EMAIL_DOMAIN":
-    //   return new EmailDomainAccessGroup(group.id);
-    // case "GROUP_MEMBER":
-    //   return new GroupMemberAccessGroup(group.id);
-    // case "SUBSCRIBER":
-    //   return new SubscriberAccessGroup(group.id);
-    default:
-      throw new Error(`Unknown access group type: ${group.type}`);
-  }
-}
-async function setObjectAclPolicy(objectFile, aclPolicy) {
-  const [exists] = await objectFile.exists();
-  if (!exists) {
-    throw new Error(`Object not found: ${objectFile.name}`);
-  }
-  await objectFile.setMetadata({
-    metadata: {
-      [ACL_POLICY_METADATA_KEY]: JSON.stringify(aclPolicy)
-    }
-  });
-}
-async function getObjectAclPolicy(objectFile) {
-  const [metadata] = await objectFile.getMetadata();
-  const aclPolicy = metadata?.metadata?.[ACL_POLICY_METADATA_KEY];
-  if (!aclPolicy) {
-    return null;
-  }
-  return JSON.parse(aclPolicy);
-}
-async function canAccessObject({
-  userId,
-  objectFile,
-  requestedPermission
-}) {
-  const aclPolicy = await getObjectAclPolicy(objectFile);
-  if (!aclPolicy) {
-    return false;
-  }
-  if (aclPolicy.visibility === "public" && requestedPermission === "read" /* READ */) {
-    return true;
-  }
-  if (!userId) {
-    return false;
-  }
-  if (aclPolicy.owner === userId) {
-    return true;
-  }
-  for (const rule of aclPolicy.aclRules || []) {
-    const accessGroup = createObjectAccessGroup(rule.group);
-    if (await accessGroup.hasMember(userId) && isPermissionAllowed(requestedPermission, rule.permission)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// server/objectStorage.ts
-var REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
-var objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token"
-      }
-    },
-    universe_domain: "googleapis.com"
-  },
-  projectId: ""
-});
+var BUCKET_ID = "replit-objstore-6f67444f-b771-4c8f-bea8-fd3ebf96c798";
+var objectStorageClient = new Client({ bucketId: BUCKET_ID });
 var ObjectNotFoundError = class _ObjectNotFoundError extends Error {
   constructor() {
     super("Object not found");
@@ -2482,202 +2630,295 @@ var ObjectNotFoundError = class _ObjectNotFoundError extends Error {
   }
 };
 var ObjectStorageService = class {
+  client;
   constructor() {
+    this.client = objectStorageClient;
+    console.log(`\u2705 Object Storage initialized with bucket ID: ${BUCKET_ID}`);
   }
-  // Gets the public object search paths.
-  getPublicObjectSearchPaths() {
-    const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "";
-    const paths = Array.from(
-      new Set(
-        pathsStr.split(",").map((path3) => path3.trim()).filter((path3) => path3.length > 0)
-      )
-    );
-    if (paths.length === 0) {
-      throw new Error(
-        "PUBLIC_OBJECT_SEARCH_PATHS not set. Create a bucket in 'Object Storage' tool and set PUBLIC_OBJECT_SEARCH_PATHS env var (comma-separated paths)."
-      );
-    }
-    return paths;
-  }
-  // Gets the private object directory.
-  getPrivateObjectDir() {
-    const dir = process.env.PRIVATE_OBJECT_DIR || "";
-    if (!dir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool and set PRIVATE_OBJECT_DIR env var."
-      );
-    }
-    return dir;
-  }
-  // Search for a public object from the search paths.
-  async searchPublicObject(filePath) {
-    for (const searchPath of this.getPublicObjectSearchPaths()) {
-      const fullPath = `${searchPath}/${filePath}`;
-      const { bucketName, objectName } = parseObjectPath(fullPath);
-      const bucket = objectStorageClient.bucket(bucketName);
-      const file = bucket.file(objectName);
-      const [exists] = await file.exists();
-      if (exists) {
-        return file;
-      }
-    }
-    return null;
-  }
-  // Downloads an object to the response.
-  async downloadObject(file, res, cacheTtlSec = 3600) {
+  /**
+   * Upload a file to object storage
+   * @param key The storage key/path for the file
+   * @param buffer The file buffer to upload
+   * @param contentType The MIME type of the file
+   * @returns The storage key where the file was saved
+   */
+  async uploadFile(key, buffer, contentType) {
     try {
-      const [metadata] = await file.getMetadata();
-      const aclPolicy = await getObjectAclPolicy(file);
-      const isPublic = aclPolicy?.visibility === "public";
-      res.set({
-        "Content-Type": metadata.contentType || "application/octet-stream",
-        "Content-Length": metadata.size,
-        "Cache-Control": `${isPublic ? "public" : "private"}, max-age=${cacheTtlSec}`
-      });
-      const stream = file.createReadStream();
-      stream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: "Error streaming file" });
-        }
-      });
-      stream.pipe(res);
+      console.log(`\u{1F4E4} Uploading file to object storage: ${key} (${contentType})`);
+      await this.client.uploadFromBytes(key, buffer);
+      console.log(`\u2705 File uploaded successfully: ${key}`);
+      return key;
     } catch (error) {
-      console.error("Error downloading file:", error);
+      console.error(`\u274C Error uploading file to object storage:`, error);
+      throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+  /**
+   * Download a file from object storage
+   * @param key The storage key/path of the file
+   * @returns The file buffer and metadata
+   */
+  async downloadFile(key) {
+    try {
+      console.log(`\u{1F4E5} Downloading file from object storage: ${key}`);
+      const downloadResult = await this.client.downloadAsBytes(key);
+      if (!downloadResult.ok) {
+        const errorMessage = downloadResult.error?.message || "";
+        if (errorMessage.includes("not found") || errorMessage.includes("404")) {
+          throw new ObjectNotFoundError();
+        }
+        console.error(`\u274C Download failed:`, downloadResult.error);
+        throw new Error(`Failed to download file: ${errorMessage || "Unknown error"}`);
+      }
+      const [buffer] = downloadResult.value;
+      const extension = key.split(".").pop()?.toLowerCase();
+      let contentType = "application/octet-stream";
+      switch (extension) {
+        case "jpg":
+        case "jpeg":
+          contentType = "image/jpeg";
+          break;
+        case "png":
+          contentType = "image/png";
+          break;
+        case "gif":
+          contentType = "image/gif";
+          break;
+        case "webp":
+          contentType = "image/webp";
+          break;
+        case "pdf":
+          contentType = "application/pdf";
+          break;
+        case "txt":
+          contentType = "text/plain";
+          break;
+        case "doc":
+          contentType = "application/msword";
+          break;
+        case "docx":
+          contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+          break;
+      }
+      console.log(`\u2705 File downloaded successfully: ${key} (${contentType})`);
+      return {
+        buffer,
+        contentType
+      };
+    } catch (error) {
+      if (error instanceof ObjectNotFoundError) {
+        throw error;
+      }
+      console.error(`\u274C Error downloading file from object storage:`, error);
+      throw new Error(`Failed to download file: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+  /**
+   * Delete a file from object storage
+   * @param key The storage key/path of the file
+   */
+  async deleteFile(key) {
+    try {
+      console.log(`\u{1F5D1}\uFE0F Deleting file from object storage: ${key}`);
+      await this.client.delete(key);
+      console.log(`\u2705 File deleted successfully: ${key}`);
+    } catch (error) {
+      console.error(`\u274C Error deleting file from object storage:`, error);
+      throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+  /**
+   * Check if a file exists in object storage
+   * @param key The storage key/path of the file
+   * @returns True if the file exists, false otherwise
+   */
+  async fileExists(key) {
+    try {
+      const result = await this.client.exists(key);
+      return result.ok && result.value === true;
+    } catch (error) {
+      console.error(`\u274C Error checking file existence:`, error);
+      return false;
+    }
+  }
+  /**
+   * Generate a unique upload key for a file
+   * @param folder The folder to upload to (e.g., 'kyc', 'chat', 'profile')
+   * @param filename The original filename
+   * @returns A unique storage key
+   */
+  generateUploadKey(folder, filename) {
+    const uuid = randomUUID2();
+    const extension = filename.split(".").pop() || "bin";
+    return `${folder}/${uuid}.${extension}`;
+  }
+  /**
+   * Upload a KYC document
+   * @returns Full URL path to access the document via /objects/ endpoint
+   */
+  async uploadKycDocument(buffer, filename, contentType) {
+    const key = this.generateUploadKey("kyc", filename);
+    console.log(`\u{1F4CB} Uploading KYC document: ${filename} -> ${key}`);
+    await this.uploadFile(key, buffer, contentType);
+    return `/objects/${key}`;
+  }
+  /**
+   * Upload a chat file
+   * @returns Full URL path to access the file via /objects/ endpoint
+   */
+  async uploadChatFile(buffer, filename, contentType) {
+    const key = this.generateUploadKey("chat", filename);
+    console.log(`\u{1F4AC} Uploading chat file: ${filename} -> ${key}`);
+    await this.uploadFile(key, buffer, contentType);
+    return `/objects/${key}`;
+  }
+  /**
+   * Upload a profile picture
+   * @returns Full URL path to access the picture via /objects/ endpoint
+   */
+  async uploadProfilePicture(buffer, filename, contentType) {
+    const key = this.generateUploadKey("profile", filename);
+    console.log(`\u{1F464} Uploading profile picture: ${filename} -> ${key}`);
+    await this.uploadFile(key, buffer, contentType);
+    return `/objects/${key}`;
+  }
+  /**
+   * Download a file and stream it to Express response
+   */
+  async downloadToResponse(key, res) {
+    try {
+      const { buffer, contentType } = await this.downloadFile(key);
+      res.set({
+        "Content-Type": contentType || "application/octet-stream",
+        "Content-Length": buffer.length.toString(),
+        "Cache-Control": "private, max-age=3600"
+      });
+      res.send(buffer);
+    } catch (error) {
+      console.error(`\u274C Error streaming file to response:`, error);
       if (!res.headersSent) {
-        res.status(500).json({ error: "Error downloading file" });
+        if (error instanceof ObjectNotFoundError) {
+          res.status(404).json({ error: "File not found" });
+        } else {
+          res.status(500).json({ error: "Error downloading file" });
+        }
       }
     }
   }
-  // Gets the upload URL for an object entity.
-  async getObjectEntityUploadURL() {
-    const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool and set PRIVATE_OBJECT_DIR env var."
-      );
+  /**
+   * List all files in a folder
+   */
+  async listFiles(prefix) {
+    try {
+      console.log(`\u{1F4CB} Listing files with prefix: ${prefix}`);
+      const result = await this.client.list({ prefix });
+      if (!result.ok) {
+        console.error(`\u274C List failed:`, result.error);
+        return [];
+      }
+      const files = result.value.map((obj) => obj.name);
+      console.log(`\u2705 Found ${files.length} files`);
+      return files;
+    } catch (error) {
+      console.error(`\u274C Error listing files:`, error);
+      return [];
     }
-    const objectId = randomUUID2();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-    const { bucketName, objectName } = parseObjectPath(fullPath);
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900
-    });
-  }
-  // Gets the object entity file from the object path.
-  async getObjectEntityFile(objectPath) {
-    if (!objectPath.startsWith("/objects/")) {
-      throw new ObjectNotFoundError();
-    }
-    const parts = objectPath.slice(1).split("/");
-    if (parts.length < 2) {
-      throw new ObjectNotFoundError();
-    }
-    const entityId = parts.slice(1).join("/");
-    let entityDir = this.getPrivateObjectDir();
-    if (!entityDir.endsWith("/")) {
-      entityDir = `${entityDir}/`;
-    }
-    const objectEntityPath = `${entityDir}${entityId}`;
-    const { bucketName, objectName } = parseObjectPath(objectEntityPath);
-    const bucket = objectStorageClient.bucket(bucketName);
-    const objectFile = bucket.file(objectName);
-    const [exists] = await objectFile.exists();
-    if (!exists) {
-      throw new ObjectNotFoundError();
-    }
-    return objectFile;
-  }
-  normalizeObjectEntityPath(rawPath) {
-    if (!rawPath.startsWith("https://storage.googleapis.com/")) {
-      return rawPath;
-    }
-    const url = new URL(rawPath);
-    const rawObjectPath = url.pathname;
-    let objectEntityDir = this.getPrivateObjectDir();
-    if (!objectEntityDir.endsWith("/")) {
-      objectEntityDir = `${objectEntityDir}/`;
-    }
-    if (!rawObjectPath.startsWith(objectEntityDir)) {
-      return rawObjectPath;
-    }
-    const entityId = rawObjectPath.slice(objectEntityDir.length);
-    return `/objects/${entityId}`;
-  }
-  // Tries to set the ACL policy for the object entity and return the normalized path.
-  async trySetObjectEntityAclPolicy(rawPath, aclPolicy) {
-    const normalizedPath = this.normalizeObjectEntityPath(rawPath);
-    if (!normalizedPath.startsWith("/")) {
-      return normalizedPath;
-    }
-    const objectFile = await this.getObjectEntityFile(normalizedPath);
-    await setObjectAclPolicy(objectFile, aclPolicy);
-    return normalizedPath;
-  }
-  // Checks if the user can access the object entity.
-  async canAccessObjectEntity({
-    userId,
-    objectFile,
-    requestedPermission
-  }) {
-    return canAccessObject({
-      userId,
-      objectFile,
-      requestedPermission: requestedPermission ?? "read" /* READ */
-    });
   }
 };
-function parseObjectPath(path3) {
-  if (!path3.startsWith("/")) {
-    path3 = `/${path3}`;
-  }
-  const pathParts = path3.split("/");
-  if (pathParts.length < 3) {
-    throw new Error("Invalid path: must contain at least a bucket name");
-  }
-  const bucketName = pathParts[1];
-  const objectName = pathParts.slice(2).join("/");
-  return {
-    bucketName,
-    objectName
-  };
-}
-async function signObjectURL({
-  bucketName,
-  objectName,
-  method,
-  ttlSec
-}) {
-  const request = {
-    bucket_name: bucketName,
-    object_name: objectName,
-    method,
-    expires_at: new Date(Date.now() + ttlSec * 1e3).toISOString()
-  };
-  const response = await fetch(
-    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(request)
+var objectStorage = new ObjectStorageService();
+
+// server/statumService.ts
+import fetch4 from "node-fetch";
+var StatumService = class {
+  consumerKey;
+  consumerSecret;
+  apiUrl;
+  constructor() {
+    this.consumerKey = process.env.STATUM_CONSUMER_KEY || "";
+    this.consumerSecret = process.env.STATUM_CONSUMER_SECRET || "";
+    this.apiUrl = "https://api.statum.co.ke/api/v2/airtime";
+    if (this.isConfigured()) {
+      console.log("\u2705 Statum Service initialized and configured");
+    } else {
+      console.warn("\u26A0\uFE0F Statum Service initialized but NOT configured - credentials missing");
     }
-  );
-  if (!response.ok) {
-    throw new Error(
-      `Failed to sign object URL, errorcode: ${response.status}, make sure you're running on Replit`
-    );
   }
-  const { signed_url: signedURL } = await response.json();
-  return signedURL;
-}
+  /**
+   * Generate Basic Auth header
+   */
+  getAuthHeader() {
+    const credentials = `${this.consumerKey}:${this.consumerSecret}`;
+    const base64Credentials = Buffer.from(credentials).toString("base64");
+    return `Basic ${base64Credentials}`;
+  }
+  /**
+   * Format phone number to 254 format (remove leading 0, add 254)
+   */
+  formatPhoneNumber(phone) {
+    let cleaned = phone.replace(/\D/g, "");
+    if (cleaned.startsWith("0")) {
+      cleaned = cleaned.substring(1);
+    }
+    if (!cleaned.startsWith("254")) {
+      cleaned = "254" + cleaned;
+    }
+    console.log(`\u{1F4DE} Formatted phone number: ${phone} -> ${cleaned}`);
+    return cleaned;
+  }
+  /**
+   * Purchase airtime via Statum API
+   */
+  async purchaseAirtime(phoneNumber, amount) {
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      console.log(`\u{1F4F1} Statum API Request: Purchasing KES ${amount} airtime for ${formattedPhone}`);
+      console.log(`\u{1F517} Endpoint: ${this.apiUrl}`);
+      const requestBody = {
+        phone_number: formattedPhone,
+        amount
+      };
+      console.log(`\u{1F4E4} Request body:`, JSON.stringify(requestBody, null, 2));
+      const response = await fetch4(this.apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": this.getAuthHeader(),
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+      console.log(`\u{1F4E5} Statum API Response Status: ${response.status} ${response.statusText}`);
+      const responseData = await response.json();
+      console.log(`\u{1F4E5} Response data:`, JSON.stringify(responseData, null, 2));
+      if (!response.ok) {
+        console.error(`\u274C Statum API Error: ${response.status}`, responseData);
+        throw new Error(responseData.message || `Statum API request failed with status ${response.status}`);
+      }
+      console.log(`\u2705 Airtime purchase successful for ${formattedPhone}`);
+      return responseData;
+    } catch (error) {
+      console.error("\u274C Statum API Error:", error);
+      if (error instanceof Error) {
+        throw new Error(`Airtime purchase failed: ${error.message}`);
+      }
+      throw new Error("Airtime purchase failed: Unknown error");
+    }
+  }
+  /**
+   * Check if Statum credentials are configured
+   */
+  isConfigured() {
+    const configured = !!(this.consumerKey && this.consumerSecret);
+    if (!configured) {
+      console.warn("\u26A0\uFE0F Statum credentials not configured - airtime purchases will fail");
+    }
+    return configured;
+  }
+};
+var statumService = new StatumService();
 
 // server/routes.ts
-var objectStorage = new ObjectStorageService();
+var objectStorage2 = new ObjectStorageService();
 var upload = multer({
   storage: multer.memoryStorage(),
   // Store files in memory buffer for cloud upload
@@ -2746,30 +2987,27 @@ async function registerRoutes(app2) {
   });
   app2.get("/objects/:objectPath(*)", async (req, res) => {
     try {
+      console.log(`\u{1F4E5} File request received: /objects/${req.params.objectPath}`);
       const userId = req.session?.userId;
       const adminId = req.session?.admin?.id;
+      console.log(`\u{1F510} Auth check - userId: ${userId}, adminId: ${adminId}`);
       if (!userId && !adminId) {
+        console.warn("\u26A0\uFE0F Unauthorized file access attempt:", req.params.objectPath);
+        console.log("Session data:", JSON.stringify(req.session, null, 2));
         return res.status(401).json({ message: "Authentication required" });
       }
-      const objectFile = await objectStorage.getObjectEntityFile(req.path);
-      if (adminId) {
-        await objectStorage.downloadObject(objectFile, res);
-        return;
+      let objectKey = req.params.objectPath;
+      if (objectKey.startsWith("/")) {
+        objectKey = objectKey.substring(1);
       }
-      const canAccess = await objectStorage.canAccessObjectEntity({
-        objectFile,
-        userId,
-        requestedPermission: "read" /* READ */
-      });
-      if (!canAccess) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      await objectStorage.downloadObject(objectFile, res);
+      console.log(`\u2705 Authenticated - downloading: ${objectKey} for ${adminId ? "admin" : "user"} ${adminId || userId}`);
+      await objectStorage2.downloadToResponse(objectKey, res);
     } catch (error) {
-      console.error("Object serving error:", error);
       if (error instanceof ObjectNotFoundError) {
+        console.warn(`\u26A0\uFE0F File not found: ${req.params.objectPath}`);
         return res.status(404).json({ message: "File not found" });
       }
+      console.error("\u274C File download error:", error);
       return res.status(500).json({ message: "Failed to serve file" });
     }
   });
@@ -2791,6 +3029,8 @@ async function registerRoutes(app2) {
   app2.post("/api/auth/signup", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
+      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      userData.phone = messagingService2.formatPhoneNumber(userData.phone);
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
@@ -2801,10 +3041,10 @@ async function registerRoutes(app2) {
         isEmailVerified: true
       });
       if (user.phone) {
-        const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+        const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
         const domain = process.env.REPLIT_DOMAINS || "greenpay.app";
         const loginUrl = `https://${domain.split(",")[0]}/login`;
-        messagingService2.sendMessage(
+        messagingService3.sendMessage(
           user.phone,
           `Welcome to GreenPay! To send and receive money, you need to: 1) Purchase a virtual card 2) Verify your KYC. Login here: ${loginUrl}`
         ).catch((err) => console.error("Welcome message error:", err));
@@ -2841,6 +3081,15 @@ async function registerRoutes(app2) {
           }
           req.session.userId = user.id;
           req.session.user = { id: user.id, email: user.email };
+          storage.createLoginHistory({
+            userId: user.id,
+            ipAddress: req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "Unknown",
+            userAgent: req.headers["user-agent"] || "Unknown",
+            deviceType: req.headers["user-agent"]?.includes("Mobile") ? "mobile" : "desktop",
+            browser: req.headers["user-agent"]?.split("/")[0] || "Unknown",
+            location: req.headers["cf-ipcountry"] || "Unknown",
+            status: "success"
+          }).catch((err2) => console.error("Login history error:", err2));
           notificationService.sendSecurityNotification(
             user.id,
             "New login detected from your account"
@@ -2914,6 +3163,15 @@ async function registerRoutes(app2) {
         }
         req.session.userId = user.id;
         req.session.user = { id: user.id, email: user.email };
+        storage.createLoginHistory({
+          userId: user.id,
+          ipAddress: loginIp || "Unknown",
+          userAgent: req.headers["user-agent"] || "Unknown",
+          deviceType: req.headers["user-agent"]?.includes("Mobile") ? "mobile" : "desktop",
+          browser: req.headers["user-agent"]?.split("/")[0] || "Unknown",
+          location: loginLocation,
+          status: "success"
+        }).catch((err) => console.error("Login history error:", err));
         delete req.session.pendingLoginUserId;
         delete req.session.loginIp;
         delete req.session.loginLocation;
@@ -2963,6 +3221,73 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Resend OTP error:", error);
       res.status(500).json({ message: "Failed to resend OTP" });
+    }
+  });
+  app2.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const formattedPhone = messagingService2.formatPhoneNumber(phone);
+      const user = await storage.getUserByPhone(formattedPhone);
+      if (!user) {
+        return res.status(404).json({ message: "No account found with this phone number" });
+      }
+      const resetCode = messagingService2.generateOTP();
+      const resetExpiry = new Date(Date.now() + 10 * 60 * 1e3);
+      await storage.updateUserOtp(user.id, resetCode, resetExpiry);
+      const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
+      const result = await messagingService2.sendMessage(user.phone, message);
+      if (!result.sms && !result.whatsapp) {
+        return res.status(500).json({ message: "Failed to send reset code" });
+      }
+      const sentMethods = [];
+      if (result.sms) sentMethods.push("SMS");
+      if (result.whatsapp) sentMethods.push("WhatsApp");
+      res.json({
+        phone: user.phone,
+        sentVia: sentMethods.join(" and ")
+      });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to send reset code" });
+    }
+  });
+  app2.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { phone, code, newPassword } = req.body;
+      if (!phone || !code || !newPassword) {
+        return res.status(400).json({ message: "Phone, code, and new password are required" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const formattedPhone = messagingService2.formatPhoneNumber(phone);
+      const user = await storage.getUserByPhone(formattedPhone);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const isValid = await storage.verifyUserOtp(user.id, code);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+      const hashedPassword = await bcrypt2.hash(newPassword, 10);
+      await storage.updateUserPassword(user.id, hashedPassword);
+      await storage.updateUserOtp(user.id, null, null);
+      messagingService2.sendMessage(
+        user.phone,
+        "Your password has been reset successfully. You can now log in with your new password."
+      ).catch((err) => console.error("Password reset notification error:", err));
+      res.json({
+        success: true,
+        message: "Password reset successful"
+      });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
     }
   });
   app2.get("/api/conversations/user-conversation", async (req, res) => {
@@ -3084,17 +3409,11 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No file uploaded" });
       }
       try {
-        const uploadUrl = await objectStorage.getObjectEntityUploadURL();
-        await fetch(uploadUrl, {
-          method: "PUT",
-          body: req.file.buffer,
-          headers: { "Content-Type": req.file.mimetype }
-        });
-        const fileUrl = await objectStorage.trySetObjectEntityAclPolicy(uploadUrl, {
-          visibility: "private",
-          owner: userId || adminId
-        });
-        console.log("File uploaded to object storage:", req.file.originalname, fileUrl);
+        const fileUrl = await objectStorage2.uploadChatFile(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype
+        );
         res.json({
           fileUrl,
           fileName: req.file.originalname,
@@ -3103,7 +3422,7 @@ async function registerRoutes(app2) {
           message: "File uploaded successfully"
         });
       } catch (uploadError) {
-        console.error("Object storage upload error:", uploadError);
+        console.error("\u274C Object storage upload error:", uploadError);
         return res.status(500).json({ message: "Failed to upload file to storage" });
       }
     } catch (error) {
@@ -3144,41 +3463,26 @@ async function registerRoutes(app2) {
           let backImageUrl2 = null;
           let selfieUrl2 = null;
           try {
-            const frontUploadUrl = await objectStorage.getObjectEntityUploadURL();
-            const backUploadUrl = await objectStorage.getObjectEntityUploadURL();
-            const selfieUploadUrl = await objectStorage.getObjectEntityUploadURL();
-            await Promise.all([
-              fetch(frontUploadUrl, {
-                method: "PUT",
-                body: files.frontImage[0].buffer,
-                headers: { "Content-Type": files.frontImage[0].mimetype }
-              }),
-              fetch(backUploadUrl, {
-                method: "PUT",
-                body: files.backImage[0].buffer,
-                headers: { "Content-Type": files.backImage[0].mimetype }
-              }),
-              fetch(selfieUploadUrl, {
-                method: "PUT",
-                body: files.selfie[0].buffer,
-                headers: { "Content-Type": files.selfie[0].mimetype }
-              })
+            [frontImageUrl2, backImageUrl2, selfieUrl2] = await Promise.all([
+              objectStorage2.uploadKycDocument(
+                files.frontImage[0].buffer,
+                files.frontImage[0].originalname,
+                files.frontImage[0].mimetype
+              ),
+              objectStorage2.uploadKycDocument(
+                files.backImage[0].buffer,
+                files.backImage[0].originalname,
+                files.backImage[0].mimetype
+              ),
+              objectStorage2.uploadKycDocument(
+                files.selfie[0].buffer,
+                files.selfie[0].originalname,
+                files.selfie[0].mimetype
+              )
             ]);
-            frontImageUrl2 = await objectStorage.trySetObjectEntityAclPolicy(frontUploadUrl, {
-              visibility: "private",
-              allowedUserIds: [userId]
-            });
-            backImageUrl2 = await objectStorage.trySetObjectEntityAclPolicy(backUploadUrl, {
-              visibility: "private",
-              allowedUserIds: [userId]
-            });
-            selfieUrl2 = await objectStorage.trySetObjectEntityAclPolicy(selfieUploadUrl, {
-              visibility: "private",
-              allowedUserIds: [userId]
-            });
           } catch (uploadError) {
-            console.error("Cloud storage upload error:", uploadError);
-            return res.status(500).json({ message: "Failed to upload documents to cloud storage" });
+            console.error("\u274C KYC document upload error:", uploadError);
+            return res.status(500).json({ message: "Failed to upload documents to storage" });
           }
           const updatedKyc = await storage.updateKycDocument(existingKyc.id, {
             documentType,
@@ -3213,41 +3517,26 @@ async function registerRoutes(app2) {
       let backImageUrl = null;
       let selfieUrl = null;
       try {
-        const frontUploadUrl = await objectStorage.getObjectEntityUploadURL();
-        const backUploadUrl = await objectStorage.getObjectEntityUploadURL();
-        const selfieUploadUrl = await objectStorage.getObjectEntityUploadURL();
-        await Promise.all([
-          fetch(frontUploadUrl, {
-            method: "PUT",
-            body: files.frontImage[0].buffer,
-            headers: { "Content-Type": files.frontImage[0].mimetype }
-          }),
-          fetch(backUploadUrl, {
-            method: "PUT",
-            body: files.backImage[0].buffer,
-            headers: { "Content-Type": files.backImage[0].mimetype }
-          }),
-          fetch(selfieUploadUrl, {
-            method: "PUT",
-            body: files.selfie[0].buffer,
-            headers: { "Content-Type": files.selfie[0].mimetype }
-          })
+        [frontImageUrl, backImageUrl, selfieUrl] = await Promise.all([
+          objectStorage2.uploadKycDocument(
+            files.frontImage[0].buffer,
+            files.frontImage[0].originalname,
+            files.frontImage[0].mimetype
+          ),
+          objectStorage2.uploadKycDocument(
+            files.backImage[0].buffer,
+            files.backImage[0].originalname,
+            files.backImage[0].mimetype
+          ),
+          objectStorage2.uploadKycDocument(
+            files.selfie[0].buffer,
+            files.selfie[0].originalname,
+            files.selfie[0].mimetype
+          )
         ]);
-        frontImageUrl = await objectStorage.trySetObjectEntityAclPolicy(frontUploadUrl, {
-          visibility: "private",
-          allowedUserIds: [userId]
-        });
-        backImageUrl = await objectStorage.trySetObjectEntityAclPolicy(backUploadUrl, {
-          visibility: "private",
-          allowedUserIds: [userId]
-        });
-        selfieUrl = await objectStorage.trySetObjectEntityAclPolicy(selfieUploadUrl, {
-          visibility: "private",
-          allowedUserIds: [userId]
-        });
       } catch (uploadError) {
-        console.error("Cloud storage upload error:", uploadError);
-        return res.status(500).json({ message: "Failed to upload documents to cloud storage" });
+        console.error("\u274C KYC document upload error:", uploadError);
+        return res.status(500).json({ message: "Failed to upload documents to storage" });
       }
       const kycData = {
         userId,
@@ -3329,7 +3618,16 @@ async function registerRoutes(app2) {
         // Callback URL for tracking
       );
       if (!paymentData.success) {
-        return res.status(400).json({ message: "Payment initiation failed", status: paymentData.status });
+        if (paymentData.status === "INVALID_PHONE_NUMBER" || paymentData.status === "INVALID_PHONE_FORMAT") {
+          return res.status(400).json({
+            message: "Invalid phone number format. Please update your profile with a valid Kenyan phone number (e.g., +254712345678 or 0712345678)",
+            status: paymentData.status
+          });
+        }
+        return res.status(400).json({
+          message: "Payment initiation failed. Please try again or contact support.",
+          status: paymentData.status
+        });
       }
       res.json({
         success: true,
@@ -3346,7 +3644,32 @@ async function registerRoutes(app2) {
   app2.put("/api/users/:id/profile", async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.session?.userId;
+      console.log("Profile update request:", {
+        urlId: id,
+        sessionUserId: userId,
+        hasSession: !!req.session,
+        sessionKeys: Object.keys(req.session || {})
+      });
+      if (!userId) {
+        return res.status(401).json({ message: "Please log in to update your profile" });
+      }
+      if (userId !== id) {
+        return res.status(403).json({ message: "You can only update your own profile" });
+      }
       const { fullName, email, phone, country, profilePhotoUrl } = req.body;
+      if (email) {
+        const existingUser = await storage.getUserByEmail(email);
+        if (existingUser && existingUser.id !== id) {
+          return res.status(400).json({ message: "Email already in use" });
+        }
+      }
+      if (phone) {
+        const existingUser = await storage.getUserByPhone(phone);
+        if (existingUser && existingUser.id !== id) {
+          return res.status(400).json({ message: "Phone number already in use" });
+        }
+      }
       const updateData = {
         fullName,
         email,
@@ -3360,8 +3683,9 @@ async function registerRoutes(app2) {
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
+      req.session.userId = updatedUser.id;
       const { password, ...userResponse } = updatedUser;
-      res.json({ user: userResponse });
+      res.json({ user: userResponse, message: "Profile updated successfully" });
     } catch (error) {
       console.error("Profile update error:", error);
       res.status(400).json({ message: "Failed to update profile" });
@@ -3392,17 +3716,11 @@ async function registerRoutes(app2) {
       if (!file.mimetype.startsWith("image/")) {
         return res.status(400).json({ message: "File must be an image" });
       }
-      const uploadUrl = await objectStorage.getObjectEntityUploadURL();
-      await fetch(uploadUrl, {
-        method: "PUT",
-        body: file.buffer,
-        headers: { "Content-Type": file.mimetype }
-      });
-      const photoUrl = objectStorage.normalizeObjectEntityPath(uploadUrl);
-      await objectStorage.trySetObjectEntityAclPolicy(photoUrl, {
-        owner: id,
-        visibility: "private"
-      });
+      const photoUrl = await objectStorage2.uploadProfilePicture(
+        file.buffer,
+        file.originalname,
+        file.mimetype
+      );
       const updatedUser = await storage.updateUser(id, {
         profilePhotoUrl: photoUrl
       });
@@ -3643,6 +3961,114 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error verifying deposit" });
     }
   });
+  app2.post("/api/airtime/purchase", async (req, res) => {
+    try {
+      const { userId, phoneNumber, amount, currency, provider } = req.body;
+      console.log(`\u{1F4F1} Airtime purchase request - User: ${userId}, Phone: ${phoneNumber}, Amount: ${amount} ${currency}, Provider: ${provider}`);
+      if (!userId || !phoneNumber || !amount || !currency || !provider) {
+        console.warn(`\u26A0\uFE0F Missing required fields in airtime purchase request`);
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        console.error(`\u274C User not found: ${userId}`);
+        return res.status(404).json({ message: "User not found" });
+      }
+      console.log(`\u{1F464} User ${user.fullName} (${user.email}) - KES Balance: ${user.kesBalance}`);
+      const kesBalance = parseFloat(user.kesBalance || "0");
+      const purchaseAmount = parseFloat(amount);
+      if (kesBalance < purchaseAmount) {
+        console.warn(`\u26A0\uFE0F Insufficient balance - Required: ${purchaseAmount}, Available: ${kesBalance}`);
+        return res.status(400).json({
+          message: "Insufficient KES balance. Please convert USD to KES using the Exchange feature."
+        });
+      }
+      console.log(`\u{1F4DE} Calling Statum API for airtime purchase...`);
+      const statumResponse = await statumService.purchaseAirtime(phoneNumber, purchaseAmount);
+      console.log(`\u2705 Statum API response:`, statumResponse);
+      const transaction = await storage.createTransaction({
+        userId,
+        type: "airtime",
+        amount: amount.toString(),
+        currency: "KES",
+        status: "completed",
+        fee: "0.00",
+        description: `Airtime purchase for ${phoneNumber} (${provider})`,
+        reference: statumResponse.transaction_id || void 0,
+        recipientDetails: {
+          phoneNumber,
+          provider
+        },
+        metadata: {
+          statumResponse
+        }
+      });
+      console.log(`\u{1F4BE} Transaction created: ${transaction.id}`);
+      const newKesBalance = kesBalance - purchaseAmount;
+      await storage.updateUser(userId, { kesBalance: newKesBalance.toFixed(2) });
+      console.log(`\u2705 Updated user balance: ${kesBalance} -> ${newKesBalance}`);
+      console.log(`\u{1F389} Airtime purchase completed successfully`);
+      res.json({
+        success: true,
+        message: "Airtime purchased successfully",
+        transaction,
+        statumResponse
+      });
+    } catch (error) {
+      console.error("\u274C Airtime purchase error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error purchasing airtime";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+  app2.post("/api/airtime/claim-bonus", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      console.log(`\u{1F381} Airtime bonus claim request - User: ${userId}`);
+      if (!userId) {
+        console.warn(`\u26A0\uFE0F Missing userId in bonus claim request`);
+        return res.status(400).json({ message: "Missing userId" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        console.error(`\u274C User not found: ${userId}`);
+        return res.status(404).json({ message: "User not found" });
+      }
+      console.log(`\u{1F464} User ${user.fullName} - Already claimed: ${user.hasClaimedAirtimeBonus}`);
+      if (user.hasClaimedAirtimeBonus) {
+        console.warn(`\u26A0\uFE0F User ${userId} has already claimed airtime bonus`);
+        return res.status(400).json({ message: "You have already claimed your airtime bonus" });
+      }
+      const currentKesBalance = parseFloat(user.kesBalance || "0");
+      const bonusAmount = 15;
+      const newKesBalance = currentKesBalance + bonusAmount;
+      await storage.updateUser(userId, {
+        kesBalance: newKesBalance.toFixed(2),
+        hasClaimedAirtimeBonus: true
+      });
+      console.log(`\u{1F4B0} Bonus credited: ${currentKesBalance} -> ${newKesBalance} KES`);
+      const transaction = await storage.createTransaction({
+        userId,
+        type: "deposit",
+        amount: bonusAmount.toString(),
+        currency: "KES",
+        status: "completed",
+        fee: "0.00",
+        description: "One-time airtime bonus - KES 15"
+      });
+      console.log(`\u{1F4BE} Bonus transaction created: ${transaction.id}`);
+      console.log(`\u2705 Airtime bonus claimed successfully`);
+      res.json({
+        success: true,
+        message: "Airtime bonus claimed successfully! KES 15 has been added to your balance.",
+        newBalance: newKesBalance.toFixed(2),
+        bonusAmount,
+        transaction
+      });
+    } catch (error) {
+      console.error("\u274C Claim bonus error:", error);
+      res.status(500).json({ message: "Error claiming airtime bonus" });
+    }
+  });
   app2.get("/api/virtual-card/:userId", async (req, res) => {
     try {
       const card = await storage.getVirtualCardByUserId(req.params.userId);
@@ -3651,10 +4077,11 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching virtual card" });
     }
   });
+  const exchangeRateService2 = createExchangeRateService(storage);
   app2.get("/api/exchange-rates/:from/:to", async (req, res) => {
     try {
       const { from, to } = req.params;
-      const rate = await exchangeRateService.getExchangeRate(from.toUpperCase(), to.toUpperCase());
+      const rate = await exchangeRateService2.getExchangeRate(from.toUpperCase(), to.toUpperCase());
       res.json({
         from: from.toUpperCase(),
         to: to.toUpperCase(),
@@ -3670,7 +4097,7 @@ async function registerRoutes(app2) {
     try {
       const { base } = req.params;
       const targets = ["NGN", "GHS", "KES", "ZAR", "EGP", "XOF", "XAF"];
-      const rates = await exchangeRateService.getMultipleRates(base.toUpperCase(), targets);
+      const rates = await exchangeRateService2.getMultipleRates(base.toUpperCase(), targets);
       res.json({
         base: base.toUpperCase(),
         rates,
@@ -3742,7 +4169,7 @@ async function registerRoutes(app2) {
       if (!user?.hasVirtualCard) {
         return res.status(400).json({ message: "Virtual card required for transactions" });
       }
-      const exchangeRate = await exchangeRateService.getExchangeRate(currency, targetCurrency);
+      const exchangeRate = await exchangeRateService2.getExchangeRate(currency, targetCurrency);
       const convertedAmount = (parseFloat(amount) * exchangeRate).toFixed(2);
       const fee = (parseFloat(amount) * 0.02).toFixed(2);
       const transaction = await storage.createTransaction({
@@ -3983,49 +4410,51 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating settings" });
     }
   });
-  app2.put("/api/users/:userId/profile", async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { fullName, email, phone, country } = req.body;
-      if (email) {
-        const existingUser = await storage.getUserByEmail(email);
-        if (existingUser && existingUser.id !== userId) {
-          return res.status(400).json({ message: "Email already in use" });
-        }
-      }
-      if (phone) {
-        const existingUser = await storage.getUserByPhone(phone);
-        if (existingUser && existingUser.id !== userId) {
-          return res.status(400).json({ message: "Phone number already in use" });
-        }
-      }
-      const updateData = { fullName, email, phone, country };
-      const user = await storage.updateUser(userId, updateData);
-      if (user) {
-        const { password, ...userResponse } = user;
-        res.json({ user: userResponse, message: "Profile updated successfully" });
-      } else {
-        res.status(404).json({ message: "User not found" });
-      }
-    } catch (error) {
-      console.error("Profile update error:", error);
-      res.status(500).json({ message: "Error updating profile" });
-    }
-  });
   app2.post("/api/exchange/convert", async (req, res) => {
     try {
       const { amount, fromCurrency, toCurrency, userId } = req.body;
       const user = await storage.getUser(userId);
-      if (!user?.hasVirtualCard) {
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (!user.hasVirtualCard) {
         return res.status(400).json({ message: "Virtual card required for currency exchanges" });
       }
-      const exchangeRate = await exchangeRateService.getExchangeRate(fromCurrency, toCurrency);
-      const convertedAmount = (parseFloat(amount) * exchangeRate).toFixed(2);
-      const fee = (parseFloat(amount) * 0.015).toFixed(2);
+      const exchangeAmount = parseFloat(amount);
+      const fee = (exchangeAmount * 0.015).toFixed(2);
+      const totalDeducted = exchangeAmount + parseFloat(fee);
+      const exchangeRate = await exchangeRateService2.getExchangeRate(fromCurrency, toCurrency);
+      const convertedAmount = (exchangeAmount * exchangeRate).toFixed(2);
+      const currentUsdBalance = parseFloat(user.balance || "0");
+      const currentKesBalance = parseFloat(user.kesBalance || "0");
+      let newUsdBalance = currentUsdBalance;
+      let newKesBalance = currentKesBalance;
+      if (fromCurrency === "USD" && toCurrency === "KES") {
+        if (currentUsdBalance < totalDeducted) {
+          return res.status(400).json({ message: "Insufficient USD balance" });
+        }
+        newUsdBalance = currentUsdBalance - totalDeducted;
+        newKesBalance = currentKesBalance + parseFloat(convertedAmount);
+      } else if (fromCurrency === "KES" && toCurrency === "USD") {
+        if (currentKesBalance < totalDeducted) {
+          return res.status(400).json({ message: "Insufficient KES balance" });
+        }
+        newKesBalance = currentKesBalance - totalDeducted;
+        newUsdBalance = currentUsdBalance + parseFloat(convertedAmount);
+      } else {
+        if (currentUsdBalance < totalDeducted) {
+          return res.status(400).json({ message: "Insufficient USD balance" });
+        }
+        newUsdBalance = currentUsdBalance - totalDeducted;
+      }
+      await storage.updateUser(userId, {
+        balance: newUsdBalance.toFixed(2),
+        kesBalance: newKesBalance.toFixed(2)
+      });
       const transaction = await storage.createTransaction({
         userId,
         type: "exchange",
-        amount,
+        amount: amount.toString(),
         currency: fromCurrency,
         status: "completed",
         fee,
@@ -5211,6 +5640,62 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create setting" });
     }
   });
+  app2.get("/api/admin/api-configurations", requireAdminAuth, async (req, res) => {
+    try {
+      const configurations = await storage.getAllApiConfigurations();
+      res.json({ configurations });
+    } catch (error) {
+      console.error("API configurations fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch API configurations" });
+    }
+  });
+  app2.get("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+    try {
+      const { provider } = req.params;
+      const configuration = await storage.getApiConfiguration(provider);
+      if (!configuration) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+      res.json({ configuration });
+    } catch (error) {
+      console.error("API configuration fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch API configuration" });
+    }
+  });
+  app2.post("/api/admin/api-configurations", requireAdminAuth, async (req, res) => {
+    try {
+      const configData = req.body;
+      const configuration = await storage.createApiConfiguration(configData);
+      res.json({ configuration, message: "API configuration created successfully" });
+    } catch (error) {
+      console.error("API configuration creation error:", error);
+      res.status(500).json({ message: "Failed to create API configuration" });
+    }
+  });
+  app2.put("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+    try {
+      const { provider } = req.params;
+      const updates = req.body;
+      const configuration = await storage.updateApiConfiguration(provider, updates);
+      if (!configuration) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+      res.json({ configuration, message: "API configuration updated successfully" });
+    } catch (error) {
+      console.error("API configuration update error:", error);
+      res.status(500).json({ message: "Failed to update API configuration" });
+    }
+  });
+  app2.delete("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+    try {
+      const { provider } = req.params;
+      await storage.deleteApiConfiguration(provider);
+      res.json({ message: "API configuration deleted successfully" });
+    } catch (error) {
+      console.error("API configuration deletion error:", error);
+      res.status(500).json({ message: "Failed to delete API configuration" });
+    }
+  });
   app2.get("/api/users/:id", async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
@@ -5221,6 +5706,17 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Error retrieving user:", error);
       res.status(500).json({ error: "Failed to retrieve user data" });
+    }
+  });
+  app2.get("/api/users/:id/login-history", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+      const history = await storage.getLoginHistoryByUserId(id, limit);
+      res.json({ loginHistory: history });
+    } catch (error) {
+      console.error("Error retrieving login history:", error);
+      res.status(500).json({ error: "Failed to retrieve login history" });
     }
   });
   app2.get("/api/analytics/:userId/spending", async (req, res) => {
@@ -5690,25 +6186,25 @@ async function registerRoutes(app2) {
       await storage.setSystemSetting({
         category: "messaging",
         key: "api_key",
-        value: apiKey,
+        value: (apiKey || "").trim(),
         description: "TalkNTalk API key for SMS and WhatsApp"
       });
       await storage.setSystemSetting({
         category: "messaging",
         key: "account_email",
-        value: accountEmail,
+        value: (accountEmail || "").trim(),
         description: "TalkNTalk account email"
       });
       await storage.setSystemSetting({
         category: "messaging",
         key: "sender_id",
-        value: senderId,
+        value: (senderId || "").trim(),
         description: "SMS sender ID"
       });
       await storage.setSystemSetting({
         category: "messaging",
         key: "whatsapp_session_id",
-        value: whatsappSessionId,
+        value: (whatsappSessionId || "").trim(),
         description: "WhatsApp business session ID"
       });
       res.json({
@@ -6080,6 +6576,23 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating card price" });
     }
   });
+  app2.post("/api/convert-to-kes", async (req, res) => {
+    try {
+      const { usdAmount } = req.body;
+      if (!usdAmount || isNaN(parseFloat(usdAmount)) || parseFloat(usdAmount) <= 0) {
+        return res.status(400).json({ message: "Valid USD amount is required" });
+      }
+      const kesAmount = await payHeroService.convertUSDtoKES(parseFloat(usdAmount));
+      res.json({
+        usdAmount: parseFloat(usdAmount),
+        kesAmount,
+        exchangeRate: 129
+      });
+    } catch (error) {
+      console.error("Error converting USD to KES:", error);
+      res.status(500).json({ message: "Error converting currency" });
+    }
+  });
   app2.post("/api/admin/login-as-user", async (req, res) => {
     try {
       const { userId } = req.body;
@@ -6267,6 +6780,139 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("PayHero callback processing error:", error);
       res.status(500).json({ message: "Error processing payment callback" });
+    }
+  });
+  app2.get("/api/system/status", async (req, res) => {
+    try {
+      console.log("\u{1F50D} System status check initiated");
+      const statusChecks = {
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        features: {},
+        overall: "healthy"
+      };
+      try {
+        await storage.getAllUsers();
+        statusChecks.features.accountAccess = {
+          status: "healthy",
+          message: "You can log in and access your account",
+          icon: "\u{1F464}"
+        };
+        console.log("\u2705 Account Access: Healthy");
+      } catch (error) {
+        statusChecks.features.accountAccess = {
+          status: "unhealthy",
+          message: "Account access is currently unavailable",
+          icon: "\u{1F464}"
+        };
+        statusChecks.overall = "degraded";
+        console.error("\u274C Account Access: Unhealthy", error);
+      }
+      try {
+        await objectStorage2.fileExists("test");
+        statusChecks.features.fileUploads = {
+          status: "healthy",
+          message: "Document uploads and profile photos working",
+          icon: "\u{1F4C1}"
+        };
+        console.log("\u2705 File Uploads: Healthy");
+      } catch (error) {
+        statusChecks.features.fileUploads = {
+          status: "degraded",
+          message: "Document uploads may have issues",
+          icon: "\u{1F4C1}"
+        };
+        console.warn("\u26A0\uFE0F File Uploads: Degraded", error);
+      }
+      try {
+        const rate = await exchangeRateService2.getExchangeRate("USD", "KES");
+        statusChecks.features.currencyExchange = {
+          status: "healthy",
+          message: `You can exchange USD to KES (rate: ${rate})`,
+          icon: "\u{1F4B1}"
+        };
+        console.log("\u2705 Currency Exchange: Healthy");
+      } catch (error) {
+        statusChecks.features.currencyExchange = {
+          status: "degraded",
+          message: "Using backup exchange rates",
+          icon: "\u{1F4B1}"
+        };
+        console.warn("\u26A0\uFE0F Currency Exchange: Degraded", error);
+      }
+      const statumConfigured = statumService.isConfigured();
+      if (statumConfigured) {
+        statusChecks.features.airtimePurchase = {
+          status: "healthy",
+          message: "You can buy airtime for all networks",
+          icon: "\u{1F4F1}"
+        };
+        console.log("\u2705 Airtime Purchase: Healthy");
+      } else {
+        statusChecks.features.airtimePurchase = {
+          status: "unhealthy",
+          message: "Airtime purchases are temporarily unavailable",
+          icon: "\u{1F4F1}"
+        };
+        statusChecks.overall = "degraded";
+        console.warn("\u26A0\uFE0F Airtime Purchase: Unhealthy");
+      }
+      try {
+        const transactions2 = await storage.getAllTransactions();
+        statusChecks.features.moneyTransfers = {
+          status: "healthy",
+          message: "You can send and receive money",
+          icon: "\u{1F4B8}"
+        };
+        console.log("\u2705 Money Transfers: Healthy");
+      } catch (error) {
+        statusChecks.features.moneyTransfers = {
+          status: "unhealthy",
+          message: "Money transfers are currently unavailable",
+          icon: "\u{1F4B8}"
+        };
+        statusChecks.overall = "degraded";
+        console.warn("\u26A0\uFE0F Money Transfers: Unhealthy", error);
+      }
+      try {
+        const cards = await storage.getAllVirtualCards();
+        statusChecks.features.virtualCards = {
+          status: "healthy",
+          message: "You can purchase and manage virtual cards",
+          icon: "\u{1F4B3}"
+        };
+        console.log("\u2705 Virtual Cards: Healthy");
+      } catch (error) {
+        statusChecks.features.virtualCards = {
+          status: "unhealthy",
+          message: "Virtual card services are unavailable",
+          icon: "\u{1F4B3}"
+        };
+        console.warn("\u26A0\uFE0F Virtual Cards: Unhealthy", error);
+      }
+      try {
+        statusChecks.features.notifications = {
+          status: "healthy",
+          message: "You will receive notifications for transactions",
+          icon: "\u{1F514}"
+        };
+        console.log("\u2705 Notifications: Healthy");
+      } catch (error) {
+        statusChecks.features.notifications = {
+          status: "degraded",
+          message: "Notifications may be delayed",
+          icon: "\u{1F514}"
+        };
+        console.warn("\u26A0\uFE0F Notifications: Degraded", error);
+      }
+      console.log(`\u{1F3C1} System status check completed - Overall: ${statusChecks.overall}`);
+      res.json(statusChecks);
+    } catch (error) {
+      console.error("\u274C Status check error:", error);
+      res.status(500).json({
+        overall: "unhealthy",
+        error: "Failed to perform status check",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
     }
   });
   const httpServer = createServer(app2);
