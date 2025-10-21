@@ -614,7 +614,7 @@ export default function DashboardPage() {
                         : 'text-red-600'
                     }`}>
                       {transaction.type === 'receive' || transaction.type === 'deposit' ? '+' : '-'}
-                      ${transaction.amount}
+                      {transaction.currency?.toUpperCase() === 'KES' ? 'KSh ' : '$'}{transaction.amount}
                     </p>
                     <p className={`text-xs ${
                       transaction.status === 'completed'

@@ -242,7 +242,7 @@ export default function AdminDashboard() {
                           <p className="text-xs text-gray-500">{txn.description}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold">${txn.amount}</p>
+                          <p className="text-sm font-bold">{txn.currency?.toUpperCase() === 'KES' ? 'KSh ' : '$'}{txn.amount}</p>
                           <Badge variant={txn.status === 'completed' ? 'default' : 'secondary'}>
                             {txn.status}
                           </Badge>

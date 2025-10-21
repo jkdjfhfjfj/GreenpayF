@@ -72,6 +72,17 @@ export default function TransactionsPage() {
     return type === "send" || type === "withdraw" || type === "card_purchase" || type === "exchange" ? "-" : "+";
   };
 
+  const getCurrencySymbol = (currency: string) => {
+    switch (currency?.toUpperCase()) {
+      case "KES":
+        return "KSh ";
+      case "USD":
+        return "$";
+      default:
+        return "$";
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background pb-20">
@@ -129,7 +140,7 @@ export default function TransactionsPage() {
       </motion.div>
 
       <div className="p-6">
-        {/* Monthly Summary */}
+        {/* Monthly Summary - Separate USD and KES */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -137,26 +148,57 @@ export default function TransactionsPage() {
           className="bg-card p-4 rounded-xl border border-border mb-6 elevation-1"
         >
           <div className="text-center">
-            <p className="text-sm text-muted-foreground">This Month</p>
-            <p className="text-2xl font-bold text-primary" data-testid="text-monthly-total">
-              ${transactions.reduce((total: number, txn: any) => 
-                txn.status === 'completed' ? total + parseFloat(txn.amount) : total, 0
-              ).toFixed(2)}
-            </p>
-            <div className="flex justify-center space-x-6 mt-4">
+            <p className="text-sm text-muted-foreground mb-3">This Month</p>
+            {/* Show USD totals if any USD transactions exist */}
+            {transactions.some((txn: any) => txn.currency?.toUpperCase() !== 'KES') && (
+              <div className="mb-2">
+                <p className="text-xl font-bold text-primary" data-testid="text-monthly-total-usd">
+                  ${transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES').reduce((total: number, txn: any) => 
+                    txn.status === 'completed' ? total + parseFloat(txn.amount) : total, 0
+                  ).toFixed(2)}
+                </p>
+              </div>
+            )}
+            {/* Show KES totals if any KES transactions exist */}
+            {transactions.some((txn: any) => txn.currency?.toUpperCase() === 'KES') && (
+              <div className="mb-2">
+                <p className="text-xl font-bold text-primary" data-testid="text-monthly-total-kes">
+                  KSh {transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES').reduce((total: number, txn: any) => 
+                    txn.status === 'completed' ? total + parseFloat(txn.amount) : total, 0
+                  ).toFixed(2)}
+                </p>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4 mt-4">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Sent</p>
-                <p className="font-semibold text-destructive" data-testid="text-monthly-sent">
-                  ${transactions.filter((txn: any) => (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase') && txn.status === 'completed')
-                    .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
-                </p>
+                {transactions.some((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase')) && (
+                  <p className="font-semibold text-destructive text-sm" data-testid="text-monthly-sent-usd">
+                    ${transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase') && txn.status === 'completed')
+                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
+                  </p>
+                )}
+                {transactions.some((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase')) && (
+                  <p className="font-semibold text-destructive text-sm" data-testid="text-monthly-sent-kes">
+                    KSh {transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase') && txn.status === 'completed')
+                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
+                  </p>
+                )}
               </div>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Received</p>
-                <p className="font-semibold text-primary" data-testid="text-monthly-received">
-                  ${transactions.filter((txn: any) => (txn.type === 'receive' || txn.type === 'deposit') && txn.status === 'completed')
-                    .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
-                </p>
+                {transactions.some((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'receive' || txn.type === 'deposit')) && (
+                  <p className="font-semibold text-primary text-sm" data-testid="text-monthly-received-usd">
+                    ${transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'receive' || txn.type === 'deposit') && txn.status === 'completed')
+                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
+                  </p>
+                )}
+                {transactions.some((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'receive' || txn.type === 'deposit')) && (
+                  <p className="font-semibold text-primary text-sm" data-testid="text-monthly-received-kes">
+                    KSh {transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'receive' || txn.type === 'deposit') && txn.status === 'completed')
+                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -237,7 +279,7 @@ export default function TransactionsPage() {
                           ? "text-destructive" 
                           : "text-primary"
                       }`} data-testid={`text-amount-${transaction.id}`}>
-                        {prefix}${transaction.amount}
+                        {prefix}{getCurrencySymbol(transaction.currency)}{transaction.amount}
                       </p>
                       <div className="flex items-center justify-end space-x-2">
                         {transaction.metadata?.convertedAmount && transaction.metadata?.targetCurrency && (

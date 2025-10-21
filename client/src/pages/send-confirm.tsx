@@ -39,9 +39,10 @@ export default function SendConfirmPage() {
       return response.json();
     },
     onSuccess: () => {
+      const currencySymbol = transferData.currency?.toUpperCase() === 'KES' ? 'KSh ' : '$';
       toast({
         title: "Transfer successful!",
-        description: `$${transferData.amount} has been sent to ${transferData.recipient.name}.`,
+        description: `${currencySymbol}${transferData.amount} has been sent to ${transferData.recipient.name}.`,
       });
       // Clear stored data
       sessionStorage.removeItem('selectedRecipient');
@@ -139,7 +140,7 @@ export default function SendConfirmPage() {
           <div className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-muted-foreground">You send</span>
-              <span className="font-semibold text-lg">${transferData.amount}</span>
+              <span className="font-semibold text-lg">{transferData.currency?.toUpperCase() === 'KES' ? 'KSh ' : '$'}{transferData.amount}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-muted-foreground">They receive</span>
@@ -147,15 +148,15 @@ export default function SendConfirmPage() {
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-muted-foreground">Transfer fee</span>
-              <span className="font-medium">${transferData.fee}</span>
+              <span className="font-medium">{transferData.currency?.toUpperCase() === 'KES' ? 'KSh ' : '$'}{transferData.fee}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-muted-foreground">Exchange rate</span>
-              <span className="font-medium">1 USD = {transferData.exchangeRate.toLocaleString()} NGN</span>
+              <span className="font-medium">1 {transferData.currency?.toUpperCase() || 'USD'} = {transferData.exchangeRate.toLocaleString()} NGN</span>
             </div>
             <div className="flex justify-between items-center py-2">
               <span className="font-bold">Total to pay</span>
-              <span className="font-bold text-xl text-primary">${transferData.total}</span>
+              <span className="font-bold text-xl text-primary">{transferData.currency?.toUpperCase() === 'KES' ? 'KSh ' : '$'}{transferData.total}</span>
             </div>
           </div>
         </motion.div>
