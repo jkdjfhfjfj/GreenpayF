@@ -287,8 +287,57 @@ export default function DashboardPage() {
       </motion.div>
 
       <div className="px-4 py-6 space-y-6">
-        {/* KYC and Card Status Alerts */}
-        {!isKYCVerified && (
+        {/* KYC Status Alert - Different messages based on status */}
+        {!isKYCVerified && user?.kycStatus === 'pending' && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4 rounded-xl flex items-center justify-between"
+          >
+            <div className="flex items-center">
+              <span className="material-icons text-blue-600 mr-3">hourglass_empty</span>
+              <div>
+                <p className="font-medium text-blue-900 dark:text-blue-200 text-sm">Documents Under Review</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Your KYC documents are being verified</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setLocation("/kyc")}
+              size="sm"
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs"
+              data-testid="button-view-kyc"
+            >
+              View Status
+            </Button>
+          </motion.div>
+        )}
+
+        {!isKYCVerified && user?.kycStatus === 'rejected' && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-4 rounded-xl flex items-center justify-between"
+          >
+            <div className="flex items-center">
+              <span className="material-icons text-red-600 mr-3">error_outline</span>
+              <div>
+                <p className="font-medium text-red-900 dark:text-red-200 text-sm">Verification Failed</p>
+                <p className="text-xs text-red-700 dark:text-red-300">Please resubmit your documents</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setLocation("/kyc")}
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white text-xs"
+              data-testid="button-resubmit-kyc"
+            >
+              Resubmit
+            </Button>
+          </motion.div>
+        )}
+
+        {!isKYCVerified && (!user?.kycStatus || user?.kycStatus === 'not_submitted') && (
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
