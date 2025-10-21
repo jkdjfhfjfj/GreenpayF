@@ -1359,6 +1359,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Airtime purchase endpoint
+  app.post("/api/airtime/purchase", async (req, res) => {
+    try {
+      const { userId, phoneNumber, amount, currency, provider } = req.body;
+
+      if (!userId || !phoneNumber || !amount || !currency || !provider) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Get user
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user has virtual card
+      if (!user.hasVirtualCard) {
+        return res.status(400).json({ message: "Virtual card required to purchase airtime" });
+      }
+
+      // Check balance
+      const currentBalance = parseFloat(user.balance || "0");
+      const purchaseAmount = parseFloat(amount);
+      
+      if (currentBalance < purchaseAmount) {
+        return res.status(400).json({ message: "Insufficient balance" });
+      }
+
+      // Create transaction
+      const transaction = await storage.createTransaction({
+        userId,
+        type: "airtime",
+        amount: amount.toString(),
+        currency,
+        status: "completed",
+        fee: "0.00",
+        description: `Airtime purchase for ${phoneNumber} (${provider})`,
+        recipientDetails: {
+          phoneNumber,
+          provider
+        }
+      });
+
+      // Update user balance
+      const newBalance = currentBalance - purchaseAmount;
+      await storage.updateUser(userId, { balance: newBalance.toFixed(2) });
+      
+      res.json({ 
+        success: true,
+        message: "Airtime purchased successfully",
+        transaction
+      });
+    } catch (error) {
+      console.error('Airtime purchase error:', error);
+      res.status(500).json({ message: "Error purchasing airtime" });
+    }
+  });
+
   app.get("/api/virtual-card/:userId", async (req, res) => {
     try {
       const card = await storage.getVirtualCardByUserId(req.params.userId);
