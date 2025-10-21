@@ -311,6 +311,26 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
+        {/* Welcome Bonus Notification - shown to new users who haven't received it */}
+        {!user?.hasReceivedWelcomeBonus && kesBalance === 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15 }}
+            className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 p-4 rounded-xl"
+          >
+            <div className="flex items-center">
+              <Sparkles className="w-6 h-6 text-green-600 mr-3 flex-shrink-0 animate-pulse" />
+              <div className="flex-1">
+                <p className="font-bold text-green-900 dark:text-green-200 text-sm mb-1">🎉 Welcome Bonus Coming!</p>
+                <p className="text-xs text-green-700 dark:text-green-300">
+                  You'll receive KES 10 as a welcome gift! This will be credited to your KES wallet automatically.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Quick Actions Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

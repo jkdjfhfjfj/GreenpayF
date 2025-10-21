@@ -85,17 +85,49 @@ export default function ExchangePage() {
       </motion.div>
 
       <div className="p-6 space-y-6">
-        {/* Current Balance */}
+        {/* Dual Wallet Balances */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-r from-primary/10 to-secondary/10 p-4 rounded-xl border border-primary/20"
+          className="grid grid-cols-2 gap-4"
         >
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Available Balance</p>
-            <p className="text-2xl font-bold text-primary">{user?.balance || "0.00"} USD</p>
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+            <p className="text-xs text-blue-700 dark:text-blue-300 mb-1">USD Balance</p>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">${user?.balance || "0.00"}</p>
           </div>
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
+            <p className="text-xs text-green-700 dark:text-green-300 mb-1">KES Balance</p>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">KSh {user?.kesBalance || "0.00"}</p>
+          </div>
+        </motion.div>
+
+        {/* Quick Conversion Suggestions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-card p-4 rounded-xl border border-border"
+        >
+          <h3 className="text-sm font-semibold mb-3">Quick Convert to KES</h3>
+          <div className="grid grid-cols-4 gap-2">
+            {[5, 10, 20, 50].map((value) => (
+              <button
+                key={value}
+                onClick={() => {
+                  setAmount(value.toString());
+                  setFromCurrency("USD");
+                  setToCurrency("KES");
+                }}
+                className="bg-primary/10 hover:bg-primary/20 text-primary py-2 px-3 rounded-lg text-sm font-semibold transition-colors"
+              >
+                ${value}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            💡 Tip: Convert USD to KES to buy airtime and withdraw
+          </p>
         </motion.div>
 
         {/* Exchange Form */}
