@@ -2,6 +2,20 @@
 
 GreenPay is a fintech mobile application designed for international money transfers, focusing on remittances to Africa. It provides a digital wallet with virtual card capabilities, KYC verification, and secure transaction processing. The application is a full-stack web application with a mobile-first design, offering multi-currency support and real-time transaction tracking. The project aims to provide seamless money transfer services to a broad user base.
 
+# Recent Changes (October 21, 2025)
+
+## UI Modernization
+- **Bottom Navigation Redesign**: Updated to modern style with elevated center button for Send Money, featuring 5 navigation items (Home, History, Send, Card, Profile) with gradient purple styling
+- **Dashboard Restructure**: Redesigned with gradient header card, improved visual hierarchy, modern card-based layout for quick actions and services
+- **Responsive Design**: Enhanced mobile-first experience with better spacing and visual appeal
+
+## New Feature: Airtime Purchase
+- **Airtime Page**: Complete airtime purchase interface with network provider selection (Safaricom, Airtel, Telkom)
+- **Quick Select Amounts**: Pre-configured amounts in local currency (KSh 50, 100, 200, 500) for fast purchases
+- **Backend API**: New endpoint `/api/airtime/purchase` for processing airtime transactions
+- **Validation**: Supports purchases from $0.10 to $1000 USD
+- **Integration**: Added to dashboard quick actions and services menu
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
