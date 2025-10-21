@@ -74,16 +74,13 @@ export class ExchangeRateService {
   }
 
   private getFallbackRate(from: string, to: string): number {
-    // Fallback rates for common African currencies
+    // Fallback rates for USD/KES only
     const fallbackRates: Record<string, Record<string, number>> = {
       'USD': {
-        'NGN': 820,
-        'GHS': 12,
-        'KES': 129,
-        'ZAR': 18.5,
-        'EGP': 31,
-        'XOF': 605,
-        'XAF': 605
+        'KES': 129
+      },
+      'KES': {
+        'USD': 0.0077
       }
     };
     
@@ -126,15 +123,10 @@ export class ExchangeRateService {
   }
 
   private getMultipleFallbackRates(base: string, targets: string[]): Record<string, number> {
-    // Return fallback rates
+    // Return fallback rates for USD/KES only
     const fallbackRates: Record<string, number> = {
-      'NGN': 820,
-      'GHS': 12,
       'KES': 129,
-      'ZAR': 18.5,
-      'EGP': 31,
-      'XOF': 605,
-      'XAF': 605
+      'USD': 0.0077
     };
     
     return Object.fromEntries(
