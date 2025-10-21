@@ -5334,15 +5334,17 @@ async function registerRoutes(app2) {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      const { amount, type, details } = req.body;
-      const currentBalance = parseFloat(user.balance || "0");
+      const { amount, type, details, currency } = req.body;
+      const targetCurrency = currency?.toUpperCase() || "USD";
+      const isKes = targetCurrency === "KES";
+      const currentBalance = parseFloat(isKes ? user.kesBalance || "0" : user.balance || "0");
       const updateAmount = parseFloat(amount);
       let newBalance;
       let transactionType;
       switch (type) {
         case "add":
           newBalance = currentBalance + updateAmount;
-          transactionType = "receive";
+          transactionType = "deposit";
           break;
         case "subtract":
           newBalance = Math.max(0, currentBalance - updateAmount);
@@ -5350,31 +5352,30 @@ async function registerRoutes(app2) {
           break;
         case "set":
           newBalance = updateAmount;
-          transactionType = updateAmount > currentBalance ? "receive" : "send";
+          transactionType = updateAmount > currentBalance ? "deposit" : "send";
           break;
         default:
           return res.status(400).json({ error: "Invalid update type" });
       }
-      const updatedUser = await storage.updateUser(req.params.id, {
-        balance: newBalance.toFixed(2)
-      });
+      const balanceUpdate = isKes ? { kesBalance: newBalance.toFixed(2) } : { balance: newBalance.toFixed(2) };
+      const updatedUser = await storage.updateUser(req.params.id, balanceUpdate);
       const transactionAmount = type === "set" ? Math.abs(newBalance - currentBalance) : updateAmount;
       const transactionData = {
         userId: req.params.id,
         type: transactionType,
         amount: transactionAmount.toFixed(2),
-        currency: user.defaultCurrency || "USD",
+        currency: targetCurrency,
         status: "completed",
-        description: details || `Admin ${type} balance adjustment`,
+        description: details || `Admin ${type} ${targetCurrency} balance adjustment`,
         recipientId: null,
         recipientName: "System Admin",
         fee: "0.00",
         exchangeRate: 1,
         sourceAmount: transactionAmount.toFixed(2),
-        sourceCurrency: user.defaultCurrency || "USD"
+        sourceCurrency: targetCurrency
       };
       await storage.createTransaction(transactionData);
-      res.json({ user: updatedUser, newBalance });
+      res.json({ user: updatedUser, newBalance, currency: targetCurrency });
     } catch (error) {
       console.error("Admin balance update error:", error);
       res.status(500).json({ error: "Failed to update user balance" });
@@ -6652,19 +6653,25 @@ async function registerRoutes(app2) {
         return res.status(404).json({ message: "User not found" });
       }
       const userTransactions = await storage.getTransactionsByUserId(userId);
+      const isKesWithdrawal = currency?.toUpperCase() === "KES";
       const realTimeBalance = userTransactions.reduce((balance, txn) => {
         if (txn.status === "completed") {
-          if (txn.type === "receive" || txn.type === "deposit") {
-            return balance + parseFloat(txn.amount);
-          } else if (txn.type === "send" || txn.type === "withdraw") {
-            return balance - parseFloat(txn.amount) - parseFloat(txn.fee || "0");
+          const txnCurrency = txn.currency?.toUpperCase();
+          const matchesCurrency = isKesWithdrawal ? txnCurrency === "KES" : txnCurrency !== "KES";
+          if (matchesCurrency) {
+            if (txn.type === "receive" || txn.type === "deposit") {
+              return balance + parseFloat(txn.amount);
+            } else if (txn.type === "send" || txn.type === "withdraw") {
+              return balance - parseFloat(txn.amount) - parseFloat(txn.fee || "0");
+            }
           }
         }
         return balance;
-      }, parseFloat(user.balance || "0"));
+      }, parseFloat(isKesWithdrawal ? user.kesBalance || "0" : user.balance || "0"));
       if (realTimeBalance < withdrawAmount + withdrawFee) {
         return res.status(400).json({
           message: "Insufficient balance",
+          currency,
           available: realTimeBalance.toFixed(2),
           required: (withdrawAmount + withdrawFee).toFixed(2)
         });
