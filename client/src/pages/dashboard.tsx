@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [, setLocation] = useLocation();
   const [showBalance, setShowBalance] = useState(true);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [activeWallet, setActiveWallet] = useState<'USD' | 'KES'>('USD');
   const { user, logout, refreshUser } = useAuth();
   const { toast } = useToast();
 
@@ -44,14 +45,16 @@ export default function DashboardPage() {
 
   const transactions = (transactionData as any)?.transactions || [];
   
-  // Use the actual stored balance from server (already includes all completed transactions)
-  // Server maintains balance accuracy by updating it directly when transactions complete
-  const realTimeBalance = parseFloat(user?.balance || '0');
+  // Dual wallet balances
+  const usdBalance = parseFloat(user?.balance || '0');
+  const kesBalance = parseFloat(user?.kesBalance || '0');
   
-  // Convert balance to other currencies using real rates
+  // Get the active wallet balance based on selection
+  const activeBalance = activeWallet === 'USD' ? usdBalance : kesBalance;
+  
+  // Convert balance to other currencies using real rates for display
   const rates = (exchangeRates as any)?.rates || {};
-  const balanceInNGN = rates.NGN ? (realTimeBalance * rates.NGN).toFixed(2) : '0.00';
-  const balanceInKES = rates.KES ? (realTimeBalance * rates.KES).toFixed(2) : '0.00';
+  const balanceInNGN = rates.NGN ? (usdBalance * rates.NGN).toFixed(2) : '0.00';
   
   // Check user status
   const isKYCVerified = user?.kycStatus === 'verified';
@@ -115,8 +118,8 @@ export default function DashboardPage() {
       color: "from-purple-500 to-purple-600",
       iconColor: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950/20",
-      disabled: !hasActiveVirtualCard,
-      requiresCard: true
+      disabled: false,
+      requiresCard: false
     },
     { 
       id: "deposit", 
@@ -185,38 +188,74 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Wallet Balance Card - Compact */}
+        {/* Wallet Balance Card - Dual Wallet */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
           className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
         >
+          {/* Wallet Switcher */}
           <div className="flex items-center justify-between mb-3">
-            <div className="flex-1">
-              <p className="text-white/70 text-xs mb-1 flex items-center">
-                Total Balance
-                {isKYCVerified && (
-                  <span className="material-icons text-green-300 ml-1 text-sm">verified</span>
-                )}
-              </p>
-              <p className="text-3xl font-bold mb-1" data-testid="text-balance">
-                {showBalance ? `$${realTimeBalance.toFixed(2)}` : "••••••"}
-              </p>
-              <p className="text-white/60 text-xs">
-                ≈ ₦{showBalance ? balanceInNGN : '••••'} • KSh{showBalance ? balanceInKES : '••••'}
-              </p>
+            <div className="flex bg-white/10 rounded-lg p-1 backdrop-blur-sm">
+              <button
+                onClick={() => setActiveWallet('USD')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  activeWallet === 'USD'
+                    ? 'bg-white text-primary shadow-md'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                USD
+              </button>
+              <button
+                onClick={() => setActiveWallet('KES')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  activeWallet === 'KES'
+                    ? 'bg-white text-primary shadow-md'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                KES
+              </button>
             </div>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowBalance(!showBalance)}
-              className="bg-white/10 p-3 rounded-full backdrop-blur-sm"
+              className="bg-white/10 p-2 rounded-full backdrop-blur-sm"
               data-testid="button-toggle-balance"
             >
-              <span className="material-icons text-white text-xl">
+              <span className="material-icons text-white text-lg">
                 {showBalance ? "visibility" : "visibility_off"}
               </span>
             </motion.button>
+          </div>
+
+          {/* Balance Display */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-white/70 text-xs mb-1 flex items-center">
+                {activeWallet} Balance
+                {isKYCVerified && (
+                  <span className="material-icons text-green-300 ml-1 text-sm">verified</span>
+                )}
+              </p>
+              <p className="text-3xl font-bold mb-2" data-testid="text-balance">
+                {showBalance 
+                  ? activeWallet === 'USD' 
+                    ? `$${activeBalance.toFixed(2)}`
+                    : `KSh ${activeBalance.toFixed(2)}`
+                  : "••••••"}
+              </p>
+              {/* Show other wallet balance */}
+              <p className="text-white/60 text-xs">
+                {activeWallet === 'USD' ? (
+                  <>Other: KSh {showBalance ? kesBalance.toFixed(2) : '••••'}</>
+                ) : (
+                  <>Other: ${showBalance ? usdBalance.toFixed(2) : '••••'}</>
+                )}
+              </p>
+            </div>
           </div>
         </motion.div>
       </motion.div>

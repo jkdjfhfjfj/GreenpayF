@@ -1359,7 +1359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Airtime purchase endpoint
+  // Airtime purchase endpoint - uses KES balance
   app.post("/api/airtime/purchase", async (req, res) => {
     try {
       const { userId, phoneNumber, amount, currency, provider } = req.body;
@@ -1374,17 +1374,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check if user has virtual card
-      if (!user.hasVirtualCard) {
-        return res.status(400).json({ message: "Virtual card required to purchase airtime" });
-      }
-
-      // Check balance
-      const currentBalance = parseFloat(user.balance || "0");
+      // Airtime purchases require KES balance
+      const kesBalance = parseFloat(user.kesBalance || "0");
       const purchaseAmount = parseFloat(amount);
       
-      if (currentBalance < purchaseAmount) {
-        return res.status(400).json({ message: "Insufficient balance" });
+      if (kesBalance < purchaseAmount) {
+        return res.status(400).json({ 
+          message: "Insufficient KES balance. Please convert USD to KES using the Exchange feature." 
+        });
       }
 
       // Create transaction
@@ -1392,7 +1389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         type: "airtime",
         amount: amount.toString(),
-        currency,
+        currency: "KES", // Airtime is always in KES
         status: "completed",
         fee: "0.00",
         description: `Airtime purchase for ${phoneNumber} (${provider})`,
@@ -1402,9 +1399,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Update user balance
-      const newBalance = currentBalance - purchaseAmount;
-      await storage.updateUser(userId, { balance: newBalance.toFixed(2) });
+      // Update user KES balance
+      const newKesBalance = kesBalance - purchaseAmount;
+      await storage.updateUser(userId, { kesBalance: newKesBalance.toFixed(2) });
       
       res.json({ 
         success: true,
