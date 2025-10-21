@@ -35,6 +35,8 @@ import {
   type InsertSavingsGoal,
   type QRPayment,
   type InsertQRPayment,
+  type LoginHistory,
+  type InsertLoginHistory,
   users,
   kycDocuments,
   virtualCards,
@@ -56,6 +58,7 @@ import {
   scheduledPayments,
   budgets,
   userPreferences,
+  loginHistory,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -199,6 +202,10 @@ export interface IStorage {
   createQRPayment(payment: InsertQRPayment): Promise<QRPayment>;
   getQRPaymentByCode(paymentCode: string): Promise<QRPayment | undefined>;
   updateQRPayment(id: string, updates: Partial<QRPayment>): Promise<QRPayment | undefined>;
+
+  // Login History operations
+  createLoginHistory(history: InsertLoginHistory): Promise<LoginHistory>;
+  getLoginHistoryByUserId(userId: string, limit?: number): Promise<LoginHistory[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -975,6 +982,10 @@ export class MemStorage implements IStorage {
   async createQRPayment(): Promise<QRPayment> { throw new Error('Not implemented'); }
   async getQRPaymentByCode(): Promise<QRPayment | undefined> { return undefined; }
   async updateQRPayment(): Promise<QRPayment | undefined> { return undefined; }
+
+  // Login History operations (stubs for MemStorage)
+  async createLoginHistory(): Promise<LoginHistory> { throw new Error('Not implemented'); }
+  async getLoginHistoryByUserId(): Promise<LoginHistory[]> { return []; }
 
   // API Configuration operations (stubs for MemStorage)
   async getApiConfiguration(): Promise<ApiConfiguration | undefined> { return undefined; }
@@ -1837,6 +1848,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(qrPayments.id, id))
       .returning();
     return payment || undefined;
+  }
+
+  // Login History operations
+  async createLoginHistory(history: InsertLoginHistory): Promise<LoginHistory> {
+    const [loginRecord] = await db
+      .insert(loginHistory)
+      .values(history)
+      .returning();
+    return loginRecord;
+  }
+
+  async getLoginHistoryByUserId(userId: string, limit: number = 10): Promise<LoginHistory[]> {
+    const history = await db
+      .select()
+      .from(loginHistory)
+      .where(eq(loginHistory.userId, userId))
+      .orderBy(desc(loginHistory.createdAt))
+      .limit(limit);
+    return history;
   }
 }
 
