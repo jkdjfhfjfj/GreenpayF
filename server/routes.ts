@@ -4561,18 +4561,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (transaction) {
-        // Deduct balance from user's account
+        // Deduct balance from user's account (correct wallet based on currency)
         const user = await storage.getUser(transaction.userId);
         if (user) {
           const withdrawalAmount = parseFloat(transaction.amount);
           const withdrawalFee = parseFloat(transaction.fee || '0');
           const totalDeduction = withdrawalAmount + withdrawalFee;
-          const currentBalance = parseFloat(user.balance || '0');
+          
+          // Check currency and deduct from correct wallet
+          const isKesWithdrawal = transaction.currency?.toUpperCase() === 'KES';
+          const currentBalance = parseFloat(isKesWithdrawal ? (user.kesBalance || '0') : (user.balance || '0'));
           const newBalance = (currentBalance - totalDeduction).toFixed(2);
           
-          await storage.updateUser(user.id, {
-            balance: newBalance
-          });
+          // Update the correct wallet balance
+          const balanceUpdate = isKesWithdrawal 
+            ? { kesBalance: newBalance } 
+            : { balance: newBalance };
+          
+          await storage.updateUser(user.id, balanceUpdate);
           
           await notificationService.sendNotification({
             title: "Withdrawal Approved",

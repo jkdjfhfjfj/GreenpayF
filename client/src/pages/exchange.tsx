@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { useCurrencyExchange } from "@/hooks/use-currency-exchange";
 import { useToast } from "@/hooks/use-toast";
+import { formatNumber } from "@/lib/formatters";
 
 export default function ExchangePage() {
   const [, setLocation] = useLocation();
@@ -25,9 +26,14 @@ export default function ExchangePage() {
   ];
 
   const exchangeRate = exchangeRates?.rates?.[toCurrency] || 1;
-  const convertedAmount = amount ? (parseFloat(amount) * exchangeRate).toFixed(2) : "0.00";
-  const fee = amount ? (parseFloat(amount) * 0.015).toFixed(2) : "0.00"; // 1.5% fee
-  const total = amount ? (parseFloat(amount) + parseFloat(fee)).toFixed(2) : "0.00";
+  const amountNum = amount ? parseFloat(amount) : 0;
+  const convertedAmountNum = amountNum * exchangeRate;
+  const feeNum = amountNum * 0.015; // 1.5% fee
+  const totalNum = amountNum + feeNum;
+  
+  const convertedAmount = amountNum ? formatNumber(convertedAmountNum) : "0.00";
+  const fee = amountNum ? formatNumber(feeNum) : "0.00";
+  const total = amountNum ? formatNumber(totalNum) : "0.00";
 
   const handleExchange = () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -88,11 +94,11 @@ export default function ExchangePage() {
         >
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
             <p className="text-xs text-blue-700 dark:text-blue-300 mb-1">USD Balance</p>
-            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">${user?.balance || "0.00"}</p>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">${formatNumber(parseFloat(user?.balance || "0"))}</p>
           </div>
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
             <p className="text-xs text-green-700 dark:text-green-300 mb-1">KES Balance</p>
-            <p className="text-2xl font-bold text-green-900 dark:text-green-100">KSh {user?.kesBalance || "0.00"}</p>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">KSh {formatNumber(parseFloat(user?.kesBalance || "0"))}</p>
           </div>
         </motion.div>
 

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/use-auth";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { useToast } from "@/hooks/use-toast";
+import { formatNumber } from "@/lib/formatters";
 
 export default function SendAmountPage() {
   const [, setLocation] = useLocation();
@@ -34,9 +35,14 @@ export default function SendAmountPage() {
   }, [setLocation]);
 
   const exchangeRate = exchangeRates?.rates?.[targetCurrency] || 1;
-  const convertedAmount = amount ? (parseFloat(amount) * exchangeRate).toFixed(2) : "0.00";
-  const fee = amount ? (parseFloat(amount) * 0.025).toFixed(2) : "0.00"; // 2.5% fee
-  const total = amount ? (parseFloat(amount) + parseFloat(fee)).toFixed(2) : "0.00";
+  const amountNum = amount ? parseFloat(amount) : 0;
+  const convertedAmountNum = amountNum * exchangeRate;
+  const feeNum = amountNum * 0.025; // 2.5% fee
+  const totalNum = amountNum + feeNum;
+  
+  const convertedAmount = amountNum ? formatNumber(convertedAmountNum) : "0.00";
+  const fee = amountNum ? formatNumber(feeNum) : "0.00";
+  const total = amountNum ? formatNumber(totalNum) : "0.00";
 
   const handleContinue = () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -255,7 +261,7 @@ export default function SendAmountPage() {
           className="text-center"
         >
           <p className="text-sm text-muted-foreground">
-            Available balance: <span className="font-semibold">{user?.balance || "0.00"} USD</span>
+            Available balance: <span className="font-semibold">${formatNumber(parseFloat(user?.balance || "0"))} USD</span>
           </p>
         </motion.div>
 
