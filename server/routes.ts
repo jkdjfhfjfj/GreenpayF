@@ -5180,18 +5180,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const baseUrl = 'https://greenpay.world';
       const today = new Date().toISOString().split('T')[0];
 
-      // Define public pages that should be indexed by Google
+      // Define all public pages that should be indexed by Google
+      // Only include pages accessible without authentication
       const publicPages = [
-        { url: '/', priority: '1.0', changefreq: 'daily' },
-        { url: '/login', priority: '0.9', changefreq: 'monthly' },
-        { url: '/signup', priority: '0.9', changefreq: 'monthly' },
-        { url: '/auth/forgot-password', priority: '0.5', changefreq: 'monthly' },
-        { url: '/status', priority: '0.7', changefreq: 'daily' },
+        // Core marketing pages
+        { url: '/', priority: '1.0', changefreq: 'daily', desc: 'Homepage - International Money Transfer to Kenya' },
+        { url: '/login', priority: '0.9', changefreq: 'monthly', desc: 'Login to GreenPay Account' },
+        { url: '/signup', priority: '0.9', changefreq: 'monthly', desc: 'Sign Up for GreenPay' },
+        { url: '/status', priority: '0.8', changefreq: 'daily', desc: 'System Status & Service Health' },
+        
+        // Auth flow pages (public but lower priority)
+        { url: '/auth/forgot-password', priority: '0.5', changefreq: 'monthly', desc: 'Reset Password' },
+        { url: '/auth/reset-password', priority: '0.5', changefreq: 'monthly', desc: 'Create New Password' },
+        { url: '/auth/otp-verification', priority: '0.4', changefreq: 'monthly', desc: 'OTP Verification' },
+        
+        // Feature landing pages (for SEO targeting)
+        { url: '/features/send-money', priority: '0.9', changefreq: 'weekly', desc: 'Send Money to Kenya - Fast & Secure' },
+        { url: '/features/virtual-cards', priority: '0.9', changefreq: 'weekly', desc: 'Virtual Cards for Online Payments' },
+        { url: '/features/exchange', priority: '0.8', changefreq: 'weekly', desc: 'USD to KES Exchange - Best Rates' },
+        { url: '/features/airtime', priority: '0.7', changefreq: 'weekly', desc: 'Buy Airtime for Kenya' },
+        
+        // Information pages
+        { url: '/about', priority: '0.7', changefreq: 'monthly', desc: 'About GreenPay' },
+        { url: '/pricing', priority: '0.8', changefreq: 'weekly', desc: 'Pricing & Fees' },
+        { url: '/security', priority: '0.7', changefreq: 'monthly', desc: 'Security & Compliance' },
+        { url: '/help', priority: '0.6', changefreq: 'weekly', desc: 'Help Center & FAQ' },
+        { url: '/contact', priority: '0.6', changefreq: 'monthly', desc: 'Contact Support' },
       ];
 
-      // Generate XML sitemap
+      // Generate XML sitemap with comments
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <!-- GreenPay - International Money Transfer & Digital Wallet -->
+  <!-- Target Keywords: send money to Kenya, USD to KES, international remittance, virtual cards -->
 ${publicPages.map(page => `  <url>
     <loc>${baseUrl}${page.url}</loc>
     <lastmod>${today}</lastmod>
@@ -5201,6 +5223,7 @@ ${publicPages.map(page => `  <url>
 </urlset>`;
 
       res.header('Content-Type', 'application/xml');
+      res.header('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
       res.send(sitemap);
     } catch (error) {
       console.error('Error generating sitemap:', error);

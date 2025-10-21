@@ -38,6 +38,15 @@ import PaymentFailedPage from "@/pages/payment-failed";
 import PaymentProcessingPage from "@/pages/payment-processing";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard-new";
+import SendMoneyLanding from "@/pages/landing/send-money";
+import VirtualCardsLanding from "@/pages/landing/virtual-cards";
+import ExchangeLanding from "@/pages/landing/exchange";
+import HelpLanding from "@/pages/landing/help";
+import AirtimeLanding from "@/pages/landing/airtime";
+import AboutLanding from "@/pages/landing/about";
+import PricingLanding from "@/pages/landing/pricing";
+import SecurityLanding from "@/pages/landing/security";
+import ContactLanding from "@/pages/landing/contact";
 
 // User Route Guard Component
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -115,6 +124,16 @@ function Router() {
       <Route path="/payment-success" component={PaymentSuccessPage} />
       <Route path="/payment-failed" component={PaymentFailedPage} />
       <Route path="/payment-processing" component={PaymentProcessingPage} />
+      {/* Public SEO landing pages */}
+      <Route path="/features/send-money" component={SendMoneyLanding} />
+      <Route path="/features/virtual-cards" component={VirtualCardsLanding} />
+      <Route path="/features/exchange" component={ExchangeLanding} />
+      <Route path="/features/airtime" component={AirtimeLanding} />
+      <Route path="/help" component={HelpLanding} />
+      <Route path="/about" component={AboutLanding} />
+      <Route path="/pricing" component={PricingLanding} />
+      <Route path="/security" component={SecurityLanding} />
+      <Route path="/contact" component={ContactLanding} />
       {/* Admin routes - protected by AdminRoute guard */}
       <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin/login" component={AdminLogin} />
