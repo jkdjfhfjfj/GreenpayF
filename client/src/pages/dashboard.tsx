@@ -358,7 +358,9 @@ export default function DashboardPage() {
                         title: "Bonus Claimed!",
                         description: data.message,
                       });
-                      refreshUser();
+                      await refreshUser();
+                      // Redirect to airtime page to use the bonus
+                      setLocation("/airtime");
                     } else {
                       toast({
                         title: "Error",
