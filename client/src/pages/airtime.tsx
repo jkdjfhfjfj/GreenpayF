@@ -184,7 +184,6 @@ export default function AirtimePage() {
                 className="p-3 rounded-xl border border-border bg-card hover:border-primary hover:bg-primary/5 transition-all"
               >
                 <p className="text-sm font-semibold">{quick.label}</p>
-                <p className="text-xs text-muted-foreground">${quick.value}</p>
               </motion.button>
             ))}
           </div>
@@ -223,12 +222,12 @@ export default function AirtimePage() {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount (USD)</FormLabel>
+                    <FormLabel>Amount (KSh)</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
-                        step="0.01"
-                        placeholder="0.50" 
+                        step="1"
+                        placeholder="50" 
                         {...field}
                         className="text-base"
                       />
@@ -244,15 +243,14 @@ export default function AirtimePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select currency" />
+                          <SelectValue placeholder="KES - Kenyan Shilling" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="KES">KES - Kenyan Shilling</SelectItem>
-                        <SelectItem value="USD">USD - US Dollar</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
