@@ -29,6 +29,7 @@ import AirtimePage from "@/pages/airtime";
 import StatusPage from "@/pages/status";
 import LoadingScreen from "@/components/loading-screen";
 import BottomNavigation from "@/components/bottom-navigation";
+import TopBar from "@/components/top-bar";
 import { PWAInstallPrompt } from "@/components/pwa-install";
 import PaymentCallbackPage from "@/pages/payment-callback";
 import PaymentSuccessPage from "@/pages/payment-success";
@@ -129,6 +130,7 @@ function App() {
         <TooltipProvider>
           <LoadingScreen />
           <Toaster />
+          <TopBar />
           <Router />
           <BottomNavigation />
           <PWAInstallPrompt />

@@ -101,7 +101,7 @@ export default function AirtimePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 page-with-topbar">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

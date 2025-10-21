@@ -105,7 +105,7 @@ export default function VirtualCardPage() {
   // If user doesn't have a card, show purchase screen
   if (!hasCard) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 page-with-topbar">
         {/* Top Navigation */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -374,7 +374,7 @@ export default function VirtualCardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 page-with-topbar">
       {/* Top Navigation */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

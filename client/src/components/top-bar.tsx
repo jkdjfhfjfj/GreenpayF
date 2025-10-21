@@ -7,18 +7,16 @@ export default function TopBar() {
   const [location, setLocation] = useLocation();
   
   // Don't show on auth pages, splash page, or admin pages
-  const hideOnPaths = [
-    '/', 
-    '/login', 
-    '/signup', 
-    '/otp-verification', 
-    '/kyc-verification', 
-    '/virtual-card-purchase',
-    '/admin',
-    '/admin-login'
-  ];
-  
-  const shouldHide = hideOnPaths.some(path => location === path || location.startsWith('/admin'));
+  const shouldHide = 
+    location === '/' ||                           // Splash page
+    location === '/login' ||                      // Login page
+    location === '/signup' ||                     // Signup page
+    location.startsWith('/auth/') ||              // All auth flow pages
+    location.startsWith('/admin') ||              // All admin pages
+    location === '/payment-callback' ||           // Payment processing pages
+    location === '/payment-success' ||
+    location === '/payment-failed' ||
+    location === '/payment-processing';
   
   if (shouldHide) {
     return null;
