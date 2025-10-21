@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { formatNumber, getCurrencySymbol } from "@/lib/formatters";
+import { generateTransactionPDF } from "@/lib/pdf-export";
+import { Download } from "lucide-react";
 
 type TransactionFilter = "all" | "sent" | "received" | "pending";
 
@@ -17,7 +19,7 @@ export default function TransactionsPage() {
     enabled: !!user?.id,
   });
 
-  const transactions = transactionData?.transactions || [];
+  const transactions = (transactionData as any)?.transactions || [];
 
   const filteredTransactions = transactions.filter((transaction: any) => {
     switch (activeFilter) {
@@ -96,13 +98,26 @@ export default function TransactionsPage() {
       >
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold">Transactions</h1>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            className="material-icons text-muted-foreground p-2 rounded-full hover:bg-muted transition-colors"
-            data-testid="button-filter"
-          >
-            filter_list
-          </motion.button>
+          <div className="flex items-center space-x-2">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                if (transactions.length > 0) {
+                  generateTransactionPDF(transactions, {
+                    fullName: user?.fullName,
+                    email: user?.email,
+                    phone: user?.phone
+                  });
+                }
+              }}
+              disabled={transactions.length === 0}
+              className="flex items-center space-x-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="button-export-pdf"
+            >
+              <Download className="h-4 w-4" />
+              <span className="text-sm font-medium">Export PDF</span>
+            </motion.button>
+          </div>
         </div>
         
         {/* Filter Tabs */}
@@ -164,14 +179,14 @@ export default function TransactionsPage() {
                 <p className="text-sm text-muted-foreground">Sent</p>
                 {transactions.some((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase')) && (
                   <p className="font-semibold text-destructive text-sm" data-testid="text-monthly-sent-usd">
-                    ${transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase') && txn.status === 'completed')
-                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
+                    ${formatNumber(transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase') && txn.status === 'completed')
+                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0))}
                   </p>
                 )}
                 {transactions.some((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase')) && (
                   <p className="font-semibold text-destructive text-sm" data-testid="text-monthly-sent-kes">
-                    KSh {transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase') && txn.status === 'completed')
-                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
+                    KSh {formatNumber(transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'send' || txn.type === 'withdraw' || txn.type === 'card_purchase') && txn.status === 'completed')
+                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0))}
                   </p>
                 )}
               </div>
@@ -179,14 +194,14 @@ export default function TransactionsPage() {
                 <p className="text-sm text-muted-foreground">Received</p>
                 {transactions.some((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'receive' || txn.type === 'deposit')) && (
                   <p className="font-semibold text-primary text-sm" data-testid="text-monthly-received-usd">
-                    ${transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'receive' || txn.type === 'deposit') && txn.status === 'completed')
-                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
+                    ${formatNumber(transactions.filter((txn: any) => txn.currency?.toUpperCase() !== 'KES' && (txn.type === 'receive' || txn.type === 'deposit') && txn.status === 'completed')
+                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0))}
                   </p>
                 )}
                 {transactions.some((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'receive' || txn.type === 'deposit')) && (
                   <p className="font-semibold text-primary text-sm" data-testid="text-monthly-received-kes">
-                    KSh {transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'receive' || txn.type === 'deposit') && txn.status === 'completed')
-                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0).toFixed(2)}
+                    KSh {formatNumber(transactions.filter((txn: any) => txn.currency?.toUpperCase() === 'KES' && (txn.type === 'receive' || txn.type === 'deposit') && txn.status === 'completed')
+                      .reduce((total: number, txn: any) => total + parseFloat(txn.amount), 0))}
                   </p>
                 )}
               </div>
