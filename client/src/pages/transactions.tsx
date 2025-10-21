@@ -74,7 +74,7 @@ export default function TransactionsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 page-with-topbar">
         <motion.div className="bg-card shadow-sm p-4 elevation-1">
           <h1 className="text-lg font-semibold">Transactions</h1>
         </motion.div>
@@ -86,7 +86,7 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 page-with-topbar">
       {/* Top Navigation */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

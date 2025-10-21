@@ -106,7 +106,7 @@ export default function KYCPage() {
   // Loading state
   if (kycLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20 flex items-center justify-center">
+      <div className="min-h-screen bg-background pb-20 flex items-center justify-center page-with-topbar">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Loading KYC status...</p>
@@ -118,7 +118,7 @@ export default function KYCPage() {
   // Handle verified status
   if (user?.kycStatus === "verified") {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 page-with-topbar">
         <motion.div className="bg-card shadow-sm p-4 flex items-center elevation-1">
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -154,7 +154,7 @@ export default function KYCPage() {
   // Handle users who have submitted documents and are awaiting review (only show if actual submission exists)
   if (kycData?.kyc && user?.kycStatus === "pending") {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 page-with-topbar">
         <motion.div className="bg-card shadow-sm p-4 flex items-center elevation-1">
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -208,7 +208,7 @@ export default function KYCPage() {
   // Handle rejected status - allow resubmission
   if (kycData?.kyc && user?.kycStatus === "rejected") {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 page-with-topbar">
         <motion.div className="bg-card shadow-sm p-4 flex items-center elevation-1">
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -257,7 +257,7 @@ export default function KYCPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 page-with-topbar">
       {/* Top Navigation */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

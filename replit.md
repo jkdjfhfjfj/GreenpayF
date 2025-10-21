@@ -6,10 +6,26 @@ GreenPay is a fintech mobile application designed for international money transf
 
 ## Latest Updates
 
+### Fixed Top Bar with Support Icon
+- **Implementation**: Created new top bar component that appears at the top of all user-facing pages
+- **Features**:
+  - Fixed/sticky positioning at top of screen
+  - GreenPay logo with gradient background
+  - Support icon (headphones) that navigates to live chat
+  - Auto-hides on auth pages, splash, and admin pages
+  - Semi-transparent backdrop with blur effect
+- **Layout Updates**: Added `.page-with-topbar` CSS class (56px padding) to all user pages to prevent content overlap
+
 ### Document Viewing Fix
 - **Issue**: Users could upload KYC documents and profile photos but couldn't view them
-- **Root Cause**: Upload functions returned storage keys (e.g., `kyc/uuid.jpg`) instead of full URLs with `/objects/` prefix
-- **Solution**: Modified upload functions to return full URLs (`/objects/kyc/uuid.jpg`) that are directly accessible
+- **Root Cause**: 
+  1. Old upload functions returned storage keys without `/objects/` prefix
+  2. Existing database records had incomplete URLs
+- **Solutions**:
+  1. Modified upload functions to return full URLs (`/objects/kyc/uuid.jpg`)
+  2. Updated download endpoint to properly handle path processing
+  3. Migrated existing database records to add `/objects/` prefix to all file URLs
+- **Database Migration**: Updated 2 profile photos and 3 KYC document URLs
 - **Affected Features**: KYC document uploads, profile photo uploads, chat file uploads
 
 ### Status Page Redesign  
@@ -24,6 +40,7 @@ GreenPay is a fintech mobile application designed for international money transf
   - Virtual Cards - Can you purchase virtual cards?
   - Notifications - Will you receive notifications?
 - **UI Improvements**: Added feature icons (📁, 💱, 📱, 💸, 💳, 🔔) and user-friendly messages
+- **Technical Fix**: Server restart resolved caching issue that was returning old API structure
 
 ## Bug Fixes
 - **Double Login Issue**: Fixed authentication race condition by adding delay between state update and navigation to ensure authentication state synchronizes properly before redirecting users to dashboard
