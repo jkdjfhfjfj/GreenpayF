@@ -19,11 +19,15 @@ export class StatumService {
   private apiUrl: string;
 
   constructor() {
-    this.consumerKey = process.env.STATUM_CONSUMER_KEY || '20931672d927728499f9ef34a5d1b0fe79d';
-    this.consumerSecret = process.env.STATUM_CONSUMER_SECRET || 'YXv7IuRnBkcyRS2ijdSy209anvzz';
+    this.consumerKey = process.env.STATUM_CONSUMER_KEY || '';
+    this.consumerSecret = process.env.STATUM_CONSUMER_SECRET || '';
     this.apiUrl = 'https://api.statum.co.ke/api/v2/airtime';
     
-    console.log('📱 Statum Service initialized');
+    if (this.isConfigured()) {
+      console.log('✅ Statum Service initialized and configured');
+    } else {
+      console.warn('⚠️ Statum Service initialized but NOT configured - credentials missing');
+    }
   }
 
   /**
