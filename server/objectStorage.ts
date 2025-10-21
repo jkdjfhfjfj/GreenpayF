@@ -65,8 +65,8 @@ export class ObjectStorageService {
         throw new Error(`Failed to download file: ${errorMessage || 'Unknown error'}`);
       }
       
-      // Convert to Buffer - value is already a Buffer
-      const buffer = downloadResult.value;
+      // Unwrap buffer from tuple - value is [Buffer], not Buffer
+      const [buffer] = downloadResult.value as [Buffer];
       
       // Determine content type from file extension
       const extension = key.split('.').pop()?.toLowerCase();
@@ -226,7 +226,7 @@ export class ObjectStorageService {
         console.error(`❌ List failed:`, result.error);
         return [];
       }
-      const files = result.value.map(obj => obj.key);
+      const files = result.value.map(obj => obj.name);
       console.log(`✅ Found ${files.length} files`);
       return files;
     } catch (error) {
