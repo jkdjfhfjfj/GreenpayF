@@ -455,6 +455,18 @@ export const userPreferences = pgTable("user_preferences", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const loginHistory = pgTable("login_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  deviceType: text("device_type"), // mobile, desktop, tablet
+  browser: text("browser"),
+  location: text("location"), // City, Country
+  status: text("status").default("success"), // success, failed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas for new tables
 export const insertSavingsGoalSchema = createInsertSchema(savingsGoals).omit({
   id: true,
@@ -490,6 +502,11 @@ export const insertUserPreferencesSchema = createInsertSchema(userPreferences).o
   updatedAt: true,
 });
 
+export const insertLoginHistorySchema = createInsertSchema(loginHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types for new tables
 export type SavingsGoal = typeof savingsGoals.$inferSelect;
 export type InsertSavingsGoal = z.infer<typeof insertSavingsGoalSchema>;
@@ -501,3 +518,5 @@ export type Budget = typeof budgets.$inferSelect;
 export type InsertBudget = z.infer<typeof insertBudgetSchema>;
 export type UserPreferences = typeof userPreferences.$inferSelect;
 export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type LoginHistory = typeof loginHistory.$inferSelect;
+export type InsertLoginHistory = z.infer<typeof insertLoginHistorySchema>;
