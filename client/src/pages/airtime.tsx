@@ -18,8 +18,8 @@ const airtimeSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits").regex(/^[0-9+]+$/, "Invalid phone number format"),
   amount: z.string().min(1, "Amount is required").refine((val) => {
     const num = parseFloat(val);
-    return num >= 0.1 && num <= 1000;
-  }, "Amount must be between $0.10 and $1000"),
+    return num >= 5 && num <= 10000;
+  }, "Amount must be between KSh 5 and KSh 10,000"),
   currency: z.string().min(1, "Please select a currency"),
   provider: z.string().min(1, "Please select a provider"),
 });
@@ -50,12 +50,12 @@ export default function AirtimePage() {
   ];
 
   const quickAmounts = [
-    { label: "KSh 50", value: "0.38", kes: "50" },
-    { label: "KSh 100", value: "0.77", kes: "100" },
-    { label: "KSh 200", value: "1.54", kes: "200" },
-    { label: "KSh 500", value: "3.85", kes: "500" },
-    { label: "KSh 1000", value: "7.69", kes: "1000" },
-    { label: "KSh 2000", value: "15.38", kes: "2000" },
+    { label: "KSh 5", value: "5" },
+    { label: "KSh 10", value: "10" },
+    { label: "KSh 20", value: "20" },
+    { label: "KSh 50", value: "50" },
+    { label: "KSh 100", value: "100" },
+    { label: "KSh 200", value: "200" },
   ];
 
   const airtimeMutation = useMutation({
@@ -85,22 +85,13 @@ export default function AirtimePage() {
   });
 
   const onSubmit = (data: AirtimeForm) => {
-    if (!user?.hasVirtualCard) {
-      toast({
-        title: "Virtual Card Required",
-        description: "Please activate your virtual card to purchase airtime",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const balance = parseFloat(user?.balance || '0');
+    const kesBalance = parseFloat(user?.kesBalance || '0');
     const amount = parseFloat(data.amount);
     
-    if (balance < amount) {
+    if (kesBalance < amount) {
       toast({
-        title: "Insufficient Balance",
-        description: "Please add funds to your wallet",
+        title: "Insufficient KES Balance",
+        description: "Please convert USD to KES in the Exchange page to buy airtime",
         variant: "destructive",
       });
       return;
@@ -134,10 +125,11 @@ export default function AirtimePage() {
           </div>
         </div>
 
-        {/* Balance Display */}
+        {/* KES Wallet Balance Display */}
         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-          <p className="text-xs text-white/70">Available Balance</p>
-          <p className="text-2xl font-bold">${parseFloat(user?.balance || '0').toFixed(2)}</p>
+          <p className="text-xs text-white/70">KES Wallet</p>
+          <p className="text-2xl font-bold">KSh {parseFloat(user?.kesBalance || '0').toFixed(2)}</p>
+          <p className="text-xs text-white/80 mt-1">Used for airtime purchases</p>
         </div>
       </motion.div>
 
