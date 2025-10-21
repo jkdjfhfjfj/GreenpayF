@@ -230,12 +230,6 @@ export default function SendMoneyPage() {
 
   const countries = [
     { name: "Kenya", currency: "KES" },
-    { name: "Nigeria", currency: "NGN" },
-    { name: "Ghana", currency: "GHS" },
-    { name: "South Africa", currency: "ZAR" },
-    { name: "Uganda", currency: "UGX" },
-    { name: "Tanzania", currency: "TZS" },
-    { name: "Rwanda", currency: "RWF" },
   ];
 
   const renderGreenPayTransferContent = () => {

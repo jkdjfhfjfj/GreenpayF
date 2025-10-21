@@ -72,11 +72,8 @@ export default function PaymentRequestsPage() {
   };
 
   const currencies = [
-    { code: "KES", name: "Kenyan Shilling", symbol: "KSh" },
     { code: "USD", name: "US Dollar", symbol: "$" },
-    { code: "NGN", name: "Nigerian Naira", symbol: "₦" },
-    { code: "GHS", name: "Ghanaian Cedi", symbol: "₵" },
-    { code: "ZAR", name: "South African Rand", symbol: "R" },
+    { code: "KES", name: "Kenyan Shilling", symbol: "KSh" },
   ];
 
   return (

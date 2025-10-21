@@ -636,11 +636,6 @@ export default function SettingsPage() {
               <SelectContent>
                 <SelectItem value="USD">$ USD</SelectItem>
                 <SelectItem value="KES">KSh KES</SelectItem>
-                <SelectItem value="NGN">₦ NGN</SelectItem>
-                <SelectItem value="GHS">₵ GHS</SelectItem>
-                <SelectItem value="ZAR">R ZAR</SelectItem>
-                <SelectItem value="EUR">€ EUR</SelectItem>
-                <SelectItem value="GBP">£ GBP</SelectItem>
               </SelectContent>
             </Select>
           </motion.div>

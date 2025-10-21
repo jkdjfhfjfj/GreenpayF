@@ -1607,7 +1607,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/exchange-rates/:base", async (req, res) => {
     try {
       const { base } = req.params;
-      const targets = ['NGN', 'GHS', 'KES', 'ZAR', 'EGP', 'XOF', 'XAF'];
+      // Support bidirectional USD ↔ KES conversions
+      const targets = base.toUpperCase() === 'USD' ? ['KES'] : ['USD'];
       const rates = await exchangeRateService.getMultipleRates(base.toUpperCase(), targets);
       
       res.json({ 

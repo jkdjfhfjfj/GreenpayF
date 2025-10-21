@@ -9,6 +9,23 @@ Phone number formats: Users can enter phone numbers in multiple formats (7123456
 
 # Recent Changes (October 21, 2025)
 
+## Currency Restriction to USD and KES Only
+- **Issue**: App supported multiple African currencies (NGN, GHS, ZAR, etc.) that were not actually functional
+- **Solution**:
+  - **Exchange Rate API**: Verified working (exchangerate-api.com returns live USD/KES rates ~129.27)
+  - **Currency Dropdowns**: Removed all currencies except USD and KES from:
+    - Exchange page (was 8 currencies, now 2)
+    - Send money page (removed Nigeria, Ghana, South Africa, Uganda, Tanzania, Rwanda - kept only Kenya)
+    - Send amount page (was 7 currencies, now 2)
+    - Payment requests page (was 5 currencies, now 2)
+    - Deposit page (was 5 currencies, now 2)
+    - Settings page (was 7 currencies, now 2)
+  - **Mock Data**: Updated mockCurrencies and mockExchangeRates to only include USD/KES
+  - **Exchange Rate Service**: Updated fallback rates to only support USD ↔ KES conversions
+  - **Server Routes**: Updated exchange rate targets array from ['NGN', 'GHS', 'KES', 'ZAR', 'EGP', 'XOF', 'XAF'] to ['KES']
+  - **Display Updates**: Fixed hardcoded NGN references in send-confirm, withdraw, and dashboard pages
+- **Impact**: App now only supports USD and KES currencies throughout, matching actual payment capabilities
+
 ## KYC Status Display and Resubmission Improvements
 - **Issue**: Dashboard KYC banner showed generic message for all non-verified statuses; rejected users couldn't resubmit documents
 - **Solution**:

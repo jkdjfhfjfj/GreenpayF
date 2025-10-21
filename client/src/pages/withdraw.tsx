@@ -523,7 +523,7 @@ export default function WithdrawPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Exchange Rate</span>
-                  <span className="font-medium">1 USD = 820 NGN</span>
+                  <span className="font-medium">1 USD = 129 KES</span>
                 </div>
                 {selectedMethod && (
                   <div className="flex justify-between">

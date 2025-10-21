@@ -22,12 +22,6 @@ export default function ExchangePage() {
   const currencies = [
     { code: "USD", name: "US Dollar", symbol: "$", flag: "🇺🇸" },
     { code: "KES", name: "Kenyan Shilling", symbol: "KSh", flag: "🇰🇪" },
-    { code: "NGN", name: "Nigerian Naira", symbol: "₦", flag: "🇳🇬" },
-    { code: "GHS", name: "Ghanaian Cedi", symbol: "₵", flag: "🇬🇭" },
-    { code: "ZAR", name: "South African Rand", symbol: "R", flag: "🇿🇦" },
-    { code: "UGX", name: "Ugandan Shilling", symbol: "USh", flag: "🇺🇬" },
-    { code: "TZS", name: "Tanzanian Shilling", symbol: "TSh", flag: "🇹🇿" },
-    { code: "RWF", name: "Rwandan Franc", symbol: "RF", flag: "🇷🇼" },
   ];
 
   const exchangeRate = exchangeRates?.rates?.[toCurrency] || 1;
