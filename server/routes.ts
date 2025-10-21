@@ -100,12 +100,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve private objects from object storage (profile photos, KYC documents, chat files)
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
+      console.log(`📥 File request received: /objects/${req.params.objectPath}`);
       const userId = (req.session as any)?.userId;
       const adminId = (req.session as any)?.admin?.id;
+      console.log(`🔐 Auth check - userId: ${userId}, adminId: ${adminId}`);
       
       // Require authentication to access private objects
       if (!userId && !adminId) {
         console.warn('⚠️ Unauthorized file access attempt:', req.params.objectPath);
+        console.log('Session data:', JSON.stringify(req.session, null, 2));
         return res.status(401).json({ message: "Authentication required" });
       }
 
@@ -118,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         objectKey = objectKey.substring(1);
       }
       
-      console.log(`📥 File download request: ${objectKey} by ${adminId ? 'admin' : 'user'} ${adminId || userId}`);
+      console.log(`✅ Authenticated - downloading: ${objectKey} for ${adminId ? 'admin' : 'user'} ${adminId || userId}`);
       
       // Download and stream the file
       // Note: In Replit Object Storage, authentication is sufficient for access control
