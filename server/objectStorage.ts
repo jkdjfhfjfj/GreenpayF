@@ -119,29 +119,35 @@ export class ObjectStorageService {
 
   /**
    * Upload a KYC document
+   * @returns Full URL path to access the document via /objects/ endpoint
    */
   async uploadKycDocument(buffer: Buffer, filename: string, contentType: string): Promise<string> {
     const key = this.generateUploadKey('kyc', filename);
     console.log(`📋 Uploading KYC document: ${filename} -> ${key}`);
-    return await this.uploadFile(key, buffer, contentType);
+    await this.uploadFile(key, buffer, contentType);
+    return `/objects/${key}`;
   }
 
   /**
    * Upload a chat file
+   * @returns Full URL path to access the file via /objects/ endpoint
    */
   async uploadChatFile(buffer: Buffer, filename: string, contentType: string): Promise<string> {
     const key = this.generateUploadKey('chat', filename);
     console.log(`💬 Uploading chat file: ${filename} -> ${key}`);
-    return await this.uploadFile(key, buffer, contentType);
+    await this.uploadFile(key, buffer, contentType);
+    return `/objects/${key}`;
   }
 
   /**
    * Upload a profile picture
+   * @returns Full URL path to access the picture via /objects/ endpoint
    */
   async uploadProfilePicture(buffer: Buffer, filename: string, contentType: string): Promise<string> {
     const key = this.generateUploadKey('profile', filename);
     console.log(`👤 Uploading profile picture: ${filename} -> ${key}`);
-    return await this.uploadFile(key, buffer, contentType);
+    await this.uploadFile(key, buffer, contentType);
+    return `/objects/${key}`;
   }
 
   /**
