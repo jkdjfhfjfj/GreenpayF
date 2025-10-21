@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Notifications from "@/components/notifications";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard } from "lucide-react";
 
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
@@ -81,287 +81,289 @@ export default function DashboardPage() {
     document.documentElement.classList.toggle('dark');
   };
 
+  // Quick action items
+  const quickActions = [
+    { 
+      id: "send", 
+      icon: Send, 
+      label: "Send Money", 
+      path: "/send-money", 
+      color: "from-blue-500 to-blue-600",
+      iconColor: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-950/20",
+      disabled: !hasActiveVirtualCard
+    },
+    { 
+      id: "receive", 
+      icon: Download, 
+      label: "Receive", 
+      path: "/receive-money", 
+      color: "from-green-500 to-green-600",
+      iconColor: "text-green-600",
+      bgColor: "bg-green-50 dark:bg-green-950/20",
+      disabled: !hasActiveVirtualCard
+    },
+    { 
+      id: "airtime", 
+      icon: Smartphone, 
+      label: "Buy Airtime", 
+      path: "/airtime", 
+      color: "from-purple-500 to-purple-600",
+      iconColor: "text-purple-600",
+      bgColor: "bg-purple-50 dark:bg-purple-950/20",
+      disabled: !hasActiveVirtualCard
+    },
+    { 
+      id: "deposit", 
+      icon: TrendingUp, 
+      label: "Add Money", 
+      path: "/deposit", 
+      color: "from-orange-500 to-orange-600",
+      iconColor: "text-orange-600",
+      bgColor: "bg-orange-50 dark:bg-orange-950/20",
+      disabled: false
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm elevation-1"
+        className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
       >
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              {user?.profilePhotoUrl ? (
-                <img 
-                  src={user.profilePhotoUrl} 
-                  alt="Profile" 
-                  className="w-10 h-10 rounded-full object-cover mr-3 border-2 border-primary/20"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mr-3">
-                  <span className="text-white font-semibold">
-                    {user?.fullName?.split(' ').map(n => n[0]).join('') || 'JD'}
-                  </span>
-                </div>
-              )}
-              <div>
-                <h1 className="font-semibold text-lg">Welcome back, {user?.fullName?.split(' ')[0] || 'John'}</h1>
-                <p className="text-sm text-muted-foreground">Good morning!</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            {user?.profilePhotoUrl ? (
+              <img 
+                src={user.profilePhotoUrl} 
+                alt="Profile" 
+                className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-white/30 shadow-lg"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mr-3 border-2 border-white/30 shadow-lg">
+                <span className="text-white font-bold text-lg">
+                  {user?.fullName?.split(' ').map(n => n[0]).join('') || 'JD'}
+                </span>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Notifications />
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleDarkMode}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-                data-testid="button-dark-mode"
-              >
-                <span className="material-icons text-muted-foreground">brightness_6</span>
-              </motion.button>
+            )}
+            <div>
+              <h1 className="font-bold text-lg">Hi, {user?.fullName?.split(' ')[0] || 'John'}!</h1>
+              <p className="text-xs text-white/80">Welcome back 👋</p>
             </div>
           </div>
+          <div className="flex items-center space-x-2">
+            <Notifications />
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleDarkMode}
+              className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+              data-testid="button-dark-mode"
+            >
+              <span className="material-icons text-white text-xl">brightness_6</span>
+            </motion.button>
+          </div>
         </div>
-      </motion.div>
 
-      <div className="p-6 space-y-6">
-        {/* KYC Status Alert */}
-        {!isKYCVerified && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`p-4 rounded-xl ${
-              user?.kycStatus === 'pending' 
-                ? 'bg-blue-50 border border-blue-200' 
-                : 'bg-amber-50 border border-amber-200'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className={`material-icons mr-2 ${
-                  user?.kycStatus === 'pending' ? 'text-blue-600' : 'text-amber-600'
-                }`}>
-                  {user?.kycStatus === 'pending' ? 'hourglass_empty' : 'warning'}
-                </span>
-                <div>
-                  <h3 className={`font-medium ${
-                    user?.kycStatus === 'pending' ? 'text-blue-800' : 'text-amber-800'
-                  }`}>
-                    {user?.kycStatus === 'pending' ? 'Verification Pending' : 'Verify Your Identity'}
-                  </h3>
-                  <p className={`text-sm ${
-                    user?.kycStatus === 'pending' ? 'text-blue-700' : 'text-amber-700'
-                  }`}>
-                    {user?.kycStatus === 'pending' 
-                      ? 'Your documents are under review' 
-                      : 'Complete KYC to unlock all features'
-                    }
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={() => setLocation("/kyc")}
-                size="sm"
-                className={
-                  user?.kycStatus === 'pending'
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-amber-600 hover:bg-amber-700'
-                }
-                data-testid="button-verify-kyc"
-              >
-                {user?.kycStatus === 'pending' ? 'View Status' : 'Verify Now'}
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Card Status Alert */}
-        {!hasActiveVirtualCard && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-50 border border-blue-200 p-4 rounded-xl"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="material-icons text-blue-600 mr-2">credit_card</span>
-                <div>
-                  <h3 className="font-medium text-blue-800">Activate Virtual Card</h3>
-                  <p className="text-sm text-blue-700">Purchase your virtual card to start transacting</p>
-                </div>
-              </div>
-              <Button
-                onClick={() => setLocation("/virtual-card")}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
-                data-testid="button-activate-card"
-              >
-                Activate
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Wallet Balance Card */}
+        {/* Wallet Balance Card - Compact */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-primary to-secondary p-6 rounded-2xl text-white elevation-3"
+          className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
         >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-green-200 text-sm flex items-center">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1">
+              <p className="text-white/70 text-xs mb-1 flex items-center">
                 Total Balance
                 {isKYCVerified && (
-                  <span className="material-icons text-green-100 ml-1 text-sm">verified</span>
+                  <span className="material-icons text-green-300 ml-1 text-sm">verified</span>
                 )}
               </p>
-              <p className="text-2xl font-bold" data-testid="text-balance">
+              <p className="text-3xl font-bold mb-1" data-testid="text-balance">
                 {showBalance ? `$${realTimeBalance.toFixed(2)}` : "••••••"}
               </p>
-              <p className="text-green-200 text-xs">
+              <p className="text-white/60 text-xs">
                 ≈ ₦{showBalance ? balanceInNGN : '••••'} • KSh{showBalance ? balanceInKES : '••••'}
               </p>
-              <p className="text-green-100 text-xs opacity-75">Live rates</p>
             </div>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowBalance(!showBalance)}
-              className="bg-white/20 p-2 rounded-full"
+              className="bg-white/10 p-3 rounded-full backdrop-blur-sm"
               data-testid="button-toggle-balance"
             >
-              <span className="material-icons text-white">
+              <span className="material-icons text-white text-xl">
                 {showBalance ? "visibility" : "visibility_off"}
               </span>
             </motion.button>
           </div>
-          
-          <div className="flex space-x-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLocation("/send-money")}
-              disabled={!hasActiveVirtualCard}
-              className={`flex-1 bg-white/20 backdrop-blur-sm rounded-xl p-2.5 text-center border-0 ${
-                !hasActiveVirtualCard ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              data-testid="button-send"
+        </motion.div>
+      </motion.div>
+
+      <div className="px-4 py-6 space-y-6">
+        {/* KYC and Card Status Alerts */}
+        {!isKYCVerified && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl flex items-center justify-between"
+          >
+            <div className="flex items-center">
+              <span className="material-icons text-amber-600 mr-3">warning</span>
+              <div>
+                <p className="font-medium text-amber-900 dark:text-amber-200 text-sm">Verify Your Identity</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">Complete KYC to unlock all features</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setLocation("/kyc")}
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs"
+              data-testid="button-verify-kyc"
             >
-              <span className="material-icons block mb-1">send</span>
-              <span className="text-xs">Send</span>
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLocation("/receive-money")}
-              disabled={!hasActiveVirtualCard}
-              className={`flex-1 bg-white/20 backdrop-blur-sm rounded-xl p-2.5 text-center border-0 ${
-                !hasActiveVirtualCard ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              data-testid="button-receive"
+              Verify
+            </Button>
+          </motion.div>
+        )}
+
+        {!hasActiveVirtualCard && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4 rounded-xl flex items-center justify-between"
+          >
+            <div className="flex items-center">
+              <CreditCard className="w-5 h-5 text-blue-600 mr-3" />
+              <div>
+                <p className="font-medium text-blue-900 dark:text-blue-200 text-sm">Get Virtual Card</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Start making transactions</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setLocation("/virtual-card")}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+              data-testid="button-activate-card"
             >
-              <span className="material-icons block mb-1">call_received</span>
-              <span className="text-xs">Receive</span>
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLocation("/deposit")}
-              className="flex-1 bg-white/20 backdrop-blur-sm rounded-xl p-2.5 text-center border-0"
-              data-testid="button-deposit"
-            >
-              <span className="material-icons block mb-1">add</span>
-              <span className="text-xs">Deposit</span>
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLocation("/exchange")}
-              className="flex-1 bg-white/20 backdrop-blur-sm rounded-xl p-2.5 text-center border-0"
-              data-testid="button-exchange"
-            >
-              <span className="material-icons block mb-1">currency_exchange</span>
-              <span className="text-xs">Exchange</span>
-            </motion.button>
+              Get Card
+            </Button>
+          </motion.div>
+        )}
+
+        {/* Quick Actions Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <h2 className="text-lg font-bold mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <motion.button
+                  key={action.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 * index }}
+                  whileTap={{ scale: action.disabled ? 1 : 0.95 }}
+                  onClick={() => !action.disabled && setLocation(action.path)}
+                  disabled={action.disabled}
+                  className={`${action.bgColor} p-5 rounded-2xl border border-border hover:shadow-lg transition-all ${
+                    action.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 shadow-md`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <p className="font-semibold text-sm text-left">{action.label}</p>
+                </motion.button>
+              );
+            })}
           </div>
         </motion.div>
 
-        {/* Quick Actions */}
+        {/* Services */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-2 gap-4"
+          transition={{ delay: 0.3 }}
         >
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setLocation("/virtual-card")}
-            className="bg-card p-4 rounded-xl border border-border text-center hover:bg-muted transition-colors elevation-1"
-            data-testid="button-virtual-card"
-          >
-            <span className="material-icons text-primary text-2xl mb-2">credit_card</span>
-            <p className="font-semibold">Virtual Card</p>
-            <p className={`text-xs ${cardStatus === 'active' ? 'text-green-600' : 'text-amber-600'}`}>
-              {cardStatus === 'active' ? 'Active' : 'Inactive'}
-            </p>
-          </motion.button>
+          <h2 className="text-lg font-bold mb-4">Services</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/virtual-card")}
+              className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
+              data-testid="button-virtual-card"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center mb-3 shadow-md">
+                <span className="material-icons text-white text-2xl">credit_card</span>
+              </div>
+              <p className="font-semibold text-sm mb-1">Virtual Card</p>
+              <p className={`text-xs ${cardStatus === 'active' ? 'text-green-600' : 'text-amber-600'}`}>
+                {cardStatus === 'active' ? '● Active' : '● Inactive'}
+              </p>
+            </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setLocation("/transactions")}
-            className="bg-card p-4 rounded-xl border border-border text-center hover:bg-muted transition-colors elevation-1"
-            data-testid="button-transactions"
-          >
-            <span className="material-icons text-secondary text-2xl mb-2">receipt_long</span>
-            <p className="font-semibold">Transactions</p>
-            <p className="text-xs text-muted-foreground">{transactions.length} records</p>
-          </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/transactions")}
+              className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
+              data-testid="button-transactions"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center mb-3 shadow-md">
+                <span className="material-icons text-white text-2xl">receipt_long</span>
+              </div>
+              <p className="font-semibold text-sm mb-1">History</p>
+              <p className="text-xs text-muted-foreground">{transactions.length} records</p>
+            </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setLocation("/settings")}
-            className="bg-card p-4 rounded-xl border border-border text-center hover:bg-muted transition-colors elevation-1"
-            data-testid="button-settings"
-          >
-            <span className="material-icons text-accent text-2xl mb-2">settings</span>
-            <p className="font-semibold">Settings</p>
-            <p className="text-xs text-muted-foreground">
-              {isKYCVerified ? 'Verified' : 'Setup required'}
-            </p>
-          </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/exchange")}
+              className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center mb-3 shadow-md">
+                <span className="material-icons text-white text-2xl">currency_exchange</span>
+              </div>
+              <p className="font-semibold text-sm mb-1">Exchange</p>
+              <p className="text-xs text-muted-foreground">Multi-currency</p>
+            </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setLocation("/support")}
-            className="bg-card p-4 rounded-xl border border-border text-center hover:bg-muted transition-colors elevation-1"
-            data-testid="button-support"
-          >
-            <span className="material-icons text-primary text-2xl mb-2">support_agent</span>
-            <p className="font-semibold">Support</p>
-            <p className="text-xs text-muted-foreground">24/7 help</p>
-          </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/support")}
+              className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
+              data-testid="button-support"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center mb-3 shadow-md">
+                <span className="material-icons text-white text-2xl">support_agent</span>
+              </div>
+              <p className="font-semibold text-sm mb-1">Support</p>
+              <p className="text-xs text-muted-foreground">24/7 help</p>
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Recent Transactions */}
         {transactions.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-card rounded-xl border border-border elevation-1"
+            transition={{ delay: 0.4 }}
+            className="bg-card rounded-2xl border border-border shadow-sm"
           >
             <div className="p-4 border-b border-border flex items-center justify-between">
-              <h3 className="font-semibold">Recent Activity</h3>
+              <h3 className="font-bold text-base">Recent Activity</h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocation("/transactions")}
+                className="text-xs"
                 data-testid="button-view-all-transactions"
               >
                 View All
@@ -369,28 +371,28 @@ export default function DashboardPage() {
             </div>
             <div className="divide-y divide-border">
               {transactions.slice(0, 3).map((transaction: any, index: number) => (
-                <div key={transaction.id || index} className="p-4 flex items-center justify-between">
+                <div key={transaction.id || index} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                   <div className="flex items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-3 ${
                       transaction.type === 'receive' || transaction.type === 'deposit'
-                        ? 'bg-green-100 text-green-600'
-                        : 'bg-red-100 text-red-600'
+                        ? 'bg-green-100 dark:bg-green-950/30 text-green-600'
+                        : 'bg-red-100 dark:bg-red-950/30 text-red-600'
                     }`}>
-                      <span className="material-icons text-sm">
+                      <span className="material-icons text-lg">
                         {transaction.type === 'receive' || transaction.type === 'deposit'
                           ? 'arrow_downward'
                           : 'arrow_upward'}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium capitalize">{transaction.type.replace('_', ' ')}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium text-sm capitalize">{transaction.type.replace('_', ' ')}</p>
+                      <p className="text-xs text-muted-foreground">
                         {new Date(transaction.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`font-semibold ${
+                    <p className={`font-bold text-sm ${
                       transaction.type === 'receive' || transaction.type === 'deposit'
                         ? 'text-green-600'
                         : 'text-red-600'
@@ -451,7 +453,6 @@ export default function DashboardPage() {
               </div>
               <p className="text-sm opacity-90">✨ Limited Time Only! ✨</p>
             </div>
-
 
             {/* Action Buttons */}
             <div className="space-y-3">

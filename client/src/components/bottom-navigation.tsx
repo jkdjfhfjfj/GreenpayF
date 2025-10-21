@@ -7,14 +7,15 @@ interface NavItem {
   icon: string;
   label: string;
   path: string;
+  isCenter?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { id: "dashboard", icon: "dashboard", label: "Dashboard", path: "/dashboard" },
-  { id: "transactions", icon: "receipt_long", label: "Transactions", path: "/transactions" },
+  { id: "dashboard", icon: "home", label: "Home", path: "/dashboard" },
+  { id: "transactions", icon: "receipt_long", label: "History", path: "/transactions" },
+  { id: "send", icon: "swap_horiz", label: "Transfer", path: "/send-money", isCenter: true },
   { id: "virtual-card", icon: "credit_card", label: "Card", path: "/virtual-card" },
-  { id: "support", icon: "support_agent", label: "Support", path: "/support" },
-  { id: "settings", icon: "settings", label: "Settings", path: "/settings" },
+  { id: "settings", icon: "person", label: "Profile", path: "/settings" },
 ];
 
 export default function BottomNavigation() {
@@ -32,10 +33,13 @@ export default function BottomNavigation() {
     location.startsWith('/support') ||
     location.startsWith('/settings') ||
     location.startsWith('/send-money') ||
+    location.startsWith('/send-amount') ||
+    location.startsWith('/send-confirm') ||
     location.startsWith('/receive-money') ||
     location.startsWith('/deposit') ||
     location.startsWith('/withdraw') ||
-    location.startsWith('/exchange')
+    location.startsWith('/exchange') ||
+    location.startsWith('/airtime')
   );
 
   if (!showBottomNav) return null;
@@ -45,96 +49,92 @@ export default function BottomNavigation() {
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-50 safe-area-pb"
+      className="fixed bottom-0 left-0 right-0 z-50"
       style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999 }}
       data-testid="bottom-navigation"
     >
-      <div className="bg-gradient-to-r from-card via-card/95 to-card backdrop-blur-sm border-t border-border/20 p-2 elevation-3 shadow-lg">
-        <div className="flex justify-around max-w-sm mx-auto">
-          {navItems.map((item) => {
-            const isActive = location === item.path;
+      <div className="bg-background/80 backdrop-blur-md border-t border-border/40 pb-safe">
+        <div className="flex justify-around items-end max-w-lg mx-auto px-4 py-2 relative">
+          {navItems.map((item, index) => {
+            const isActive = location === item.path || 
+              (item.path === '/send-money' && (location.startsWith('/send-money') || location.startsWith('/send-amount') || location.startsWith('/send-confirm')));
             
+            if (item.isCenter) {
+              // Large center button
+              return (
+                <motion.button
+                  key={item.id}
+                  onClick={() => setLocation(item.path)}
+                  whileTap={{ scale: 0.9 }}
+                  className="relative -mt-8"
+                  data-testid={`nav-${item.id}`}
+                >
+                  <div className="relative">
+                    {/* Elevated circular button with gradient */}
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary via-purple-500 to-secondary shadow-xl flex items-center justify-center relative overflow-hidden">
+                      {/* Animated glow effect */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-primary/50 to-secondary/50 rounded-full"
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [0.5, 0.2, 0.5],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      />
+                      <span className="material-icons text-white text-3xl relative z-10">
+                        {item.icon}
+                      </span>
+                    </div>
+                    {/* Label below */}
+                    <p className="text-xs font-medium text-foreground/70 mt-2 text-center">
+                      {item.label}
+                    </p>
+                  </div>
+                </motion.button>
+              );
+            }
+
+            // Regular nav items
             return (
               <motion.button
                 key={item.id}
                 onClick={() => setLocation(item.path)}
-                whileTap={{ 
-                  scale: 0.85, 
-                  y: 1,
-                  transition: { type: "spring", stiffness: 500, damping: 25 }
-                }}
-                whileHover={{ 
-                  scale: 1.08, 
-                  y: -4,
-                  transition: { type: "spring", stiffness: 400, damping: 20 }
-                }}
-                className={`relative flex flex-col items-center py-3 px-4 rounded-2xl transition-all duration-300 min-w-[60px] overflow-hidden ${
-                  isActive 
-                    ? 'bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg backdrop-blur-sm border border-primary/20' 
-                    : 'text-muted-foreground hover:text-primary hover:bg-gradient-to-br hover:from-primary/10 hover:via-primary/5 hover:to-transparent'
-                }`}
+                whileTap={{ scale: 0.85 }}
+                className="flex flex-col items-center py-2 px-3 min-w-[60px] relative"
                 data-testid={`nav-${item.id}`}
               >
-                {/* Animated background glow effect */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/15 to-primary/20 opacity-0"
-                  whileHover={{
-                    opacity: isActive ? 0.3 : 0.15,
-                    scale: 1.2,
-                    transition: { duration: 0.3, ease: "easeOut" }
-                  }}
-                  style={{
-                    filter: 'blur(8px)',
-                  }}
-                />
-                
-                {/* Icon with enhanced animations */}
-                <motion.span 
-                  className={`material-icons mb-1 relative z-10 transition-all duration-300 ${
-                    isActive ? 'text-lg' : 'text-base'
+                <div className="relative">
+                  <span 
+                    className={`material-icons transition-all duration-200 ${
+                      isActive 
+                        ? 'text-primary text-2xl' 
+                        : 'text-muted-foreground text-xl'
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  {/* Active indicator dot */}
+                  {isActive && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full"
+                    />
+                  )}
+                </div>
+                <span 
+                  className={`text-xs font-medium mt-1 transition-all duration-200 ${
+                    isActive 
+                      ? 'text-primary' 
+                      : 'text-muted-foreground'
                   }`}
-                  whileHover={{
-                    rotateZ: [0, -5, 5, 0],
-                    transition: { duration: 0.4, ease: "easeInOut" }
-                  }}
-                >
-                  {item.icon}
-                </motion.span>
-                
-                {/* Label with bounce effect */}
-                <motion.span 
-                  className={`text-xs font-semibold transition-all duration-300 relative z-10 ${
-                    isActive ? 'opacity-100' : 'opacity-80'
-                  }`}
-                  whileHover={{
-                    y: [-1, 0],
-                    transition: { duration: 0.2, ease: "easeOut" }
-                  }}
                 >
                   {item.label}
-                </motion.span>
-
-                {/* Active indicator with pulse */}
-                {isActive && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full"
-                  >
-                    <motion.div
-                      className="absolute inset-0 bg-primary rounded-full"
-                      animate={{
-                        scale: [1, 1.5, 1],
-                        opacity: [0.7, 0.3, 0.7],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    />
-                  </motion.div>
-                )}
+                </span>
               </motion.button>
             );
           })}
