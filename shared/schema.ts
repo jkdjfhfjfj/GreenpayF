@@ -19,7 +19,9 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   biometricEnabled: boolean("biometric_enabled").default(false),
   pushNotificationsEnabled: boolean("push_notifications_enabled").default(true),
-  balance: decimal("balance", { precision: 10, scale: 2 }).default("0.00"),
+  balance: decimal("balance", { precision: 10, scale: 2 }).default("0.00"), // USD balance
+  kesBalance: decimal("kes_balance", { precision: 10, scale: 2 }).default("0.00"), // KES balance
+  hasReceivedWelcomeBonus: boolean("has_received_welcome_bonus").default(false),
   otpCode: text("otp_code"),
   otpExpiry: timestamp("otp_expiry"),
   paystackCustomerId: text("paystack_customer_id"),
