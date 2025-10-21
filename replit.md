@@ -6,15 +6,26 @@ GreenPay is a fintech mobile application designed for international money transf
 
 ## Latest Updates
 
-### Fixed Top Bar with Support Icon
-- **Implementation**: Created new top bar component that appears at the top of all user-facing pages
-- **Features**:
-  - Fixed/sticky positioning at top of screen
-  - GreenPay logo with gradient background
-  - Support icon (headphones) that navigates to live chat
-  - Auto-hides on auth pages, splash, and admin pages
-  - Semi-transparent backdrop with blur effect
-- **Layout Updates**: Added `.page-with-topbar` CSS class (56px padding) to all user pages to prevent content overlap
+### Support Button in Dashboard
+- **Location**: Added support button (headphones icon) next to notification bell in dashboard header
+- **Functionality**: Clicking the icon navigates to live chat for instant customer support
+- **Design**: Consistent with existing header icons (notification, dark mode toggle)
+
+### Forgot Password Feature
+- **Flow**: Phone-based password reset using SMS/WhatsApp OTP verification
+- **Pages**:
+  - `/auth/forgot-password` - User enters phone number to receive reset code
+  - `/auth/reset-password` - User enters 6-digit code and new password
+- **Backend Endpoints**:
+  - `POST /api/auth/forgot-password` - Sends reset code via SMS/WhatsApp
+  - `POST /api/auth/reset-password` - Verifies code and updates password
+- **Security**:
+  - OTP expires after 10 minutes
+  - Password hashed with bcrypt before storage
+  - Reuses existing messaging service for code delivery
+  - Clear OTP after successful password reset
+- **Storage Layer**: Added `updateUserPassword()` method to safely update user passwords
+- **UX**: Clear feedback at each step with toast notifications
 
 ### Document Viewing Fix
 - **Issue**: Users could upload KYC documents and profile photos but couldn't view them
