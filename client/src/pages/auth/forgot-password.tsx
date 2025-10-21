@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
                       <Input
                         {...field}
                         type="tel"
-                        placeholder="07XXXXXXXX"
+                        placeholder="712345678 or 0712345678"
                         className="h-12"
                         autoComplete="tel"
                       />
