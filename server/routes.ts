@@ -425,6 +425,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Forgot password - Send reset code
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      // Find user by phone number
+      const { messagingService } = await import('./services/messaging');
+      const formattedPhone = messagingService.formatPhoneNumber(phone);
+      const user = await storage.getUserByPhone(formattedPhone);
+      
+      if (!user) {
+        return res.status(404).json({ message: "No account found with this phone number" });
+      }
+
+      // Generate reset code (6-digit OTP)
+      const resetCode = messagingService.generateOTP();
+      const resetExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      // Store reset code in user's OTP field
+      await storage.updateUserOtp(user.id, resetCode, resetExpiry);
+      
+      // Send reset code via SMS and WhatsApp
+      const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
+      const result = await messagingService.sendMessage(user.phone, message);
+      
+      if (!result.sms && !result.whatsapp) {
+        return res.status(500).json({ message: "Failed to send reset code" });
+      }
+      
+      const sentMethods = [];
+      if (result.sms) sentMethods.push('SMS');
+      if (result.whatsapp) sentMethods.push('WhatsApp');
+      
+      res.json({ 
+        phone: user.phone,
+        sentVia: sentMethods.join(' and ')
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: "Failed to send reset code" });
+    }
+  });
+
+  // Reset password - Verify code and update password
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { phone, code, newPassword } = req.body;
+      
+      if (!phone || !code || !newPassword) {
+        return res.status(400).json({ message: "Phone, code, and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      // Find user by phone
+      const { messagingService } = await import('./services/messaging');
+      const formattedPhone = messagingService.formatPhoneNumber(phone);
+      const user = await storage.getUserByPhone(formattedPhone);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify reset code
+      const isValid = await storage.verifyUserOtp(user.id, code);
+      
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      
+      // Update password
+      await storage.updateUserPassword(user.id, hashedPassword);
+      
+      // Clear OTP
+      await storage.updateUserOtp(user.id, null, null);
+      
+      // Send confirmation message
+      messagingService.sendMessage(
+        user.phone,
+        "Your password has been reset successfully. You can now log in with your new password."
+      ).catch(err => console.error('Password reset notification error:', err));
+      
+      res.json({ 
+        success: true,
+        message: "Password reset successful" 
+      });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
   // Conversation endpoints
   app.get("/api/conversations/user-conversation", async (req, res) => {
     try {

@@ -11,6 +11,8 @@ import SignupPage from "@/pages/auth/signup";
 import OtpVerificationPage from "@/pages/auth/otp-verification";
 import KycVerificationPage from "@/pages/auth/kyc-verification";
 import VirtualCardPurchasePage from "@/pages/auth/virtual-card-purchase";
+import ForgotPasswordPage from "@/pages/auth/forgot-password";
+import ResetPasswordPage from "@/pages/auth/reset-password";
 import DashboardPage from "@/pages/dashboard";
 import SendMoneyPage from "@/pages/send-money";
 import SendAmountPage from "@/pages/send-amount";
@@ -89,6 +91,8 @@ function Router() {
       <Route path="/auth/otp-verification" component={OtpVerificationPage} />
       <Route path="/auth/kyc-verification" component={KycVerificationPage} />
       <Route path="/auth/virtual-card-purchase" component={VirtualCardPurchasePage} />
+      <Route path="/auth/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/auth/reset-password" component={ResetPasswordPage} />
       <Route path="/dashboard">
         <ProtectedRoute component={DashboardPage} />
       </Route>
