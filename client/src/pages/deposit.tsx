@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { formatNumber } from "@/lib/formatters";
 
 const depositSchema = z.object({
   amount: z.string().min(1, "Amount is required").refine((val) => parseFloat(val) >= 10, "Minimum deposit is $10"),
@@ -132,7 +133,7 @@ export default function DepositPage() {
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Current Balance</p>
             <p className="text-2xl font-bold text-primary" data-testid="text-current-balance">
-              ${user?.balance ? parseFloat(user.balance).toFixed(2) : '0.00'}
+              ${formatNumber(parseFloat(user?.balance || '0'))}
             </p>
           </div>
         </motion.div>
@@ -327,7 +328,7 @@ export default function DepositPage() {
                   <span>Total</span>
                   <span>
                     ${selectedMethod === "bank" ? form.watch("amount") || "0.00" : 
-                      selectedMethod && form.watch("amount") ? (parseFloat(form.watch("amount")) + 2.99).toFixed(2) : "0.00"}
+                      selectedMethod && form.watch("amount") ? formatNumber(parseFloat(form.watch("amount")) + 2.99) : "0.00"}
                   </span>
                 </div>
               </div>

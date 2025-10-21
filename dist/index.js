@@ -6406,11 +6406,11 @@ async function registerRoutes(app2) {
           const withdrawalAmount = parseFloat(transaction.amount);
           const withdrawalFee = parseFloat(transaction.fee || "0");
           const totalDeduction = withdrawalAmount + withdrawalFee;
-          const currentBalance = parseFloat(user.balance || "0");
+          const isKesWithdrawal = transaction.currency?.toUpperCase() === "KES";
+          const currentBalance = parseFloat(isKesWithdrawal ? user.kesBalance || "0" : user.balance || "0");
           const newBalance = (currentBalance - totalDeduction).toFixed(2);
-          await storage.updateUser(user.id, {
-            balance: newBalance
-          });
+          const balanceUpdate = isKesWithdrawal ? { kesBalance: newBalance } : { balance: newBalance };
+          await storage.updateUser(user.id, balanceUpdate);
           await notificationService.sendNotification({
             title: "Withdrawal Approved",
             body: `Your withdrawal of ${transaction.currency} ${transaction.amount} has been approved and processed.`,

@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { mockCurrencies } from "@/lib/mock-data";
+import { formatNumber } from "@/lib/formatters";
 
 const withdrawSchema = z.object({
   amount: z.string().min(1, "Amount is required").refine((val) => parseFloat(val) >= 100, "Minimum withdrawal is KSh 100"),
@@ -167,7 +168,7 @@ export default function WithdrawPage() {
         >
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Available for Withdrawal (KES)</p>
-            <p className="text-2xl font-bold text-primary" data-testid="text-available-balance">KSh {realTimeBalance.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-primary" data-testid="text-available-balance">KSh {formatNumber(realTimeBalance)}</p>
             <p className="text-xs text-muted-foreground mt-1">
               {realTimeBalance < 100 && usdBalance > 0 && (
                 <span className="text-amber-600">Convert USD to KES to withdraw • </span>
@@ -190,7 +191,7 @@ export default function WithdrawPage() {
               <div>
                 <p className="font-medium text-blue-900 dark:text-blue-200 text-sm mb-1">Convert USD to KES First</p>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
-                  Withdrawals require KES balance. You have ${usdBalance.toFixed(2)} USD available to convert.
+                  Withdrawals require KES balance. You have ${formatNumber(usdBalance)} USD available to convert.
                 </p>
                 <Button
                   type="button"
@@ -538,7 +539,7 @@ export default function WithdrawPage() {
                   <span>You Receive</span>
                   <span className="text-primary">
                     ${form.watch("amount") ? 
-                      (parseFloat(form.watch("amount")) - parseFloat(getWithdrawFee().replace('$', ''))).toFixed(2) : 
+                      formatNumber(parseFloat(form.watch("amount")) - parseFloat(getWithdrawFee().replace('$', ''))) : 
                       "0.00"}
                   </span>
                 </div>

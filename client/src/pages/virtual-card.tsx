@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { X, Sparkles } from "lucide-react";
+import { formatNumber } from "@/lib/formatters";
 
 export default function VirtualCardPage() {
   const [, setLocation] = useLocation();
@@ -485,7 +486,7 @@ export default function VirtualCardPage() {
           <div className="text-center">
             <p className="text-sm text-muted-foreground mb-1">Available Balance</p>
             <p className="text-3xl font-bold text-primary" data-testid="text-card-balance">
-              ${realTimeBalance.toFixed(2)}
+              ${formatNumber(realTimeBalance)}
             </p>
             <p className="text-sm text-muted-foreground">Last updated: Just now</p>
           </div>
