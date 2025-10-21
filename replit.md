@@ -46,6 +46,30 @@ GreenPay is a fintech mobile application designed for international money transf
   - Clear error messages for insufficient funds
 - **Technical Debt**: Exchange endpoint uses read-modify-write pattern; should be wrapped in database transaction to prevent race conditions in production
 
+## Login History Tracking
+- **Database Table**: New `login_history` table tracking user login events with ipAddress, userAgent, deviceType, browser, location, status, and timestamp
+- **Backend Tracking**: Login history automatically saved on both direct login and OTP verification paths
+- **Device Detection**: System extracts device type (Mobile/Desktop/Tablet), browser name, and operating system from user-agent
+- **Storage Layer**: Methods `createLoginHistory` and `getLoginHistoryByUserId` for managing login records
+- **API Endpoint**: GET `/api/users/:id/login-history` returns recent login events for authenticated users
+- **Dashboard Display**: "Recent Logins" section shows last 5 login events with device info, browser, location, timestamp, and success/failure status
+- **React Query Fix**: Uses stable query key with custom queryFn to properly handle user authentication state hydration
+
+## Enhanced Balance Card (Dashboard)
+- **User Country Display**: Shows user's country with location icon next to balance label
+- **KYC Verification Icon**: Green verified checkmark displayed when user has completed KYC
+- **Quick Exchange Access**: Prominent "Exchange" button with currency exchange icon positioned next to "Other wallet" balance for easy USD↔KES conversion
+
+## KES-Based Withdrawals
+- **Currency Switch**: Withdraw page now uses KES balance instead of USD balance
+- **Minimum Amount**: Updated from $10 minimum to KSh 100 minimum withdrawal
+- **Fees in KES**: All withdrawal fees displayed in local currency (KSh 200-400 depending on method)
+- **Conversion Prompts**: Blue info box appears when user has insufficient KES balance, directing them to exchange page
+- **Currency Labels**: Updated all UI labels to show "KSh" prefix instead of "$" for clarity
+
+## UX Improvements
+- **Login Modal Removed**: Eliminated the 75% discount virtual card purchase modal that appeared 2 seconds after user login, providing cleaner dashboard experience
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
