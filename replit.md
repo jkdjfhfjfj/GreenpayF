@@ -21,11 +21,18 @@ Phone number formats: Users can enter phone numbers in multiple formats (7123456
 
 ## Object Storage Result Unwrapping Fix  
 - **Issue**: File viewing was broken - `getMetadata()` doesn't exist in Replit Object Storage client
+- **Root Cause**: 
+  - Result objects must be unwrapped using `result.ok` and `result.value`
+  - `downloadAsBytes()` returns `[Buffer]` tuple, not raw `Buffer`
+  - StorageObject uses `name` property, not `key`
 - **Solution**: 
-  - Properly unwrap Result objects using `result.ok` and `result.value`
+  - Properly unwrap Result objects: `if (!result.ok)` checks, `result.value` extraction
+  - Destructure Buffer from tuple: `const [buffer] = downloadResult.value as [Buffer];`
+  - Fixed listFiles: `obj.name` instead of `obj.key`
   - Distinguish 404 (file not found) from 500 (storage error)
   - Extension-based MIME type detection
-- **Impact**: Profile photos, KYC documents, and chat files now viewable
+  - Enhanced logging for debugging file downloads
+- **Impact**: Profile photos, KYC documents, and chat files now viewable with correct binary content
 
 # System Architecture
 
