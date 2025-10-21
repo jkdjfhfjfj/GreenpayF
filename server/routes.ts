@@ -155,6 +155,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertUserSchema.parse(req.body);
       
+      // Format phone number consistently (+254XXXXXXXXX)
+      const { messagingService } = await import('./services/messaging');
+      userData.phone = messagingService.formatPhoneNumber(userData.phone);
+      
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {

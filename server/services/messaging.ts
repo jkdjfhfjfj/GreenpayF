@@ -44,32 +44,38 @@ export class MessagingService {
   }
 
   /**
-   * Format phone number to Kenya format (254XXXXXXXXX)
-   * Handles: +254xxx, 0xxx, 254xxx, 7xxx
+   * Format phone number to Kenya format (+254XXXXXXXXX)
+   * Handles: +254xxx, 00254xxx, 0xxx, 254xxx, 7xxx, 1xxx
+   * Always returns phone with + prefix for database consistency
    */
   formatPhoneNumber(phone: string): string {
     // Remove any whitespace and special characters except +
     let cleaned = phone.replace(/[\s-()]/g, '');
     
-    // Remove leading + if present
+    // Handle international prefix "00" (e.g., 00254712345678)
+    if (cleaned.startsWith('00')) {
+      cleaned = cleaned.substring(2);
+    }
+    
+    // Remove leading + if present temporarily
     if (cleaned.startsWith('+')) {
       cleaned = cleaned.substring(1);
     }
     
     // Handle different formats
     if (cleaned.startsWith('254')) {
-      // Already in correct format
-      return cleaned;
+      // Already in correct format, just add +
+      return '+' + cleaned;
     } else if (cleaned.startsWith('0')) {
       // Replace leading 0 with 254
-      return '254' + cleaned.substring(1);
-    } else if (cleaned.length === 9 && cleaned.startsWith('7')) {
-      // Add 254 prefix
-      return '254' + cleaned;
+      return '+254' + cleaned.substring(1);
+    } else if (cleaned.length === 9 && (cleaned.startsWith('7') || cleaned.startsWith('1'))) {
+      // Add 254 prefix for local numbers
+      return '+254' + cleaned;
     }
     
-    // Return as-is if format is unclear (will likely fail at API)
-    return cleaned;
+    // Return with + prefix even if format is unclear
+    return '+' + cleaned;
   }
 
   /**
