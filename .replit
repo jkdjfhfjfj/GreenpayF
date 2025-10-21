@@ -59,8 +59,9 @@ localPort = 40969
 externalPort = 3001
 
 [deployment]
-run = ["sh", "-c", "npm start"]
-deploymentTarget = "cloudrun"
+run = ["node", "dist/index.js"]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
 
 [objectStorage]
 defaultBucketID = "replit-objstore-6f67444f-b771-4c8f-bea8-fd3ebf96c798"
