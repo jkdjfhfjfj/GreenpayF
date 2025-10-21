@@ -40,23 +40,12 @@ export const mockRecipients = [
 
 export const mockCurrencies = [
   { code: "USD", name: "US Dollar", symbol: "$" },
-  { code: "EUR", name: "Euro", symbol: "€" },
-  { code: "GBP", name: "British Pound", symbol: "£" },
-  { code: "NGN", name: "Nigerian Naira", symbol: "₦" },
-  { code: "GHS", name: "Ghanaian Cedi", symbol: "₵" },
   { code: "KES", name: "Kenyan Shilling", symbol: "KSh" },
-  { code: "ZAR", name: "South African Rand", symbol: "R" },
-  { code: "XAF", name: "Central African CFA Franc", symbol: "FCFA" },
 ];
 
 export const mockExchangeRates = {
-  "USD-NGN": 820.0,
-  "USD-GHS": 12.5,
-  "USD-KES": 150.0,
-  "USD-ZAR": 18.5,
-  "USD-XAF": 615.0,
-  "EUR-USD": 1.08,
-  "GBP-USD": 1.25,
+  "USD-KES": 129.0,
+  "KES-USD": 0.0077,
 };
 
 export const mockFAQs = [
