@@ -33,7 +33,7 @@ export const users = pgTable("users", {
 
 export const kycDocuments = pgTable("kyc_documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   documentType: text("document_type").notNull(), // national_id, passport, drivers_license
   frontImageUrl: text("front_image_url"),
   backImageUrl: text("back_image_url"),
@@ -49,7 +49,7 @@ export const kycDocuments = pgTable("kyc_documents", {
 
 export const virtualCards = pgTable("virtual_cards", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   cardNumber: text("card_number").notNull(),
   expiryDate: text("expiry_date").notNull(),
   cvv: text("cvv").notNull(),
@@ -63,7 +63,7 @@ export const virtualCards = pgTable("virtual_cards", {
 
 export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   type: text("type").notNull(), // send, receive, deposit, withdraw, card_purchase
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   currency: text("currency").notNull(),
@@ -83,7 +83,7 @@ export const transactions = pgTable("transactions", {
 
 export const recipients = pgTable("recipients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   phone: text("phone"),
   email: text("email"),
@@ -99,7 +99,7 @@ export const recipients = pgTable("recipients", {
 
 export const paymentRequests = pgTable("payment_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  fromUserId: varchar("from_user_id").references(() => users.id).notNull(),
+  fromUserId: varchar("from_user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   recipientId: varchar("recipient_id").references(() => recipients.id),
   toEmail: text("to_email"),
   toPhone: text("to_phone"),
@@ -113,10 +113,10 @@ export const paymentRequests = pgTable("payment_requests", {
 
 export const chatMessages = pgTable("chat_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   message: text("message").notNull(),
   isFromAdmin: boolean("is_from_admin").default(false),
-  adminId: varchar("admin_id").references(() => users.id),
+  adminId: varchar("admin_id").references(() => users.id, { onDelete: "cascade" }),
   conversationId: varchar("conversation_id").notNull(), // Groups messages by support session
   status: text("status").default("sent"), // sent, delivered, read
   createdAt: timestamp("created_at").defaultNow(),
@@ -129,7 +129,7 @@ export const notifications = pgTable("notifications", {
   message: text("message").notNull(),
   type: text("type").default("info"), // info, success, warning, error
   isGlobal: boolean("is_global").default(false), // true for admin broadcasts
-  userId: varchar("user_id").references(() => users.id), // null for global notifications
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }), // null for global notifications
   isRead: boolean("is_read").default(false),
   actionUrl: text("action_url"),
   metadata: jsonb("metadata"),
@@ -139,12 +139,12 @@ export const notifications = pgTable("notifications", {
 
 export const supportTickets = pgTable("support_tickets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   issueType: text("issue_type").notNull(),
   description: text("description").notNull(),
   status: text("status").default("open"), // open, in_progress, resolved, closed
   priority: text("priority").default("medium"), // low, medium, high, urgent
-  assignedAdminId: varchar("assigned_admin_id").references(() => users.id),
+  assignedAdminId: varchar("assigned_admin_id").references(() => users.id, { onDelete: "set null" }),
   adminNotes: text("admin_notes"),
   resolvedAt: timestamp("resolved_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -153,7 +153,7 @@ export const supportTickets = pgTable("support_tickets", {
 
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   adminId: varchar("admin_id").references(() => admins.id),
   status: text("status").default("active"), // active, closed
   title: text("title"),
@@ -386,7 +386,7 @@ export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema
 // Enhanced Features Tables
 export const savingsGoals = pgTable("savings_goals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   title: text("title").notNull(),
   targetAmount: decimal("target_amount", { precision: 10, scale: 2 }).notNull(),
   currentAmount: decimal("current_amount", { precision: 10, scale: 2 }).default("0.00"),
@@ -399,7 +399,7 @@ export const savingsGoals = pgTable("savings_goals", {
 
 export const qrPayments = pgTable("qr_payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   paymentCode: text("payment_code").notNull().unique(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   currency: text("currency").notNull().default("USD"),
@@ -412,7 +412,7 @@ export const qrPayments = pgTable("qr_payments", {
 
 export const scheduledPayments = pgTable("scheduled_payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   recipientId: varchar("recipient_id").references(() => recipients.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   currency: text("currency").notNull().default("USD"),
@@ -427,7 +427,7 @@ export const scheduledPayments = pgTable("scheduled_payments", {
 
 export const budgets = pgTable("budgets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   category: text("category").notNull(),
   budgetAmount: decimal("budget_amount", { precision: 10, scale: 2 }).notNull(),
   spentAmount: decimal("spent_amount", { precision: 10, scale: 2 }).default("0.00"),
@@ -442,7 +442,7 @@ export const budgets = pgTable("budgets", {
 
 export const userPreferences = pgTable("user_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull().unique(),
   theme: text("theme").default("light"), // light, dark, auto
   language: text("language").default("en"),
   biometricEnabled: boolean("biometric_enabled").default(false),
@@ -458,7 +458,7 @@ export const userPreferences = pgTable("user_preferences", {
 
 export const loginHistory = pgTable("login_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   deviceType: text("device_type"), // mobile, desktop, tablet

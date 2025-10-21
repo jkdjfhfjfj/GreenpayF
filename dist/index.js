@@ -95,7 +95,7 @@ var init_schema = __esm({
     });
     kycDocuments = pgTable("kyc_documents", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       documentType: text("document_type").notNull(),
       // national_id, passport, drivers_license
       frontImageUrl: text("front_image_url"),
@@ -111,7 +111,7 @@ var init_schema = __esm({
     });
     virtualCards = pgTable("virtual_cards", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       cardNumber: text("card_number").notNull(),
       expiryDate: text("expiry_date").notNull(),
       cvv: text("cvv").notNull(),
@@ -125,7 +125,7 @@ var init_schema = __esm({
     });
     transactions = pgTable("transactions", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       type: text("type").notNull(),
       // send, receive, deposit, withdraw, card_purchase
       amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
@@ -147,7 +147,7 @@ var init_schema = __esm({
     });
     recipients = pgTable("recipients", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       name: text("name").notNull(),
       phone: text("phone"),
       email: text("email"),
@@ -163,7 +163,7 @@ var init_schema = __esm({
     });
     paymentRequests = pgTable("payment_requests", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      fromUserId: varchar("from_user_id").references(() => users.id).notNull(),
+      fromUserId: varchar("from_user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       recipientId: varchar("recipient_id").references(() => recipients.id),
       toEmail: text("to_email"),
       toPhone: text("to_phone"),
@@ -177,10 +177,10 @@ var init_schema = __esm({
     });
     chatMessages = pgTable("chat_messages", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       message: text("message").notNull(),
       isFromAdmin: boolean("is_from_admin").default(false),
-      adminId: varchar("admin_id").references(() => users.id),
+      adminId: varchar("admin_id").references(() => users.id, { onDelete: "cascade" }),
       conversationId: varchar("conversation_id").notNull(),
       // Groups messages by support session
       status: text("status").default("sent"),
@@ -195,7 +195,7 @@ var init_schema = __esm({
       // info, success, warning, error
       isGlobal: boolean("is_global").default(false),
       // true for admin broadcasts
-      userId: varchar("user_id").references(() => users.id),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
       // null for global notifications
       isRead: boolean("is_read").default(false),
       actionUrl: text("action_url"),
@@ -205,14 +205,14 @@ var init_schema = __esm({
     });
     supportTickets = pgTable("support_tickets", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       issueType: text("issue_type").notNull(),
       description: text("description").notNull(),
       status: text("status").default("open"),
       // open, in_progress, resolved, closed
       priority: text("priority").default("medium"),
       // low, medium, high, urgent
-      assignedAdminId: varchar("assigned_admin_id").references(() => users.id),
+      assignedAdminId: varchar("assigned_admin_id").references(() => users.id, { onDelete: "set null" }),
       adminNotes: text("admin_notes"),
       resolvedAt: timestamp("resolved_at"),
       createdAt: timestamp("created_at").defaultNow(),
@@ -220,7 +220,7 @@ var init_schema = __esm({
     });
     conversations = pgTable("conversations", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       adminId: varchar("admin_id").references(() => admins.id),
       status: text("status").default("active"),
       // active, closed
@@ -402,7 +402,7 @@ var init_schema = __esm({
     });
     savingsGoals = pgTable("savings_goals", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       title: text("title").notNull(),
       targetAmount: decimal("target_amount", { precision: 10, scale: 2 }).notNull(),
       currentAmount: decimal("current_amount", { precision: 10, scale: 2 }).default("0.00"),
@@ -414,7 +414,7 @@ var init_schema = __esm({
     });
     qrPayments = pgTable("qr_payments", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       paymentCode: text("payment_code").notNull().unique(),
       amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
       currency: text("currency").notNull().default("USD"),
@@ -426,7 +426,7 @@ var init_schema = __esm({
     });
     scheduledPayments = pgTable("scheduled_payments", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       recipientId: varchar("recipient_id").references(() => recipients.id),
       amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
       currency: text("currency").notNull().default("USD"),
@@ -441,7 +441,7 @@ var init_schema = __esm({
     });
     budgets = pgTable("budgets", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       category: text("category").notNull(),
       budgetAmount: decimal("budget_amount", { precision: 10, scale: 2 }).notNull(),
       spentAmount: decimal("spent_amount", { precision: 10, scale: 2 }).default("0.00"),
@@ -457,7 +457,7 @@ var init_schema = __esm({
     });
     userPreferences = pgTable("user_preferences", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull().unique(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull().unique(),
       theme: text("theme").default("light"),
       // light, dark, auto
       language: text("language").default("en"),
@@ -473,7 +473,7 @@ var init_schema = __esm({
     });
     loginHistory = pgTable("login_history", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
       ipAddress: text("ip_address"),
       userAgent: text("user_agent"),
       deviceType: text("device_type"),
@@ -6962,7 +6962,6 @@ ${publicPages.map((page) => `  <url>
   });
   app2.get("/robots.txt", (req, res) => {
     const robotsTxt = `User-agent: *
-Disallow: /dashboard/
 Disallow: /admin/
 Disallow: /api/
 
