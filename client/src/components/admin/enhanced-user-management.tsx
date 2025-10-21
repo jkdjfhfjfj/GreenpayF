@@ -81,6 +81,7 @@ export default function EnhancedUserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [balanceUpdate, setBalanceUpdate] = useState("");
   const [updateType, setUpdateType] = useState<"add" | "subtract" | "set">("add");
+  const [updateCurrency, setUpdateCurrency] = useState<"USD" | "KES">("USD");
   const [transactionDetails, setTransactionDetails] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -151,11 +152,12 @@ export default function EnhancedUserManagement() {
   });
 
   const updateBalanceMutation = useMutation({
-    mutationFn: async ({ userId, amount, type, details }: { userId: string; amount: string; type: string; details: string }) => {
+    mutationFn: async ({ userId, amount, type, details, currency }: { userId: string; amount: string; type: string; details: string; currency: string }) => {
       const response = await apiRequest("PUT", `/api/admin/users/${userId}/balance`, {
         amount,
         type,
-        details
+        details,
+        currency
       });
       return response.json();
     },
@@ -168,6 +170,7 @@ export default function EnhancedUserManagement() {
       setSelectedUser(null);
       setBalanceUpdate("");
       setTransactionDetails("");
+      setUpdateCurrency("USD");
     },
     onError: () => {
       toast({
@@ -247,7 +250,8 @@ export default function EnhancedUserManagement() {
       userId: user.id,
       amount: balanceUpdate,
       type: updateType,
-      details: transactionDetails || `Admin ${updateType} balance adjustment`
+      details: transactionDetails || `Admin ${updateType} ${updateCurrency} balance adjustment`,
+      currency: updateCurrency
     });
   };
 
@@ -389,6 +393,8 @@ export default function EnhancedUserManagement() {
                                 setBalanceUpdate={setBalanceUpdate}
                                 updateType={updateType}
                                 setUpdateType={setUpdateType}
+                                updateCurrency={updateCurrency}
+                                setUpdateCurrency={setUpdateCurrency}
                                 transactionDetails={transactionDetails}
                                 setTransactionDetails={setTransactionDetails}
                                 isLoading={updateBalanceMutation.isPending || updateCardStatusMutation.isPending}
@@ -445,6 +451,8 @@ function UserManagementDialog({
   setBalanceUpdate,
   updateType,
   setUpdateType,
+  updateCurrency,
+  setUpdateCurrency,
   transactionDetails,
   setTransactionDetails,
   isLoading 
@@ -456,6 +464,8 @@ function UserManagementDialog({
   setBalanceUpdate: (value: string) => void;
   updateType: "add" | "subtract" | "set";
   setUpdateType: (type: "add" | "subtract" | "set") => void;
+  updateCurrency: "USD" | "KES";
+  setUpdateCurrency: (currency: "USD" | "KES") => void;
   transactionDetails: string;
   setTransactionDetails: (value: string) => void;
   isLoading: boolean;
@@ -507,14 +517,28 @@ function UserManagementDialog({
       <div>
         <h4 className="font-medium text-gray-900 dark:text-white mb-4">Balance Management</h4>
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="w-5 h-5 text-green-600" />
-            <span className="text-lg font-semibold">
-              Current Balance: ${parseFloat(user.balance).toFixed(2)} {user.currency}
-            </span>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-blue-600" />
+              <div>
+                <div className="text-sm text-gray-500">USD Balance</div>
+                <div className="text-lg font-semibold">
+                  ${parseFloat(user.balance || '0').toFixed(2)}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              <div>
+                <div className="text-sm text-gray-500">KES Balance</div>
+                <div className="text-lg font-semibold">
+                  KSh {parseFloat((user as any).kesBalance || '0').toFixed(2)}
+                </div>
+              </div>
+            </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
               <Label htmlFor="update-type">Action</Label>
               <Select value={updateType} onValueChange={(value: "add" | "subtract" | "set") => setUpdateType(value)}>
@@ -540,7 +564,20 @@ function UserManagementDialog({
             </div>
             
             <div>
-              <Label htmlFor="amount">Amount ($)</Label>
+              <Label htmlFor="currency">Currency</Label>
+              <Select value={updateCurrency} onValueChange={(value: "USD" | "KES") => setUpdateCurrency(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="KES">KES (KSh)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="amount">Amount</Label>
               <Input
                 id="amount"
                 type="number"
