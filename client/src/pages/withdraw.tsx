@@ -15,7 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { mockCurrencies } from "@/lib/mock-data";
 
 const withdrawSchema = z.object({
-  amount: z.string().min(1, "Amount is required").refine((val) => parseFloat(val) >= 10, "Minimum withdrawal is $10"),
+  amount: z.string().min(1, "Amount is required").refine((val) => parseFloat(val) >= 100, "Minimum withdrawal is KSh 100"),
   currency: z.string().min(1, "Please select a currency"),
   withdrawMethod: z.string().min(1, "Please select a withdrawal method"),
   accountDetails: z.object({
@@ -35,15 +35,15 @@ export default function WithdrawPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Use the actual stored balance from server (already includes all completed transactions)
-  // Server maintains balance accuracy by updating it directly when transactions complete
-  const realTimeBalance = parseFloat(user?.balance || '0');
+  // Use KES balance for withdrawals - users must convert USD to KES first
+  const realTimeBalance = parseFloat(user?.kesBalance || '0');
+  const usdBalance = parseFloat(user?.balance || '0');
 
   const form = useForm<WithdrawForm>({
     resolver: zodResolver(withdrawSchema),
     defaultValues: {
       amount: "",
-      currency: "USD",
+      currency: "KES",
       withdrawMethod: "",
       accountDetails: {
         bankName: "",
@@ -96,7 +96,7 @@ export default function WithdrawPage() {
       name: "Bank Transfer",
       icon: "account_balance",
       description: "Direct transfer to your bank account",
-      fee: "$2.99",
+      fee: "KSh 300",
       processingTime: "1-3 business days",
       countries: ["Nigeria", "Ghana", "Kenya", "South Africa", "Uganda"],
     },
@@ -105,7 +105,7 @@ export default function WithdrawPage() {
       name: "Mobile Money",
       icon: "phone_android",
       description: "M-Pesa, Airtel Money, MTN Mobile Money",
-      fee: "$1.99",
+      fee: "KSh 200",
       processingTime: "Within 30 minutes",
       countries: ["Kenya", "Uganda", "Tanzania", "Rwanda", "Cameroon"],
     },
@@ -114,7 +114,7 @@ export default function WithdrawPage() {
       name: "Local Bank Account",
       icon: "account_balance_wallet",
       description: "Direct deposit to local African banks",
-      fee: "$3.99",
+      fee: "KSh 400",
       processingTime: "2-4 hours",
       countries: ["Nigeria", "Ghana", "Kenya", "South Africa", "Egypt"],
     },
@@ -166,11 +166,44 @@ export default function WithdrawPage() {
           className="bg-gradient-to-r from-primary/10 to-secondary/10 p-4 rounded-xl border border-primary/20"
         >
           <div className="text-center">
-            <p className="text-sm text-muted-foreground">Available for Withdrawal</p>
-            <p className="text-2xl font-bold text-primary" data-testid="text-available-balance">${realTimeBalance.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground mt-1">Real-time Balance</p>
+            <p className="text-sm text-muted-foreground">Available for Withdrawal (KES)</p>
+            <p className="text-2xl font-bold text-primary" data-testid="text-available-balance">KSh {realTimeBalance.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {realTimeBalance < 100 && usdBalance > 0 && (
+                <span className="text-amber-600">Convert USD to KES to withdraw • </span>
+              )}
+              Real-time Balance
+            </p>
           </div>
         </motion.div>
+
+        {/* Helpful tip if user has USD but no KES */}
+        {realTimeBalance < 100 && usdBalance > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4 rounded-xl"
+          >
+            <div className="flex items-start">
+              <span className="material-icons text-blue-600 mr-3 mt-0.5">info</span>
+              <div>
+                <p className="font-medium text-blue-900 dark:text-blue-200 text-sm mb-1">Convert USD to KES First</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                  Withdrawals require KES balance. You have ${usdBalance.toFixed(2)} USD available to convert.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setLocation("/exchange")}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                >
+                  Convert to KES
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

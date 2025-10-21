@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
   const [showBalance, setShowBalance] = useState(true);
-  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [showDiscountModal] = useState(false); // Modal disabled - kept for future use
   const [activeWallet, setActiveWallet] = useState<'USD' | 'KES'>('USD');
   const { user, logout, refreshUser } = useAuth();
   const { toast } = useToast();
@@ -43,7 +43,19 @@ export default function DashboardPage() {
     queryKey: ["/api/system-settings/card-price"],
   });
 
+  // Get login history
+  const { data: loginHistoryData } = useQuery({
+    queryKey: ["/api/users/login-history", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const response = await apiRequest("GET", `/api/users/${user.id}/login-history`);
+      return response.json();
+    },
+    enabled: !!user?.id,
+  });
+
   const transactions = (transactionData as any)?.transactions || [];
+  const loginHistory = (loginHistoryData as any)?.loginHistory || [];
   
   // Dual wallet balances
   const usdBalance = parseFloat(user?.balance || '0');
@@ -67,20 +79,7 @@ export default function DashboardPage() {
   const originalPrice = "60.00";
   const discountPrice = currentCardPrice;
 
-  // Show discount modal for users without active cards on dashboard load
-  useEffect(() => {
-    if (!hasActiveVirtualCard && user?.id && !showDiscountModal) {
-      // Check if user has already seen the discount offer
-      const hasSeenOffer = localStorage.getItem(`discount_offer_seen_${user.id}`);
-      
-      if (!hasSeenOffer) {
-        const timer = setTimeout(() => {
-          setShowDiscountModal(true);
-        }, 2000); // Show after 2 seconds to let dashboard fully load
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [hasActiveVirtualCard, user?.id, showDiscountModal, card?.status]);
+  // Discount modal disabled - users can access virtual card from dashboard or menu
 
   const toggleDarkMode = () => {
     document.documentElement.classList.toggle('dark');
@@ -234,12 +233,20 @@ export default function DashboardPage() {
           {/* Balance Display */}
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-white/70 text-xs mb-1 flex items-center">
-                {activeWallet} Balance
-                {isKYCVerified && (
-                  <span className="material-icons text-green-300 ml-1 text-sm">verified</span>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-white/70 text-xs flex items-center">
+                  {activeWallet} Balance
+                  {isKYCVerified && (
+                    <span className="material-icons text-green-300 ml-1 text-sm">verified</span>
+                  )}
+                </p>
+                {user?.country && (
+                  <p className="text-white/60 text-xs flex items-center">
+                    <span className="material-icons text-xs mr-0.5">location_on</span>
+                    {user.country}
+                  </p>
                 )}
-              </p>
+              </div>
               <p className="text-3xl font-bold mb-2" data-testid="text-balance">
                 {showBalance 
                   ? activeWallet === 'USD' 
@@ -247,14 +254,24 @@ export default function DashboardPage() {
                     : `KSh ${activeBalance.toFixed(2)}`
                   : "••••••"}
               </p>
-              {/* Show other wallet balance */}
-              <p className="text-white/60 text-xs">
-                {activeWallet === 'USD' ? (
-                  <>Other: KSh {showBalance ? kesBalance.toFixed(2) : '••••'}</>
-                ) : (
-                  <>Other: ${showBalance ? usdBalance.toFixed(2) : '••••'}</>
-                )}
-              </p>
+              {/* Show other wallet balance and exchange button */}
+              <div className="flex items-center justify-between">
+                <p className="text-white/60 text-xs">
+                  {activeWallet === 'USD' ? (
+                    <>Other: KSh {showBalance ? kesBalance.toFixed(2) : '••••'}</>
+                  ) : (
+                    <>Other: ${showBalance ? usdBalance.toFixed(2) : '••••'}</>
+                  )}
+                </p>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setLocation("/exchange")}
+                  className="flex items-center bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  <span className="material-icons text-white text-sm mr-1">currency_exchange</span>
+                  <span className="text-white text-xs font-medium">Exchange</span>
+                </motion.button>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -505,80 +522,57 @@ export default function DashboardPage() {
             </div>
           </motion.div>
         )}
+
+        {/* Login History */}
+        {loginHistory.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-card rounded-2xl border border-border shadow-sm"
+          >
+            <div className="p-4 border-b border-border">
+              <h3 className="font-bold text-base">Recent Logins</h3>
+            </div>
+            <div className="divide-y divide-border">
+              {loginHistory.slice(0, 5).map((login: any, index: number) => (
+                <div key={login.id || index} className="p-4 flex items-start justify-between hover:bg-muted/50 transition-colors">
+                  <div className="flex items-start">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/30 text-blue-600 flex items-center justify-center mr-3 flex-shrink-0">
+                      <span className="material-icons text-lg">
+                        {login.deviceType === 'mobile' ? 'smartphone' : 'computer'}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {login.browser || 'Unknown Browser'}
+                        {login.deviceType && ` • ${login.deviceType.charAt(0).toUpperCase() + login.deviceType.slice(1)}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {login.location || 'Unknown Location'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(login.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      login.status === 'success' 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' 
+                        : 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400'
+                    }`}>
+                      {login.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </div>
 
-      {/* 75% Discount Offer Modal */}
-      <Dialog open={showDiscountModal} onOpenChange={(open) => {
-        setShowDiscountModal(open);
-        // Mark as seen when closed by any method
-        if (!open && user?.id) {
-          localStorage.setItem(`discount_offer_seen_${user.id}`, 'true');
-        }
-      }}>
-        <DialogContent className="max-w-sm mx-auto bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 border-pink-200 shadow-2xl relative overflow-hidden">
-          {/* Flower decorations */}
-          <div className="absolute -top-2 -right-2 text-6xl opacity-30 rotate-12">🌸</div>
-          <div className="absolute -bottom-4 -left-4 text-5xl opacity-40 -rotate-12">🌺</div>
-          <div className="absolute top-4 left-2 text-3xl opacity-25 rotate-45">🌼</div>
-          <div className="absolute bottom-6 right-4 text-4xl opacity-30 -rotate-45">🌷</div>
-          <div className="absolute top-1/2 -right-6 text-5xl opacity-20 rotate-90">🌻</div>
-          
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-center text-pink-800 mb-2 relative z-10">
-              <Sparkles className="w-5 h-5 mr-2 text-pink-600 animate-pulse" />
-              <span className="text-lg font-bold">🌟 Special Offer! 🌟</span>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="text-center space-y-3 relative z-10">
-            {/* Simple flashy offer */}
-            <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-rose-500 rounded-lg p-4 text-white animate-pulse shadow-lg">
-              <div className="text-2xl font-bold mb-1">💳 Virtual Card</div>
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <span className="text-lg line-through opacity-70">${originalPrice}</span>
-                <span className="text-3xl font-black">${discountPrice}</span>
-                <div className="bg-white/20 text-xs px-2 py-1 rounded-full font-bold">
-                  75% OFF
-                </div>
-              </div>
-              <p className="text-sm opacity-90">✨ Limited Time Only! ✨</p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <Button
-                onClick={() => {
-                  setShowDiscountModal(false);
-                  setLocation("/virtual-card");
-                }}
-                className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl shadow-lg"
-                data-testid="button-get-discount-card"
-              >
-                Get Card Now - ${discountPrice} ⚡
-              </Button>
-              
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowDiscountModal(false);
-                  // Mark as seen so it doesn't show again
-                  if (user?.id) {
-                    localStorage.setItem(`discount_offer_seen_${user.id}`, 'true');
-                  }
-                }}
-                className="w-full text-pink-700 hover:text-pink-800 hover:bg-pink-50"
-                data-testid="button-close-discount-modal"
-              >
-                Maybe Later
-              </Button>
-            </div>
-
-            <p className="text-xs text-pink-600/70">
-              🔥 Limited time offer - Don't miss out!
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Discount modal removed - users can access virtual card directly from menu/dashboard */}
     </div>
   );
 }
