@@ -33,11 +33,9 @@ export class ObjectStorageService {
   async uploadFile(key: string, buffer: Buffer, contentType: string): Promise<string> {
     try {
       console.log(`📤 Uploading file to object storage: ${key} (${contentType})`);
-      await this.client.uploadFromBytes(key, buffer, {
-        metadata: {
-          contentType,
-        },
-      });
+      // Replit Object Storage doesn't support metadata, so we just upload the file
+      // Content type will be determined from file extension when downloading
+      await this.client.uploadFromBytes(key, buffer);
       console.log(`✅ File uploaded successfully: ${key}`);
       return key;
     } catch (error) {
@@ -60,12 +58,43 @@ export class ObjectStorageService {
       }
 
       const buffer = await this.client.downloadAsBytes(key);
-      const metadata = await this.client.getMetadata(key);
       
-      console.log(`✅ File downloaded successfully: ${key}`);
+      // Determine content type from file extension
+      const extension = key.split('.').pop()?.toLowerCase();
+      let contentType = 'application/octet-stream';
+      
+      switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+          contentType = 'image/jpeg';
+          break;
+        case 'png':
+          contentType = 'image/png';
+          break;
+        case 'gif':
+          contentType = 'image/gif';
+          break;
+        case 'webp':
+          contentType = 'image/webp';
+          break;
+        case 'pdf':
+          contentType = 'application/pdf';
+          break;
+        case 'txt':
+          contentType = 'text/plain';
+          break;
+        case 'doc':
+          contentType = 'application/msword';
+          break;
+        case 'docx':
+          contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          break;
+      }
+      
+      console.log(`✅ File downloaded successfully: ${key} (${contentType})`);
       return {
         buffer: Buffer.from(buffer),
-        contentType: metadata?.contentType,
+        contentType,
       };
     } catch (error) {
       if (error instanceof ObjectNotFoundError) {
