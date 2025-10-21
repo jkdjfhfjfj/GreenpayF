@@ -4,6 +4,16 @@ GreenPay is a fintech mobile application designed for international money transf
 
 # Recent Changes (October 21, 2025)
 
+## Bug Fixes
+- **Double Login Issue**: Fixed authentication race condition by adding delay between state update and navigation to ensure authentication state synchronizes properly before redirecting users to dashboard
+
+## Admin Configuration System
+- **API Configurations Table**: New database table `api_configurations` to store API credentials for Exchange Rate, Paystack, and PayHero services
+- **Admin CRUD Operations**: Full storage layer support for managing API configurations (create, read, update, delete)
+- **Admin API Endpoints**: 5 new endpoints under `/api/admin/api-configurations` for managing service credentials
+- **Database-First Configuration**: Exchange Rate service now prioritizes database-stored credentials over environment variables, allowing runtime configuration updates
+- **Security**: All admin configuration endpoints protected with `requireAdminAuth` middleware
+
 ## UI Modernization
 - **Bottom Navigation Redesign**: Updated to modern style with elevated center button for Send Money, featuring 5 navigation items (Home, History, Send, Card, Profile) with gradient purple styling
 - **Dashboard Restructure**: Redesigned with gradient header card, improved visual hierarchy, modern card-based layout for quick actions and services

@@ -322,10 +322,30 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// API Configurations for external services
+export const apiConfigurations = pgTable("api_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull().unique(), // 'exchange_rate', 'paystack', 'payhero'
+  displayName: text("display_name").notNull(),
+  apiKey: text("api_key"),
+  apiSecret: text("api_secret"),
+  baseUrl: text("base_url"),
+  webhookSecret: text("webhook_secret"),
+  isEnabled: boolean("is_enabled").default(true),
+  configuration: jsonb("configuration"), // Additional provider-specific settings
+  lastTested: timestamp("last_tested"),
+  testStatus: text("test_status"), // 'success', 'failed', 'pending'
+  testMessage: text("test_message"),
+  updatedBy: varchar("updated_by").references(() => admins.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export type Admin = typeof admins.$inferSelect;
 export type AdminLog = typeof adminLogs.$inferSelect;
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type SystemLog = typeof systemLogs.$inferSelect;
+export type ApiConfiguration = typeof apiConfigurations.$inferSelect;
 
 export const insertAdminSchema = createInsertSchema(admins).omit({
   id: true,
@@ -348,10 +368,17 @@ export const insertSystemLogSchema = createInsertSchema(systemLogs).omit({
   timestamp: true,
 });
 
+export const insertApiConfigurationSchema = createInsertSchema(apiConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertAdmin = z.infer<typeof insertAdminSchema>;
 export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
 export type InsertSystemLog = z.infer<typeof insertSystemLogSchema>;
 export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;
+export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema>;
 
 // Enhanced Features Tables
 export const savingsGoals = pgTable("savings_goals", {

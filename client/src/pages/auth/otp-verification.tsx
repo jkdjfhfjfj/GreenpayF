@@ -53,14 +53,18 @@ export default function OtpVerificationPage() {
       localStorage.removeItem("otpUserId");
       localStorage.removeItem("otpPhone");
       
-      // Login the user
+      // Login the user - this updates state and localStorage
       login(data.user);
       
       toast({
         title: "Login successful!",
         description: "You have been successfully verified and logged in.",
       });
-      setLocation("/dashboard");
+      
+      // Use setTimeout to ensure state has updated before navigation
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 100);
     },
     onError: () => {
       toast({
