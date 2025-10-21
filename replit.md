@@ -9,6 +9,19 @@ Phone number formats: Users can enter phone numbers in multiple formats (7123456
 
 # Recent Changes (October 21, 2025)
 
+## SEO Optimization with XML Sitemap
+- **Implementation**: Created dynamic XML sitemap and robots.txt for Google Search Console
+- **Features**:
+  - **XML Sitemap**: Available at `/sitemap.xml` with all public pages
+  - **Robots.txt**: Available at `/robots.txt` with crawl directives
+  - **Domain**: Uses greenpay.world for all URLs
+  - **Pages Indexed**: Home, Login, Signup, Forgot Password, Status page
+  - **Priority Configuration**: Homepage (1.0), Login/Signup (0.9), Status (0.7), Forgot Password (0.5)
+  - **Protected Routes**: Dashboard, admin, and API routes excluded from indexing
+  - **Auto-updates**: Last modified date updates daily
+- **Submission URL**: `https://greenpay.world/sitemap.xml`
+- **Impact**: Improved SEO visibility and Google indexing for public pages
+
 ## Currency Restriction to USD and KES Only
 - **Issue**: App supported multiple African currencies (NGN, GHS, ZAR, etc.) that were not actually functional
 - **Solution**:
