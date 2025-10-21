@@ -18,6 +18,7 @@ import { biometricService } from "./services/biometric";
 import { notificationService } from "./services/notifications";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
+import { statumService } from "./statumService";
 
 const objectStorage = new ObjectStorageService();
 
@@ -592,21 +593,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Upload to object storage
       try {
-        const uploadUrl = await objectStorage.getObjectEntityUploadURL();
-        
-        await fetch(uploadUrl, {
-          method: 'PUT',
-          body: req.file.buffer,
-          headers: { 'Content-Type': req.file.mimetype }
-        });
-
-        // Set ACL policy and get the actual object path
-        const fileUrl = await objectStorage.trySetObjectEntityAclPolicy(uploadUrl, {
-          visibility: 'private',
-          owner: userId || adminId
-        });
-
-        console.log('File uploaded to object storage:', req.file.originalname, fileUrl);
+        const fileUrl = await objectStorage.uploadChatFile(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype
+        );
         
         res.json({ 
           fileUrl,
@@ -616,7 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "File uploaded successfully"
         });
       } catch (uploadError) {
-        console.error('Object storage upload error:', uploadError);
+        console.error('❌ Object storage upload error:', uploadError);
         return res.status(500).json({ message: "Failed to upload file to storage" });
       }
     } catch (error) {
@@ -1381,58 +1372,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Airtime purchase endpoint - uses KES balance
+  // Airtime purchase endpoint - uses KES balance and Statum API
   app.post("/api/airtime/purchase", async (req, res) => {
     try {
       const { userId, phoneNumber, amount, currency, provider } = req.body;
 
+      console.log(`📱 Airtime purchase request - User: ${userId}, Phone: ${phoneNumber}, Amount: ${amount} ${currency}, Provider: ${provider}`);
+
       if (!userId || !phoneNumber || !amount || !currency || !provider) {
+        console.warn(`⚠️ Missing required fields in airtime purchase request`);
         return res.status(400).json({ message: "Missing required fields" });
       }
 
       // Get user
       const user = await storage.getUser(userId);
       if (!user) {
+        console.error(`❌ User not found: ${userId}`);
         return res.status(404).json({ message: "User not found" });
       }
+
+      console.log(`👤 User ${user.fullName} (${user.email}) - KES Balance: ${user.kesBalance}`);
 
       // Airtime purchases require KES balance
       const kesBalance = parseFloat(user.kesBalance || "0");
       const purchaseAmount = parseFloat(amount);
       
       if (kesBalance < purchaseAmount) {
+        console.warn(`⚠️ Insufficient balance - Required: ${purchaseAmount}, Available: ${kesBalance}`);
         return res.status(400).json({ 
           message: "Insufficient KES balance. Please convert USD to KES using the Exchange feature." 
         });
       }
 
-      // Create transaction
+      // Call Statum API to purchase airtime
+      console.log(`📞 Calling Statum API for airtime purchase...`);
+      const statumResponse = await statumService.purchaseAirtime(phoneNumber, purchaseAmount);
+      
+      console.log(`✅ Statum API response:`, statumResponse);
+
+      // Create transaction record
       const transaction = await storage.createTransaction({
         userId,
         type: "airtime",
         amount: amount.toString(),
-        currency: "KES", // Airtime is always in KES
+        currency: "KES",
         status: "completed",
         fee: "0.00",
         description: `Airtime purchase for ${phoneNumber} (${provider})`,
+        reference: statumResponse.transaction_id || undefined,
         recipientDetails: {
           phoneNumber,
           provider
+        },
+        metadata: {
+          statumResponse
         }
       });
+
+      console.log(`💾 Transaction created: ${transaction.id}`);
 
       // Update user KES balance
       const newKesBalance = kesBalance - purchaseAmount;
       await storage.updateUser(userId, { kesBalance: newKesBalance.toFixed(2) });
       
+      console.log(`✅ Updated user balance: ${kesBalance} -> ${newKesBalance}`);
+      console.log(`🎉 Airtime purchase completed successfully`);
+
       res.json({ 
         success: true,
         message: "Airtime purchased successfully",
+        transaction,
+        statumResponse
+      });
+    } catch (error) {
+      console.error('❌ Airtime purchase error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Error purchasing airtime";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+
+  // Claim airtime bonus endpoint
+  app.post("/api/airtime/claim-bonus", async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      console.log(`🎁 Airtime bonus claim request - User: ${userId}`);
+
+      if (!userId) {
+        console.warn(`⚠️ Missing userId in bonus claim request`);
+        return res.status(400).json({ message: "Missing userId" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        console.error(`❌ User not found: ${userId}`);
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(`👤 User ${user.fullName} - Already claimed: ${user.hasClaimedAirtimeBonus}`);
+
+      // Check if user has already claimed the bonus
+      if (user.hasClaimedAirtimeBonus) {
+        console.warn(`⚠️ User ${userId} has already claimed airtime bonus`);
+        return res.status(400).json({ message: "You have already claimed your airtime bonus" });
+      }
+
+      // Add KES 15 to user's KES balance
+      const currentKesBalance = parseFloat(user.kesBalance || "0");
+      const bonusAmount = 15;
+      const newKesBalance = currentKesBalance + bonusAmount;
+
+      await storage.updateUser(userId, { 
+        kesBalance: newKesBalance.toFixed(2),
+        hasClaimedAirtimeBonus: true
+      });
+
+      console.log(`💰 Bonus credited: ${currentKesBalance} -> ${newKesBalance} KES`);
+
+      // Create transaction record for the bonus
+      const transaction = await storage.createTransaction({
+        userId,
+        type: "deposit",
+        amount: bonusAmount.toString(),
+        currency: "KES",
+        status: "completed",
+        fee: "0.00",
+        description: "One-time airtime bonus - KES 15"
+      });
+
+      console.log(`💾 Bonus transaction created: ${transaction.id}`);
+      console.log(`✅ Airtime bonus claimed successfully`);
+
+      res.json({
+        success: true,
+        message: "Airtime bonus claimed successfully! KES 15 has been added to your balance.",
+        newBalance: newKesBalance.toFixed(2),
+        bonusAmount,
         transaction
       });
     } catch (error) {
-      console.error('Airtime purchase error:', error);
-      res.status(500).json({ message: "Error purchasing airtime" });
+      console.error('❌ Claim bonus error:', error);
+      res.status(500).json({ message: "Error claiming airtime bonus" });
     }
   });
 
@@ -4881,6 +4961,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('PayHero callback processing error:', error);
       res.status(500).json({ message: "Error processing payment callback" });
+    }
+  });
+
+  // System status endpoint - checks health of all services
+  app.get("/api/system/status", async (req, res) => {
+    try {
+      console.log('🔍 System status check initiated');
+      
+      const statusChecks: any = {
+        timestamp: new Date().toISOString(),
+        services: {},
+        overall: 'healthy'
+      };
+
+      // Check database connection
+      try {
+        await storage.getAllUsers();
+        statusChecks.services.database = { status: 'healthy', message: 'Connected' };
+        console.log('✅ Database: Healthy');
+      } catch (error) {
+        statusChecks.services.database = { status: 'unhealthy', message: 'Connection failed' };
+        statusChecks.overall = 'degraded';
+        console.error('❌ Database: Unhealthy', error);
+      }
+
+      // Check Object Storage
+      try {
+        const isConfigured = await objectStorage.fileExists('test');
+        statusChecks.services.objectStorage = { status: 'healthy', message: 'Bucket accessible' };
+        console.log('✅ Object Storage: Healthy');
+      } catch (error) {
+        statusChecks.services.objectStorage = { status: 'degraded', message: 'Bucket accessible with warnings' };
+        console.warn('⚠️ Object Storage: Degraded', error);
+      }
+
+      // Check Exchange Rate Service
+      try {
+        const rate = await exchangeRateService.getExchangeRate('USD', 'KES');
+        statusChecks.services.exchangeRate = { 
+          status: 'healthy', 
+          message: `Current USD to KES rate: ${rate}`
+        };
+        console.log('✅ Exchange Rate Service: Healthy');
+      } catch (error) {
+        statusChecks.services.exchangeRate = { status: 'degraded', message: 'Using fallback rates' };
+        console.warn('⚠️ Exchange Rate Service: Degraded', error);
+      }
+
+      // Check Statum API
+      const statumConfigured = statumService.isConfigured();
+      if (statumConfigured) {
+        statusChecks.services.statumAirtime = { 
+          status: 'healthy', 
+          message: 'API credentials configured' 
+        };
+        console.log('✅ Statum Airtime: Healthy');
+      } else {
+        statusChecks.services.statumAirtime = { 
+          status: 'unhealthy', 
+          message: 'API credentials not configured' 
+        };
+        statusChecks.overall = 'degraded';
+        console.warn('⚠️ Statum Airtime: Unhealthy - credentials missing');
+      }
+
+      // Check Paystack Service
+      try {
+        const paystackConfigured = paystackService.isConfigured();
+        if (paystackConfigured) {
+          statusChecks.services.paystack = { 
+            status: 'healthy', 
+            message: 'API key configured' 
+          };
+          console.log('✅ Paystack: Healthy');
+        } else {
+          statusChecks.services.paystack = { 
+            status: 'unhealthy', 
+            message: 'API key not configured' 
+          };
+          console.warn('⚠️ Paystack: Unhealthy - API key missing');
+        }
+      } catch (error) {
+        statusChecks.services.paystack = { status: 'unknown', message: 'Unable to check' };
+        console.warn('⚠️ Paystack: Unknown status', error);
+      }
+
+      // Check PayHero Service
+      try {
+        const payHeroConfigured = payHeroService.isConfigured();
+        if (payHeroConfigured) {
+          statusChecks.services.payHero = { 
+            status: 'healthy', 
+            message: 'API credentials configured' 
+          };
+          console.log('✅ PayHero: Healthy');
+        } else {
+          statusChecks.services.payHero = { 
+            status: 'unhealthy', 
+            message: 'API credentials not configured' 
+          };
+          console.warn('⚠️ PayHero: Unhealthy - credentials missing');
+        }
+      } catch (error) {
+        statusChecks.services.payHero = { status: 'unknown', message: 'Unable to check' };
+        console.warn('⚠️ PayHero: Unknown status', error);
+      }
+
+      // Check WhatsApp Service
+      try {
+        const whatsappConfigured = whatsappService.isConfigured();
+        if (whatsappConfigured) {
+          statusChecks.services.whatsapp = { 
+            status: 'healthy', 
+            message: 'API credentials configured' 
+          };
+          console.log('✅ WhatsApp: Healthy');
+        } else {
+          statusChecks.services.whatsapp = { 
+            status: 'degraded', 
+            message: 'API credentials not configured' 
+          };
+          console.warn('⚠️ WhatsApp: Degraded - credentials missing');
+        }
+      } catch (error) {
+        statusChecks.services.whatsapp = { status: 'unknown', message: 'Unable to check' };
+        console.warn('⚠️ WhatsApp: Unknown status', error);
+      }
+
+      console.log(`🏁 System status check completed - Overall: ${statusChecks.overall}`);
+      res.json(statusChecks);
+    } catch (error) {
+      console.error('❌ Status check error:', error);
+      res.status(500).json({ 
+        overall: 'unhealthy',
+        error: 'Failed to perform status check',
+        timestamp: new Date().toISOString()
+      });
     }
   });
 

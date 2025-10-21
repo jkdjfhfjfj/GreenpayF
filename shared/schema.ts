@@ -22,6 +22,7 @@ export const users = pgTable("users", {
   balance: decimal("balance", { precision: 10, scale: 2 }).default("0.00"), // USD balance
   kesBalance: decimal("kes_balance", { precision: 10, scale: 2 }).default("0.00"), // KES balance
   hasReceivedWelcomeBonus: boolean("has_received_welcome_bonus").default(false),
+  hasClaimedAirtimeBonus: boolean("has_claimed_airtime_bonus").default(false),
   otpCode: text("otp_code"),
   otpExpiry: timestamp("otp_expiry"),
   paystackCustomerId: text("paystack_customer_id"),

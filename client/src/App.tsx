@@ -26,6 +26,7 @@ import WithdrawPage from "@/pages/withdraw";
 import ExchangePage from "@/pages/exchange";
 import KycPage from "@/pages/kyc";
 import AirtimePage from "@/pages/airtime";
+import StatusPage from "@/pages/status";
 import LoadingScreen from "@/components/loading-screen";
 import BottomNavigation from "@/components/bottom-navigation";
 import { PWAInstallPrompt } from "@/components/pwa-install";
@@ -105,6 +106,7 @@ function Router() {
       <Route path="/exchange" component={ExchangePage} />
       <Route path="/kyc" component={KycPage} />
       <Route path="/airtime" component={AirtimePage} />
+      <Route path="/status" component={StatusPage} />
       <Route path="/payment-callback" component={PaymentCallbackPage} />
       <Route path="/payment-success" component={PaymentSuccessPage} />
       <Route path="/payment-failed" component={PaymentFailedPage} />
