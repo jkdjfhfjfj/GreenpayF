@@ -21,13 +21,16 @@ GreenPay is a fintech mobile application designed for international money transf
 - **Card Requirement Notifications**: Users without virtual cards now see "Card required" labels on disabled actions and receive helpful toast notifications when attempting to use send/receive/withdraw features
 - **Responsive Design**: Enhanced mobile-first experience with better spacing and visual appeal
 
-## New Feature: Airtime Purchase
+## Airtime Purchase System
 - **Airtime Page**: Complete airtime purchase interface with network provider selection (Safaricom, Airtel, Telkom)
-- **Quick Select Amounts**: Pre-configured amounts in local currency (KSh 50, 100, 200, 500) for fast purchases
-- **Backend API**: New endpoint `/api/airtime/purchase` for processing airtime transactions
-- **Validation**: Supports purchases from $0.10 to $1000 USD
-- **Integration**: Added to dashboard quick actions and services menu
-- **KES-Only Requirement**: Updated to use KES balance exclusively; no virtual card required
+- **Quick Select Amounts**: Pre-configured KES amounts (5, 10, 20, 50, 100, 200) for fast purchases
+- **Real API Integration**: Uses Statum API (https://api.statum.co.ke/api/v2/airtime) with HTTP Basic Auth for actual airtime top-ups
+- **Backend API**: Endpoint `/api/airtime/purchase` processes real purchases and deducts from KES wallet
+- **Validation**: Minimum KSh 5, Maximum KSh 10,000 per purchase
+- **KES-Only**: Uses KES wallet balance exclusively; currency selector locked to KES
+- **Bonus System**: One-time KES 15 airtime bonus claimable from dashboard, redirects to airtime page after claim
+- **Phone Format**: Automatic conversion to 254XXXXXXXXX format for Kenyan numbers
+- **Transaction Tracking**: Stores Statum transaction IDs and API responses in transaction metadata
 
 ## Dual-Wallet System Implementation
 - **Database Schema**: Added `kesBalance` (decimal) and `hasReceivedWelcomeBonus` (boolean) fields to users table
@@ -67,8 +70,23 @@ GreenPay is a fintech mobile application designed for international money transf
 - **Conversion Prompts**: Blue info box appears when user has insufficient KES balance, directing them to exchange page
 - **Currency Labels**: Updated all UI labels to show "KSh" prefix instead of "$" for clarity
 
+## File Storage Migration
+- **Replit Object Storage**: Migrated all file storage from Google Cloud Storage to Replit Object Storage
+- **Bucket Configuration**: Using bucket ID `replit-objstore-6f67444f-b771-4c8f-bea8-fd3ebf96c798` (alias: UnsteadyKindlyMigration)
+- **Access Control**: Simplified to authentication-based access (any authenticated user can access files); UUID-based keys prevent guessing
+- **File Types**: Handles KYC documents, profile photos, and chat file uploads
+- **Comprehensive Logging**: Emoji-based logging throughout (📤 uploads, 📥 downloads, ✅ success, ❌ errors)
+
+## System Monitoring
+- **Status Page**: New `/status` route showing real-time health checks for all services
+- **Service Checks**: Database, Object Storage, Exchange Rate API, Statum, Paystack, PayHero, WhatsApp services
+- **Auto-Refresh**: Status page auto-refreshes every 30 seconds
+- **Color-Coded**: Visual status badges (healthy/degraded/unhealthy) with detailed messages
+- **Navigation**: Accessible from dashboard services grid
+
 ## UX Improvements
 - **Login Modal Removed**: Eliminated the 75% discount virtual card purchase modal that appeared 2 seconds after user login, providing cleaner dashboard experience
+- **Airtime Bonus Flow**: After claiming KES 15 bonus, users automatically redirected to airtime purchase page
 
 # User Preferences
 
