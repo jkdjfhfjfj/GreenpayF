@@ -1838,13 +1838,10 @@ var init_exchange_rate = __esm({
       getFallbackRate(from, to) {
         const fallbackRates = {
           "USD": {
-            "NGN": 820,
-            "GHS": 12,
-            "KES": 129,
-            "ZAR": 18.5,
-            "EGP": 31,
-            "XOF": 605,
-            "XAF": 605
+            "KES": 129
+          },
+          "KES": {
+            "USD": 77e-4
           }
         };
         return fallbackRates[from]?.[to] || 1;
@@ -1876,13 +1873,8 @@ var init_exchange_rate = __esm({
       }
       getMultipleFallbackRates(base, targets) {
         const fallbackRates = {
-          "NGN": 820,
-          "GHS": 12,
           "KES": 129,
-          "ZAR": 18.5,
-          "EGP": 31,
-          "XOF": 605,
-          "XAF": 605
+          "USD": 77e-4
         };
         return Object.fromEntries(
           targets.map((target) => [target, fallbackRates[target] || 1])
@@ -4096,7 +4088,7 @@ async function registerRoutes(app2) {
   app2.get("/api/exchange-rates/:base", async (req, res) => {
     try {
       const { base } = req.params;
-      const targets = ["NGN", "GHS", "KES", "ZAR", "EGP", "XOF", "XAF"];
+      const targets = base.toUpperCase() === "USD" ? ["KES"] : ["USD"];
       const rates = await exchangeRateService2.getMultipleRates(base.toUpperCase(), targets);
       res.json({
         base: base.toUpperCase(),
