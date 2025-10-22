@@ -28,7 +28,7 @@ export class CloudinaryStorageService {
 
   /**
    * Upload a file to Cloudinary
-   * @param key The storage key/path for the file (used as public_id)
+   * @param key The storage key/path for the file (e.g., "kyc/uuid.pdf")
    * @param buffer The file buffer to upload
    * @param contentType The MIME type of the file
    * @returns The Cloudinary public URL
@@ -37,20 +37,23 @@ export class CloudinaryStorageService {
     try {
       console.log(`📤 Uploading file to Cloudinary: ${key} (${contentType})`);
 
+      // Prefix with greenpay/ for organization
+      const publicId = `greenpay/${key}`;
+
       return new Promise<string>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
-            public_id: key,
+            public_id: publicId,
             resource_type: this.getResourceType(contentType),
-            folder: this.getFolderFromKey(key),
-            format: this.getFormatFromContentType(contentType),
+            // Don't use folder parameter - public_id already contains the path
           },
           (error, result) => {
             if (error) {
               console.error(`❌ Cloudinary upload error:`, error);
               reject(new Error(`Failed to upload file: ${error.message}`));
             } else if (result) {
-              console.log(`✅ File uploaded successfully to Cloudinary: ${result.secure_url}`);
+              console.log(`✅ File uploaded to: ${result.secure_url}`);
+              console.log(`   Public ID: ${result.public_id}`);
               resolve(result.secure_url);
             } else {
               reject(new Error('Upload failed: No result returned'));
@@ -69,14 +72,20 @@ export class CloudinaryStorageService {
   /**
    * Download a file from Cloudinary (fetch the image/file)
    * Note: Cloudinary serves files via URLs, so this fetches from the URL
-   * @param key The storage key/path of the file (public_id)
+   * @param keyOrUrl The storage key/path (public_id) or full Cloudinary URL
    * @returns The file buffer and metadata
    */
-  async downloadFile(key: string): Promise<{ buffer: Buffer; contentType?: string }> {
+  async downloadFile(keyOrUrl: string): Promise<{ buffer: Buffer; contentType?: string }> {
     try {
-      console.log(`📥 Downloading file from Cloudinary: ${key}`);
+      console.log(`📥 Downloading file from Cloudinary: ${keyOrUrl}`);
       
-      const response = await fetch(key);
+      // If it's already a URL, use it directly; otherwise construct the URL
+      const url = (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://'))
+        ? keyOrUrl
+        : this.constructCloudinaryUrl(keyOrUrl);
+      
+      console.log(`🔗 Fetching from URL: ${url}`);
+      const response = await fetch(url);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -89,7 +98,7 @@ export class CloudinaryStorageService {
       const buffer = Buffer.from(arrayBuffer);
       const contentType = response.headers.get('content-type') || 'application/octet-stream';
 
-      console.log(`✅ File downloaded successfully: ${key} (${contentType})`);
+      console.log(`✅ File downloaded successfully: ${keyOrUrl} (${contentType})`);
       return {
         buffer,
         contentType,
@@ -105,17 +114,22 @@ export class CloudinaryStorageService {
 
   /**
    * Delete a file from Cloudinary
-   * @param key The Cloudinary URL or public_id
+   * @param keyOrUrl The storage key (e.g., "kyc/uuid.pdf") or full Cloudinary URL
    */
-  async deleteFile(key: string): Promise<void> {
+  async deleteFile(keyOrUrl: string): Promise<void> {
     try {
-      console.log(`🗑️ Deleting file from Cloudinary: ${key}`);
+      console.log(`🗑️ Deleting file from Cloudinary: ${keyOrUrl}`);
       
-      const publicId = this.extractPublicIdFromUrl(key);
-      const resourceType = this.guessResourceTypeFromUrl(key);
+      // If it's a URL, extract the public_id; otherwise prepend greenpay/
+      const publicId = (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://'))
+        ? this.extractPublicIdFromUrl(keyOrUrl)
+        : `greenpay/${keyOrUrl}`;
       
+      const resourceType = this.guessResourceTypeFromKey(keyOrUrl);
+      
+      console.log(`🗑️ Deleting public_id: ${publicId} (type: ${resourceType})`);
       await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-      console.log(`✅ File deleted successfully: ${key}`);
+      console.log(`✅ File deleted successfully: ${keyOrUrl}`);
     } catch (error) {
       console.error(`❌ Error deleting file from Cloudinary:`, error);
       throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -124,13 +138,17 @@ export class CloudinaryStorageService {
 
   /**
    * Check if a file exists in Cloudinary
-   * @param key The Cloudinary URL or public_id
+   * @param keyOrUrl The storage key (e.g., "kyc/uuid.pdf") or full Cloudinary URL
    * @returns True if the file exists, false otherwise
    */
-  async fileExists(key: string): Promise<boolean> {
+  async fileExists(keyOrUrl: string): Promise<boolean> {
     try {
-      const publicId = this.extractPublicIdFromUrl(key);
-      const resourceType = this.guessResourceTypeFromUrl(key);
+      // If it's a URL, extract the public_id; otherwise prepend greenpay/
+      const publicId = (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://'))
+        ? this.extractPublicIdFromUrl(keyOrUrl)
+        : `greenpay/${keyOrUrl}`;
+      
+      const resourceType = this.guessResourceTypeFromKey(keyOrUrl);
       
       const result = await cloudinary.api.resource(publicId, { resource_type: resourceType });
       return !!result;
@@ -187,22 +205,19 @@ export class CloudinaryStorageService {
 
   /**
    * Download a file and stream it to Express response
-   * For Cloudinary, we can just redirect to the URL or proxy the download
+   * For Cloudinary, we redirect to the Cloudinary URL for direct download
    */
-  async downloadToResponse(key: string, res: Response): Promise<void> {
+  async downloadToResponse(keyOrUrl: string, res: Response): Promise<void> {
     try {
-      if (key.startsWith('http://') || key.startsWith('https://')) {
-        res.redirect(key);
+      // If it's already a URL, redirect directly; otherwise construct the URL from the key
+      if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
+        console.log(`🔗 Redirecting to Cloudinary URL: ${keyOrUrl}`);
+        res.redirect(keyOrUrl);
       } else {
-        const { buffer, contentType } = await this.downloadFile(key);
-        
-        res.set({
-          'Content-Type': contentType || 'application/octet-stream',
-          'Content-Length': buffer.length.toString(),
-          'Cache-Control': 'private, max-age=3600',
-        });
-
-        res.send(buffer);
+        // Construct Cloudinary URL from the key
+        const cloudinaryUrl = this.constructCloudinaryUrl(keyOrUrl);
+        console.log(`🔗 Redirecting to constructed URL: ${cloudinaryUrl}`);
+        res.redirect(cloudinaryUrl);
       }
     } catch (error) {
       console.error(`❌ Error streaming file to response:`, error);
@@ -260,13 +275,42 @@ export class CloudinaryStorageService {
       return url;
     }
     
-    const parts = url.split('/');
-    const uploadIndex = parts.indexOf('upload');
-    if (uploadIndex === -1) return url;
-    
-    const pathAfterUpload = parts.slice(uploadIndex + 2).join('/');
-    const publicId = pathAfterUpload.split('.')[0];
-    return publicId;
+    try {
+      // Since all our uploads use "greenpay/" prefix, find where it starts
+      const greenpayIndex = url.indexOf('/greenpay/');
+      if (greenpayIndex !== -1) {
+        // Extract from greenpay/ onwards, keeping the extension
+        const publicIdWithSlash = url.substring(greenpayIndex + 1); // Skip the leading /
+        const publicId = publicIdWithSlash.split('?')[0]; // Remove query params if any
+        console.log(`📝 Extracted public_id from URL: ${publicId}`);
+        return publicId;
+      }
+      
+      // Fallback: parse URL the traditional way
+      const parts = url.split('/');
+      const uploadIndex = parts.indexOf('upload');
+      if (uploadIndex === -1) return url;
+      
+      // Find first part that looks like a path (not transformation params, not version)
+      let startIndex = uploadIndex + 1;
+      while (startIndex < parts.length) {
+        const part = parts[startIndex];
+        // Skip transformation parameters (contain commas or underscores with values)
+        // Skip version tokens (start with 'v' followed by digits)
+        if (part.includes(',') || part.includes('_') || /^v\d+$/.test(part)) {
+          startIndex++;
+        } else {
+          break;
+        }
+      }
+      
+      const publicId = parts.slice(startIndex).join('/').split('?')[0]; // Remove query params
+      console.log(`📝 Extracted public_id from URL: ${publicId}`);
+      return publicId;
+    } catch (error) {
+      console.error(`❌ Error extracting public_id from URL:`, error);
+      return url;
+    }
   }
 
   private guessResourceTypeFromUrl(url: string): 'image' | 'video' | 'raw' {
@@ -274,10 +318,47 @@ export class CloudinaryStorageService {
     if (url.includes('/video/upload/')) return 'video';
     if (url.includes('/raw/upload/')) return 'raw';
     
-    const extension = url.split('.').pop()?.toLowerCase();
+    return this.guessResourceTypeFromKey(url);
+  }
+
+  private guessResourceTypeFromKey(keyOrUrl: string): 'image' | 'video' | 'raw' {
+    const extension = keyOrUrl.split('.').pop()?.toLowerCase();
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension || '')) return 'image';
     if (['mp4', 'mov', 'avi', 'webm'].includes(extension || '')) return 'video';
     return 'raw';
+  }
+
+  /**
+   * Construct a Cloudinary URL from a storage key (public_id)
+   * @param key Storage key like "kyc/uuid.pdf" or "profile/uuid.jpg"
+   * @returns Full Cloudinary URL
+   */
+  private constructCloudinaryUrl(key: string): string {
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      throw new Error('CLOUDINARY_CLOUD_NAME not configured');
+    }
+
+    // Public ID matches what we uploaded: greenpay/{key}
+    const publicId = `greenpay/${key}`;
+    
+    // Determine resource type from file extension
+    const extension = key.split('.').pop()?.toLowerCase();
+    let resourceType: 'image' | 'video' | 'raw' = 'raw'; // default for documents
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension || '')) {
+      resourceType = 'image';
+    } else if (['mp4', 'mov', 'avi', 'webm'].includes(extension || '')) {
+      resourceType = 'video';
+    }
+
+    // Use Cloudinary SDK to generate the URL (more reliable than manual construction)
+    const url = cloudinary.url(publicId, {
+      resource_type: resourceType,
+      secure: true,
+    });
+    
+    console.log(`🔗 Constructed Cloudinary URL: ${url} (from key: ${key})`);
+    return url;
   }
 }
 
