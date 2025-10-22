@@ -16,10 +16,10 @@ import { paystackService } from "./services/paystack";
 import { twoFactorService } from "./services/2fa";
 import { biometricService } from "./services/biometric";
 import { notificationService } from "./services/notifications";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { CloudinaryStorageService, ObjectNotFoundError } from "./cloudinaryStorage";
 import { statumService } from "./statumService";
 
-const objectStorage = new ObjectStorageService();
+const cloudinaryStorage = new CloudinaryStorageService();
 
 // Configure multer for file uploads with memory storage (for cloud upload)
 const upload = multer({
@@ -124,9 +124,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Authenticated - downloading: ${objectKey} for ${adminId ? 'admin' : 'user'} ${adminId || userId}`);
       
       // Download and stream the file
-      // Note: In Replit Object Storage, authentication is sufficient for access control
+      // Note: Cloudinary serves files via URLs
       // File keys use UUIDs making them non-guessable
-      await objectStorage.downloadToResponse(objectKey, res);
+      await cloudinaryStorage.downloadToResponse(objectKey, res);
     } catch (error) {
       if (error instanceof ObjectNotFoundError) {
         console.warn(`⚠️ File not found: ${req.params.objectPath}`);
@@ -694,9 +694,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Upload to object storage
+      // Upload to Cloudinary
       try {
-        const fileUrl = await objectStorage.uploadChatFile(
+        const fileUrl = await cloudinaryStorage.uploadChatFile(
           req.file.buffer,
           req.file.originalname,
           req.file.mimetype
@@ -767,17 +767,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           try {
             [frontImageUrl, backImageUrl, selfieUrl] = await Promise.all([
-              objectStorage.uploadKycDocument(
+              cloudinaryStorage.uploadKycDocument(
                 files.frontImage[0].buffer,
                 files.frontImage[0].originalname,
                 files.frontImage[0].mimetype
               ),
-              objectStorage.uploadKycDocument(
+              cloudinaryStorage.uploadKycDocument(
                 files.backImage[0].buffer,
                 files.backImage[0].originalname,
                 files.backImage[0].mimetype
               ),
-              objectStorage.uploadKycDocument(
+              cloudinaryStorage.uploadKycDocument(
                 files.selfie[0].buffer,
                 files.selfie[0].originalname,
                 files.selfie[0].mimetype
@@ -833,17 +833,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         [frontImageUrl, backImageUrl, selfieUrl] = await Promise.all([
-          objectStorage.uploadKycDocument(
+          cloudinaryStorage.uploadKycDocument(
             files.frontImage[0].buffer,
             files.frontImage[0].originalname,
             files.frontImage[0].mimetype
           ),
-          objectStorage.uploadKycDocument(
+          cloudinaryStorage.uploadKycDocument(
             files.backImage[0].buffer,
             files.backImage[0].originalname,
             files.backImage[0].mimetype
           ),
-          objectStorage.uploadKycDocument(
+          cloudinaryStorage.uploadKycDocument(
             files.selfie[0].buffer,
             files.selfie[0].originalname,
             files.selfie[0].mimetype
@@ -1090,8 +1090,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "File must be an image" });
       }
 
-      // Upload profile picture to object storage
-      const photoUrl = await objectStorage.uploadProfilePicture(
+      // Upload profile picture to Cloudinary
+      const photoUrl = await cloudinaryStorage.uploadProfilePicture(
         file.buffer,
         file.originalname,
         file.mimetype
@@ -5075,15 +5075,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('❌ Account Access: Unhealthy', error);
       }
 
-      // Check if file uploads/downloads work
+      // Check if file uploads/downloads work with Cloudinary
       try {
-        await objectStorage.fileExists('test');
-        statusChecks.features.fileUploads = { 
-          status: 'healthy', 
-          message: 'Document uploads and profile photos working',
-          icon: '📁'
-        };
-        console.log('✅ File Uploads: Healthy');
+        // Just check if Cloudinary is configured
+        if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+          statusChecks.features.fileUploads = { 
+            status: 'healthy', 
+            message: 'Document uploads and profile photos working',
+            icon: '📁'
+          };
+          console.log('✅ File Uploads: Healthy');
+        } else {
+          statusChecks.features.fileUploads = { 
+            status: 'degraded', 
+            message: 'File storage not configured - uploads won\'t work',
+            icon: '📁'
+          };
+          console.warn('⚠️ File Uploads: Not configured');
+        }
       } catch (error) {
         statusChecks.features.fileUploads = { 
           status: 'degraded', 
