@@ -18,7 +18,7 @@ export default function SplashPage() {
       // Redirect unauthenticated users to login after a short delay
       const timer = setTimeout(() => {
         setLocation("/login");
-      }, 10000); // 10 second delay to show splash screen
+      }, 2000); // 2 second delay to show splash screen
 
       return () => clearTimeout(timer);
     }
