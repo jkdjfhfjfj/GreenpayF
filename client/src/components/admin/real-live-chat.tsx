@@ -390,12 +390,46 @@ export default function RealLiveChat() {
                         {message.messageType === 'file' || message.messageType === 'image' ? (
                           <div className="space-y-2">
                             {message.messageType === 'image' && message.fileUrl ? (
-                              <img 
-                                src={message.fileUrl} 
-                                alt={message.fileName}
-                                className="max-w-full rounded border"
-                                data-testid={`image-${message.id}`}
-                              />
+                              <a 
+                                href={message.fileUrl.startsWith('http://') || message.fileUrl.startsWith('https://') 
+                                  ? message.fileUrl 
+                                  : `/${message.fileUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block"
+                              >
+                                <img 
+                                  src={message.fileUrl.startsWith('http://') || message.fileUrl.startsWith('https://') 
+                                    ? message.fileUrl 
+                                    : `/${message.fileUrl}`} 
+                                  alt={message.fileName}
+                                  className="max-w-full rounded border cursor-pointer hover:opacity-90 transition-opacity"
+                                  data-testid={`image-${message.id}`}
+                                />
+                              </a>
+                            ) : message.fileUrl ? (
+                              <a 
+                                href={message.fileUrl.startsWith('http://') || message.fileUrl.startsWith('https://') 
+                                  ? message.fileUrl 
+                                  : `/${message.fileUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center space-x-2 p-2 bg-background/10 rounded hover:bg-background/20 transition-colors cursor-pointer"
+                                data-testid={`file-${message.id}`}
+                              >
+                                {message.messageType === 'image' ? (
+                                  <ImageIcon className="w-4 h-4" />
+                                ) : (
+                                  <FileText className="w-4 h-4" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{message.fileName}</p>
+                                  {message.fileSize && (
+                                    <p className="text-xs opacity-75">{formatFileSize(message.fileSize)}</p>
+                                  )}
+                                </div>
+                                <Paperclip className="w-3 h-3 opacity-75" />
+                              </a>
                             ) : (
                               <div className="flex items-center space-x-2 p-2 bg-background/10 rounded">
                                 {message.messageType === 'image' ? (
