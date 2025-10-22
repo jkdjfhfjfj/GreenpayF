@@ -11,16 +11,10 @@ export default function SplashPage() {
     // Wait for authentication check to complete
     if (isLoading) return;
     
-    // Auto-redirect based on authentication status
+    // Only redirect authenticated users to dashboard
+    // Unauthenticated users stay on splash page
     if (isAuthenticated) {
       setLocation("/dashboard");
-    } else {
-      // Redirect unauthenticated users to login after a short delay
-      const timer = setTimeout(() => {
-        setLocation("/login");
-      }, 2000); // 2 second delay to show splash screen
-
-      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, isLoading, setLocation]);
 
