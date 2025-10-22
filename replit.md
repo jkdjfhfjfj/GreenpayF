@@ -24,7 +24,7 @@ Phone number formats: Users can enter phone numbers in multiple formats (7123456
 - **Framework**: Express.js for RESTful APIs.
 - **Data Storage**: Drizzle ORM for PostgreSQL.
 - **Authentication**: Custom authentication with email/phone verification, OTP via SMS/WhatsApp, and server-side session management using PostgreSQL.
-- **File Management**: Replit Object Storage for user-uploaded files (KYC, profile photos, chat).
+- **File Management**: Cloudinary for user-uploaded files (KYC, profile photos, chat) - supports external hosting.
 - **Dual-Wallet System**: Supports both USD and KES balances with exchange functionality.
 
 ## Data Layer
