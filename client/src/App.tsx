@@ -51,7 +51,12 @@ import ContactLanding from "@/pages/landing/contact";
 // User Route Guard Component
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
   
   if (!isAuthenticated) {
     // Redirect to login if not authenticated
