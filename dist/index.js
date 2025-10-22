@@ -1781,7 +1781,7 @@ __export(exchange_rate_exports, {
   createExchangeRateService: () => createExchangeRateService,
   exchangeRateService: () => exchangeRateService
 });
-import fetch from "node-fetch";
+import fetch2 from "node-fetch";
 var ExchangeRateService, createExchangeRateService, exchangeRateService;
 var init_exchange_rate = __esm({
   "server/services/exchange-rate.ts"() {
@@ -1821,7 +1821,7 @@ var init_exchange_rate = __esm({
         }
         try {
           const url = `${this.baseUrl}/${apiKey}/pair/${from}/${to}`;
-          const response = await fetch(url);
+          const response = await fetch2(url);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -1853,7 +1853,7 @@ var init_exchange_rate = __esm({
         }
         try {
           const url = `${this.baseUrl}/${apiKey}/latest/${base}`;
-          const response = await fetch(url);
+          const response = await fetch2(url);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -1892,7 +1892,7 @@ __export(messaging_exports, {
   MessagingService: () => MessagingService,
   messagingService: () => messagingService
 });
-import fetch5 from "node-fetch";
+import fetch6 from "node-fetch";
 var MessagingService, messagingService;
 var init_messaging = __esm({
   "server/services/messaging.ts"() {
@@ -1963,7 +1963,7 @@ var init_messaging = __esm({
         try {
           const formattedPhone = this.formatPhoneNumber(phone);
           const formattedMessage = this.formatMessage(message);
-          const response = await fetch5(this.SMS_URL, {
+          const response = await fetch6(this.SMS_URL, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -1997,7 +1997,7 @@ var init_messaging = __esm({
           const formattedPhone = this.formatPhoneNumber(phone);
           const formattedMessage = this.formatMessage(message);
           const url = `${this.WHATSAPP_URL_BASE}/${credentials.whatsappSessionId}/message/send`;
-          const response = await fetch5(url, {
+          const response = await fetch6(url, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -2111,7 +2111,7 @@ import * as QRCode2 from "qrcode";
 
 // server/services/payhero.ts
 init_storage();
-import fetch2 from "node-fetch";
+import fetch3 from "node-fetch";
 var PayHeroService = class {
   username;
   password;
@@ -2262,7 +2262,7 @@ var PayHeroService = class {
         channel_id: payload.channel_id,
         url
       });
-      const response = await fetch2(url, {
+      const response = await fetch3(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2312,7 +2312,7 @@ var PayHeroService = class {
       const credentials = Buffer.from(`${this.username}:${this.password}`).toString("base64");
       const authHeader = `Basic ${credentials}`;
       console.log("Checking PayHero transaction status:", { reference, url });
-      const response = await fetch2(url, {
+      const response = await fetch3(url, {
         method: "GET",
         headers: {
           "Authorization": authHeader
@@ -2372,7 +2372,7 @@ var PayHeroService = class {
 var payHeroService = new PayHeroService();
 
 // server/services/paystack.ts
-import fetch3 from "node-fetch";
+import fetch4 from "node-fetch";
 var PaystackService = class {
   secretKey;
   baseUrl = "https://api.paystack.co";
@@ -2414,7 +2414,7 @@ var PaystackService = class {
           provider: "mpesa"
         };
       }
-      const response = await fetch3(url, {
+      const response = await fetch4(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.secretKey}`,
@@ -2435,7 +2435,7 @@ var PaystackService = class {
   async verifyPayment(reference) {
     try {
       const url = `${this.baseUrl}/transaction/verify/${reference}`;
-      const response = await fetch3(url, {
+      const response = await fetch4(url, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${this.secretKey}`
@@ -2460,7 +2460,7 @@ var PaystackService = class {
         last_name: lastName,
         phone
       };
-      const response = await fetch3(url, {
+      const response = await fetch4(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.secretKey}`,
@@ -2609,11 +2609,9 @@ var NotificationService = class {
 };
 var notificationService = new NotificationService();
 
-// server/objectStorage.ts
-import { Client } from "@replit/object-storage";
+// server/cloudinaryStorage.ts
+import { v2 as cloudinary } from "cloudinary";
 import { randomUUID as randomUUID2 } from "crypto";
-var BUCKET_ID = "replit-objstore-6f67444f-b771-4c8f-bea8-fd3ebf96c798";
-var objectStorageClient = new Client({ bucketId: BUCKET_ID });
 var ObjectNotFoundError = class _ObjectNotFoundError extends Error {
   constructor() {
     super("Object not found");
@@ -2621,78 +2619,80 @@ var ObjectNotFoundError = class _ObjectNotFoundError extends Error {
     Object.setPrototypeOf(this, _ObjectNotFoundError.prototype);
   }
 };
-var ObjectStorageService = class {
-  client;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+var CloudinaryStorageService = class {
   constructor() {
-    this.client = objectStorageClient;
-    console.log(`\u2705 Object Storage initialized with bucket ID: ${BUCKET_ID}`);
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.warn("\u26A0\uFE0F  Cloudinary credentials not configured. File uploads will fail.");
+      console.warn("   Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET");
+    } else {
+      console.log(`\u2705 Cloudinary Storage initialized for: ${process.env.CLOUDINARY_CLOUD_NAME}`);
+    }
   }
   /**
-   * Upload a file to object storage
-   * @param key The storage key/path for the file
+   * Upload a file to Cloudinary
+   * @param key The storage key/path for the file (e.g., "kyc/uuid.pdf")
    * @param buffer The file buffer to upload
    * @param contentType The MIME type of the file
-   * @returns The storage key where the file was saved
+   * @returns The Cloudinary public URL
    */
   async uploadFile(key, buffer, contentType) {
     try {
-      console.log(`\u{1F4E4} Uploading file to object storage: ${key} (${contentType})`);
-      await this.client.uploadFromBytes(key, buffer);
-      console.log(`\u2705 File uploaded successfully: ${key}`);
-      return key;
+      console.log(`\u{1F4E4} Uploading file to Cloudinary: ${key} (${contentType})`);
+      const publicId = `greenpay/${key}`;
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            public_id: publicId,
+            resource_type: this.getResourceType(contentType)
+            // Don't use folder parameter - public_id already contains the path
+          },
+          (error, result) => {
+            if (error) {
+              console.error(`\u274C Cloudinary upload error:`, error);
+              reject(new Error(`Failed to upload file: ${error.message}`));
+            } else if (result) {
+              console.log(`\u2705 File uploaded to: ${result.secure_url}`);
+              console.log(`   Public ID: ${result.public_id}`);
+              resolve(result.secure_url);
+            } else {
+              reject(new Error("Upload failed: No result returned"));
+            }
+          }
+        );
+        uploadStream.end(buffer);
+      });
     } catch (error) {
-      console.error(`\u274C Error uploading file to object storage:`, error);
+      console.error(`\u274C Error uploading file to Cloudinary:`, error);
       throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
   /**
-   * Download a file from object storage
-   * @param key The storage key/path of the file
+   * Download a file from Cloudinary (fetch the image/file)
+   * Note: Cloudinary serves files via URLs, so this fetches from the URL
+   * @param keyOrUrl The storage key/path (public_id) or full Cloudinary URL
    * @returns The file buffer and metadata
    */
-  async downloadFile(key) {
+  async downloadFile(keyOrUrl) {
     try {
-      console.log(`\u{1F4E5} Downloading file from object storage: ${key}`);
-      const downloadResult = await this.client.downloadAsBytes(key);
-      if (!downloadResult.ok) {
-        const errorMessage = downloadResult.error?.message || "";
-        if (errorMessage.includes("not found") || errorMessage.includes("404")) {
+      console.log(`\u{1F4E5} Downloading file from Cloudinary: ${keyOrUrl}`);
+      const url = keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://") ? keyOrUrl : this.constructCloudinaryUrl(keyOrUrl);
+      console.log(`\u{1F517} Fetching from URL: ${url}`);
+      const response = await fetch(url);
+      if (!response.ok) {
+        if (response.status === 404) {
           throw new ObjectNotFoundError();
         }
-        console.error(`\u274C Download failed:`, downloadResult.error);
-        throw new Error(`Failed to download file: ${errorMessage || "Unknown error"}`);
+        throw new Error(`Failed to download file: ${response.statusText}`);
       }
-      const [buffer] = downloadResult.value;
-      const extension = key.split(".").pop()?.toLowerCase();
-      let contentType = "application/octet-stream";
-      switch (extension) {
-        case "jpg":
-        case "jpeg":
-          contentType = "image/jpeg";
-          break;
-        case "png":
-          contentType = "image/png";
-          break;
-        case "gif":
-          contentType = "image/gif";
-          break;
-        case "webp":
-          contentType = "image/webp";
-          break;
-        case "pdf":
-          contentType = "application/pdf";
-          break;
-        case "txt":
-          contentType = "text/plain";
-          break;
-        case "doc":
-          contentType = "application/msword";
-          break;
-        case "docx":
-          contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-          break;
-      }
-      console.log(`\u2705 File downloaded successfully: ${key} (${contentType})`);
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const contentType = response.headers.get("content-type") || "application/octet-stream";
+      console.log(`\u2705 File downloaded successfully: ${keyOrUrl} (${contentType})`);
       return {
         buffer,
         contentType
@@ -2701,34 +2701,42 @@ var ObjectStorageService = class {
       if (error instanceof ObjectNotFoundError) {
         throw error;
       }
-      console.error(`\u274C Error downloading file from object storage:`, error);
+      console.error(`\u274C Error downloading file from Cloudinary:`, error);
       throw new Error(`Failed to download file: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
   /**
-   * Delete a file from object storage
-   * @param key The storage key/path of the file
+   * Delete a file from Cloudinary
+   * @param keyOrUrl The storage key (e.g., "kyc/uuid.pdf") or full Cloudinary URL
    */
-  async deleteFile(key) {
+  async deleteFile(keyOrUrl) {
     try {
-      console.log(`\u{1F5D1}\uFE0F Deleting file from object storage: ${key}`);
-      await this.client.delete(key);
-      console.log(`\u2705 File deleted successfully: ${key}`);
+      console.log(`\u{1F5D1}\uFE0F Deleting file from Cloudinary: ${keyOrUrl}`);
+      const publicId = keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://") ? this.extractPublicIdFromUrl(keyOrUrl) : `greenpay/${keyOrUrl}`;
+      const resourceType = this.guessResourceTypeFromKey(keyOrUrl);
+      console.log(`\u{1F5D1}\uFE0F Deleting public_id: ${publicId} (type: ${resourceType})`);
+      await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+      console.log(`\u2705 File deleted successfully: ${keyOrUrl}`);
     } catch (error) {
-      console.error(`\u274C Error deleting file from object storage:`, error);
+      console.error(`\u274C Error deleting file from Cloudinary:`, error);
       throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
   /**
-   * Check if a file exists in object storage
-   * @param key The storage key/path of the file
+   * Check if a file exists in Cloudinary
+   * @param keyOrUrl The storage key (e.g., "kyc/uuid.pdf") or full Cloudinary URL
    * @returns True if the file exists, false otherwise
    */
-  async fileExists(key) {
+  async fileExists(keyOrUrl) {
     try {
-      const result = await this.client.exists(key);
-      return result.ok && result.value === true;
+      const publicId = keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://") ? this.extractPublicIdFromUrl(keyOrUrl) : `greenpay/${keyOrUrl}`;
+      const resourceType = this.guessResourceTypeFromKey(keyOrUrl);
+      const result = await cloudinary.api.resource(publicId, { resource_type: resourceType });
+      return !!result;
     } catch (error) {
+      if (error.error?.http_code === 404) {
+        return false;
+      }
       console.error(`\u274C Error checking file existence:`, error);
       return false;
     }
@@ -2746,46 +2754,45 @@ var ObjectStorageService = class {
   }
   /**
    * Upload a KYC document
-   * @returns Full URL path to access the document via /objects/ endpoint
+   * @returns Cloudinary URL
    */
   async uploadKycDocument(buffer, filename, contentType) {
     const key = this.generateUploadKey("kyc", filename);
     console.log(`\u{1F4CB} Uploading KYC document: ${filename} -> ${key}`);
-    await this.uploadFile(key, buffer, contentType);
-    return `/objects/${key}`;
+    return await this.uploadFile(key, buffer, contentType);
   }
   /**
    * Upload a chat file
-   * @returns Full URL path to access the file via /objects/ endpoint
+   * @returns Cloudinary URL
    */
   async uploadChatFile(buffer, filename, contentType) {
     const key = this.generateUploadKey("chat", filename);
     console.log(`\u{1F4AC} Uploading chat file: ${filename} -> ${key}`);
-    await this.uploadFile(key, buffer, contentType);
-    return `/objects/${key}`;
+    return await this.uploadFile(key, buffer, contentType);
   }
   /**
    * Upload a profile picture
-   * @returns Full URL path to access the picture via /objects/ endpoint
+   * @returns Cloudinary URL
    */
   async uploadProfilePicture(buffer, filename, contentType) {
     const key = this.generateUploadKey("profile", filename);
     console.log(`\u{1F464} Uploading profile picture: ${filename} -> ${key}`);
-    await this.uploadFile(key, buffer, contentType);
-    return `/objects/${key}`;
+    return await this.uploadFile(key, buffer, contentType);
   }
   /**
    * Download a file and stream it to Express response
+   * For Cloudinary, we redirect to the Cloudinary URL for direct download
    */
-  async downloadToResponse(key, res) {
+  async downloadToResponse(keyOrUrl, res) {
     try {
-      const { buffer, contentType } = await this.downloadFile(key);
-      res.set({
-        "Content-Type": contentType || "application/octet-stream",
-        "Content-Length": buffer.length.toString(),
-        "Cache-Control": "private, max-age=3600"
-      });
-      res.send(buffer);
+      if (keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://")) {
+        console.log(`\u{1F517} Redirecting to Cloudinary URL: ${keyOrUrl}`);
+        res.redirect(keyOrUrl);
+      } else {
+        const cloudinaryUrl = this.constructCloudinaryUrl(keyOrUrl);
+        console.log(`\u{1F517} Redirecting to constructed URL: ${cloudinaryUrl}`);
+        res.redirect(cloudinaryUrl);
+      }
     } catch (error) {
       console.error(`\u274C Error streaming file to response:`, error);
       if (!res.headersSent) {
@@ -2798,17 +2805,17 @@ var ObjectStorageService = class {
     }
   }
   /**
-   * List all files in a folder
+   * List all files in a folder (Cloudinary folder)
    */
   async listFiles(prefix) {
     try {
       console.log(`\u{1F4CB} Listing files with prefix: ${prefix}`);
-      const result = await this.client.list({ prefix });
-      if (!result.ok) {
-        console.error(`\u274C List failed:`, result.error);
-        return [];
-      }
-      const files = result.value.map((obj) => obj.name);
+      const result = await cloudinary.api.resources({
+        type: "upload",
+        prefix,
+        max_results: 500
+      });
+      const files = result.resources.map((resource) => resource.secure_url);
       console.log(`\u2705 Found ${files.length} files`);
       return files;
     } catch (error) {
@@ -2816,11 +2823,93 @@ var ObjectStorageService = class {
       return [];
     }
   }
+  // Helper methods
+  getResourceType(contentType) {
+    if (contentType.startsWith("image/")) return "image";
+    if (contentType.startsWith("video/")) return "video";
+    return "raw";
+  }
+  getFolderFromKey(key) {
+    const parts = key.split("/");
+    return parts.length > 1 ? parts[0] : "greenpay";
+  }
+  getFormatFromContentType(contentType) {
+    const match = contentType.match(/\/(\w+)/);
+    return match ? match[1] : void 0;
+  }
+  extractPublicIdFromUrl(url) {
+    if (!url.includes("cloudinary.com")) {
+      return url;
+    }
+    try {
+      const greenpayIndex = url.indexOf("/greenpay/");
+      if (greenpayIndex !== -1) {
+        const publicIdWithSlash = url.substring(greenpayIndex + 1);
+        const publicId2 = publicIdWithSlash.split("?")[0];
+        console.log(`\u{1F4DD} Extracted public_id from URL: ${publicId2}`);
+        return publicId2;
+      }
+      const parts = url.split("/");
+      const uploadIndex = parts.indexOf("upload");
+      if (uploadIndex === -1) return url;
+      let startIndex = uploadIndex + 1;
+      while (startIndex < parts.length) {
+        const part = parts[startIndex];
+        if (part.includes(",") || part.includes("_") || /^v\d+$/.test(part)) {
+          startIndex++;
+        } else {
+          break;
+        }
+      }
+      const publicId = parts.slice(startIndex).join("/").split("?")[0];
+      console.log(`\u{1F4DD} Extracted public_id from URL: ${publicId}`);
+      return publicId;
+    } catch (error) {
+      console.error(`\u274C Error extracting public_id from URL:`, error);
+      return url;
+    }
+  }
+  guessResourceTypeFromUrl(url) {
+    if (url.includes("/image/upload/")) return "image";
+    if (url.includes("/video/upload/")) return "video";
+    if (url.includes("/raw/upload/")) return "raw";
+    return this.guessResourceTypeFromKey(url);
+  }
+  guessResourceTypeFromKey(keyOrUrl) {
+    const extension = keyOrUrl.split(".").pop()?.toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || "")) return "image";
+    if (["mp4", "mov", "avi", "webm"].includes(extension || "")) return "video";
+    return "raw";
+  }
+  /**
+   * Construct a Cloudinary URL from a storage key (public_id)
+   * @param key Storage key like "kyc/uuid.pdf" or "profile/uuid.jpg"
+   * @returns Full Cloudinary URL
+   */
+  constructCloudinaryUrl(key) {
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      throw new Error("CLOUDINARY_CLOUD_NAME not configured");
+    }
+    const publicId = `greenpay/${key}`;
+    const extension = key.split(".").pop()?.toLowerCase();
+    let resourceType = "raw";
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || "")) {
+      resourceType = "image";
+    } else if (["mp4", "mov", "avi", "webm"].includes(extension || "")) {
+      resourceType = "video";
+    }
+    const url = cloudinary.url(publicId, {
+      resource_type: resourceType,
+      secure: true
+    });
+    console.log(`\u{1F517} Constructed Cloudinary URL: ${url} (from key: ${key})`);
+    return url;
+  }
 };
-var objectStorage = new ObjectStorageService();
+var cloudinaryStorage = new CloudinaryStorageService();
 
 // server/statumService.ts
-import fetch4 from "node-fetch";
+import fetch5 from "node-fetch";
 var StatumService = class {
   consumerKey;
   consumerSecret;
@@ -2870,7 +2959,7 @@ var StatumService = class {
         amount
       };
       console.log(`\u{1F4E4} Request body:`, JSON.stringify(requestBody, null, 2));
-      const response = await fetch4(this.apiUrl, {
+      const response = await fetch5(this.apiUrl, {
         method: "POST",
         headers: {
           "Authorization": this.getAuthHeader(),
@@ -2910,7 +2999,7 @@ var StatumService = class {
 var statumService = new StatumService();
 
 // server/routes.ts
-var objectStorage2 = new ObjectStorageService();
+var cloudinaryStorage2 = new CloudinaryStorageService();
 var upload = multer({
   storage: multer.memoryStorage(),
   // Store files in memory buffer for cloud upload
@@ -2993,7 +3082,7 @@ async function registerRoutes(app2) {
         objectKey = objectKey.substring(1);
       }
       console.log(`\u2705 Authenticated - downloading: ${objectKey} for ${adminId ? "admin" : "user"} ${adminId || userId}`);
-      await objectStorage2.downloadToResponse(objectKey, res);
+      await cloudinaryStorage2.downloadToResponse(objectKey, res);
     } catch (error) {
       if (error instanceof ObjectNotFoundError) {
         console.warn(`\u26A0\uFE0F File not found: ${req.params.objectPath}`);
@@ -3401,7 +3490,7 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No file uploaded" });
       }
       try {
-        const fileUrl = await objectStorage2.uploadChatFile(
+        const fileUrl = await cloudinaryStorage2.uploadChatFile(
           req.file.buffer,
           req.file.originalname,
           req.file.mimetype
@@ -3456,17 +3545,17 @@ async function registerRoutes(app2) {
           let selfieUrl2 = null;
           try {
             [frontImageUrl2, backImageUrl2, selfieUrl2] = await Promise.all([
-              objectStorage2.uploadKycDocument(
+              cloudinaryStorage2.uploadKycDocument(
                 files.frontImage[0].buffer,
                 files.frontImage[0].originalname,
                 files.frontImage[0].mimetype
               ),
-              objectStorage2.uploadKycDocument(
+              cloudinaryStorage2.uploadKycDocument(
                 files.backImage[0].buffer,
                 files.backImage[0].originalname,
                 files.backImage[0].mimetype
               ),
-              objectStorage2.uploadKycDocument(
+              cloudinaryStorage2.uploadKycDocument(
                 files.selfie[0].buffer,
                 files.selfie[0].originalname,
                 files.selfie[0].mimetype
@@ -3510,17 +3599,17 @@ async function registerRoutes(app2) {
       let selfieUrl = null;
       try {
         [frontImageUrl, backImageUrl, selfieUrl] = await Promise.all([
-          objectStorage2.uploadKycDocument(
+          cloudinaryStorage2.uploadKycDocument(
             files.frontImage[0].buffer,
             files.frontImage[0].originalname,
             files.frontImage[0].mimetype
           ),
-          objectStorage2.uploadKycDocument(
+          cloudinaryStorage2.uploadKycDocument(
             files.backImage[0].buffer,
             files.backImage[0].originalname,
             files.backImage[0].mimetype
           ),
-          objectStorage2.uploadKycDocument(
+          cloudinaryStorage2.uploadKycDocument(
             files.selfie[0].buffer,
             files.selfie[0].originalname,
             files.selfie[0].mimetype
@@ -3708,7 +3797,7 @@ async function registerRoutes(app2) {
       if (!file.mimetype.startsWith("image/")) {
         return res.status(400).json({ message: "File must be an image" });
       }
-      const photoUrl = await objectStorage2.uploadProfilePicture(
+      const photoUrl = await cloudinaryStorage2.uploadProfilePicture(
         file.buffer,
         file.originalname,
         file.mimetype
@@ -6807,13 +6896,21 @@ async function registerRoutes(app2) {
         console.error("\u274C Account Access: Unhealthy", error);
       }
       try {
-        await objectStorage2.fileExists("test");
-        statusChecks.features.fileUploads = {
-          status: "healthy",
-          message: "Document uploads and profile photos working",
-          icon: "\u{1F4C1}"
-        };
-        console.log("\u2705 File Uploads: Healthy");
+        if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+          statusChecks.features.fileUploads = {
+            status: "healthy",
+            message: "Document uploads and profile photos working",
+            icon: "\u{1F4C1}"
+          };
+          console.log("\u2705 File Uploads: Healthy");
+        } else {
+          statusChecks.features.fileUploads = {
+            status: "degraded",
+            message: "File storage not configured - uploads won't work",
+            icon: "\u{1F4C1}"
+          };
+          console.warn("\u26A0\uFE0F File Uploads: Not configured");
+        }
       } catch (error) {
         statusChecks.features.fileUploads = {
           status: "degraded",
