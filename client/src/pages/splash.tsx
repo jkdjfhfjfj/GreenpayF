@@ -5,9 +5,12 @@ import { useEffect } from "react";
 
 export default function SplashPage() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
+    // Wait for authentication check to complete
+    if (isLoading) return;
+    
     // Auto-redirect based on authentication status
     if (isAuthenticated) {
       setLocation("/dashboard");
@@ -19,7 +22,7 @@ export default function SplashPage() {
 
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, setLocation]);
+  }, [isAuthenticated, isLoading, setLocation]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex flex-col">
