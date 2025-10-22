@@ -155,7 +155,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <LoadingScreen />
           <Toaster />
           <Router />
           <BottomNavigation />

@@ -271,11 +271,20 @@ export default function LiveChatPage() {
                     {message.messageType === 'image' && message.fileUrl && (
                       <div className="mb-2">
                         <img 
-                          src={message.fileUrl!.startsWith('/') ? message.fileUrl : `/${message.fileUrl}`} 
+                          src={message.fileUrl.startsWith('http://') || message.fileUrl.startsWith('https://') 
+                            ? message.fileUrl 
+                            : message.fileUrl.startsWith('/') 
+                              ? message.fileUrl 
+                              : `/${message.fileUrl}`
+                          } 
                           alt="Uploaded image" 
                           className="max-w-full h-auto rounded cursor-pointer"
                           onClick={() => {
-                            const url = message.fileUrl!.startsWith('/') ? message.fileUrl : `/${message.fileUrl}`;
+                            const url = message.fileUrl!.startsWith('http://') || message.fileUrl!.startsWith('https://')
+                              ? message.fileUrl
+                              : message.fileUrl!.startsWith('/')
+                                ? message.fileUrl
+                                : `/${message.fileUrl}`;
                             window.open(url, '_blank');
                           }}
                         />
@@ -285,7 +294,12 @@ export default function LiveChatPage() {
                       <div className="flex items-center gap-2 mb-2 p-2 bg-black/10 rounded">
                         <Paperclip className="w-4 h-4" />
                         <a 
-                          href={message.fileUrl!.startsWith('/') ? message.fileUrl : `/${message.fileUrl}`} 
+                          href={message.fileUrl.startsWith('http://') || message.fileUrl.startsWith('https://')
+                            ? message.fileUrl
+                            : message.fileUrl.startsWith('/')
+                              ? message.fileUrl
+                              : `/${message.fileUrl}`
+                          }
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-sm underline hover:no-underline"
