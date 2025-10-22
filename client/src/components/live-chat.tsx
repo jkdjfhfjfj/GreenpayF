@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send } from "lucide-react";
+import { Send, Download, FileText, Image as ImageIcon } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface ChatMessage {
@@ -15,6 +15,10 @@ interface ChatMessage {
   senderId: string;
   conversationId: string;
   createdAt: Date | string;
+  messageType?: 'text' | 'file' | 'image';
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
 }
 
 interface LiveChatProps {
@@ -113,6 +117,13 @@ export default function LiveChat({ isAdmin = false, conversationId }: LiveChatPr
     }
   };
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    return `${(kb / 1024).toFixed(1)} MB`;
+  };
+
   if (!user?.id) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
@@ -158,7 +169,51 @@ export default function LiveChat({ isAdmin = false, conversationId }: LiveChatPr
                       : 'bg-primary text-primary-foreground'
                   }`}
                 >
-                  <p>{message.content}</p>
+                  {message.messageType === 'image' && message.fileUrl ? (
+                    <div className="space-y-2">
+                      <img 
+                        src={message.fileUrl} 
+                        alt={message.fileName || 'Uploaded image'} 
+                        className="rounded max-w-full h-auto max-h-64 object-contain"
+                      />
+                      <a
+                        href={message.fileUrl}
+                        download={message.fileName}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-xs opacity-80 hover:opacity-100 underline"
+                      >
+                        <Download className="w-3 h-3" />
+                        Download {message.fileName}
+                      </a>
+                      {message.content && <p className="mt-1">{message.content}</p>}
+                    </div>
+                  ) : message.messageType === 'file' && message.fileUrl ? (
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2 p-2 bg-background/10 rounded">
+                        <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{message.fileName || 'File'}</p>
+                          {message.fileSize && (
+                            <p className="text-xs opacity-70">{formatFileSize(message.fileSize)}</p>
+                          )}
+                        </div>
+                      </div>
+                      <a
+                        href={message.fileUrl}
+                        download={message.fileName}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-xs opacity-80 hover:opacity-100 underline"
+                      >
+                        <Download className="w-3 h-3" />
+                        Download
+                      </a>
+                      {message.content && <p className="mt-1">{message.content}</p>}
+                    </div>
+                  ) : (
+                    <p>{message.content}</p>
+                  )}
                   <p className="text-xs opacity-70 mt-1">
                     {new Date(message.createdAt).toLocaleTimeString()}
                   </p>
