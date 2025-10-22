@@ -59,7 +59,7 @@ Phone number formats: Users can enter phone numbers in multiple formats (7123456
 - **PostgreSQL**: Primary database (Neon serverless PostgreSQL).
 - **Drizzle ORM**: Type-safe database operations.
 - **connect-pg-simple**: PostgreSQL-based session storage.
-- **Replit Object Storage**: File storage for user documents and media.
+- **Cloudinary**: Cloud-based file storage for user documents and media (images, PDFs, etc.). All files stored with "greenpay/" prefix for organization. Supports 25GB free storage, perfect for production deployment.
 
 ## UI & Design System
 - **Radix UI**: Primitive components.
