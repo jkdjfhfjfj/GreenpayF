@@ -107,29 +107,23 @@ PAYHERO_ACCOUNT_ID=your-payhero-account-id
 PAYHERO_WEBHOOK_SECRET=your-payhero-webhook-secret
 ```
 
-#### File Storage (choose one)
+#### File Storage - Cloudinary (✅ REQUIRED)
 
-**Option 1: Cloudinary** (easiest)
+**Your app now uses Cloudinary for file uploads!**
+
 ```bash
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
 ```
 
-**Option 2: AWS S3**
-```bash
-AWS_ACCESS_KEY_ID=your-aws-access-key
-AWS_SECRET_ACCESS_KEY=your-aws-secret-key
-AWS_REGION=us-east-1
-AWS_S3_BUCKET=greenpay-files
-```
+📖 **See `CLOUDINARY_SETUP.md` for detailed setup instructions!**
 
-**Option 3: Google Cloud Storage**
-```bash
-GCS_PROJECT_ID=your-project-id
-GCS_BUCKET_NAME=greenpay-files
-GCS_KEYFILE_PATH=/etc/secrets/keyfile.json
-```
+**Quick setup:**
+1. Sign up at [cloudinary.com/users/register/free](https://cloudinary.com/users/register/free)
+2. Get credentials from Dashboard
+3. Add to Render environment variables
+4. Done! (25GB free storage)
 
 ---
 
@@ -203,28 +197,21 @@ Visit this URL to see your app live! 🎉
 
 ---
 
-## ⚠️ Important: File Storage
+## ⚠️ Important: File Storage (Cloudinary)
 
-**Replit Object Storage won't work on Render!**
+**Your app now uses Cloudinary for file storage!**
 
-You MUST set up one of these:
+✅ **Cloudinary is already integrated** - you just need to add credentials
 
-1. **Cloudinary** (recommended, easiest)
-   - Sign up at [cloudinary.com](https://cloudinary.com)
-   - Free tier: 25GB storage
-   - Add credentials to Render
+**Setup (5 minutes):**
 
-2. **AWS S3**
-   - Create S3 bucket
-   - Get access keys
-   - Add to Render
+1. **Sign up:** [cloudinary.com/users/register/free](https://cloudinary.com/users/register/free)
+2. **Get credentials** from Dashboard (Cloud Name, API Key, API Secret)
+3. **Add to Render** environment variables (see Step 3 above)
 
-3. **Google Cloud Storage**
-   - Create GCS bucket
-   - Download service account key
-   - Add to Render
+**Free tier:** 25GB storage + 25GB bandwidth/month (plenty for your app!)
 
-See **FILE_STORAGE_MIGRATION.md** for detailed instructions.
+📖 **See `CLOUDINARY_SETUP.md` for complete setup guide with screenshots!**
 
 ---
 
