@@ -412,19 +412,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
       
-      // Send OTP via SMS and WhatsApp
-      const result = await messagingService.sendOTP(user.phone, otpCode);
+      // Send OTP via SMS, WhatsApp, and Email
+      const result = await messagingService.sendOTP(
+        user.phone, 
+        otpCode,
+        user.email || undefined,
+        user.fullName || undefined
+      );
       
-      if (!result.sms && !result.whatsapp) {
+      if (!result.sms && !result.whatsapp && !result.email) {
         return res.status(500).json({ message: "Failed to resend verification code" });
       }
       
       const sentMethods = [];
       if (result.sms) sentMethods.push('SMS');
       if (result.whatsapp) sentMethods.push('WhatsApp');
+      if (result.email) sentMethods.push('Email');
       
       res.json({ 
-        message: `New OTP sent via ${sentMethods.join(' and ')}`
+        message: `New OTP sent via ${sentMethods.join(', ')}`
       });
     } catch (error) {
       console.error('Resend OTP error:', error);
@@ -457,21 +463,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store reset code in user's OTP field
       await storage.updateUserOtp(user.id, resetCode, resetExpiry);
       
-      // Send reset code via SMS and WhatsApp
-      const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
-      const result = await messagingService.sendMessage(user.phone, message);
+      // Send reset code via SMS, WhatsApp, and Email
+      const result = await messagingService.sendPasswordReset(
+        user.phone, 
+        resetCode,
+        user.email || undefined,
+        user.fullName || undefined
+      );
       
-      if (!result.sms && !result.whatsapp) {
+      if (!result.sms && !result.whatsapp && !result.email) {
         return res.status(500).json({ message: "Failed to send reset code" });
       }
       
       const sentMethods = [];
       if (result.sms) sentMethods.push('SMS');
       if (result.whatsapp) sentMethods.push('WhatsApp');
+      if (result.email) sentMethods.push('Email');
       
       res.json({ 
         phone: user.phone,
-        sentVia: sentMethods.join(' and ')
+        sentVia: sentMethods.join(', ')
       });
     } catch (error) {
       console.error('Forgot password error:', error);
