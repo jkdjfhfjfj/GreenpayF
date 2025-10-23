@@ -3,15 +3,11 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
-import { useRecipients, useCreateRecipient } from "@/hooks/use-recipients";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -26,19 +22,6 @@ interface UserSearchResult {
 
 export default function SendMoneyPage() {
   const [, setLocation] = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newRecipient, setNewRecipient] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    accountNumber: "",
-    bankName: "",
-    country: "Kenya",
-    currency: "KES",
-    recipientType: "mobile_wallet" as "bank" | "mobile_wallet" | "cash_pickup"
-  });
   
   // GreenPay user transfer state
   const [greenPaySearchTerm, setGreenPaySearchTerm] = useState("");
@@ -49,9 +32,6 @@ export default function SendMoneyPage() {
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   
   const { user } = useAuth();
-  const { data: recipientData } = useRecipients();
-  const createRecipient = useCreateRecipient();
-  const recipients = recipientData?.recipients || [];
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -194,42 +174,6 @@ export default function SendMoneyPage() {
       </div>
     );
   }
-
-  const filteredRecipients = recipients.filter(recipient =>
-    recipient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    recipient.phone?.includes(searchQuery) ||
-    recipient.email?.includes(searchQuery)
-  );
-
-  const handleContinue = () => {
-    if (selectedRecipient) {
-      // Store selected recipient in sessionStorage for next step
-      sessionStorage.setItem('selectedRecipient', JSON.stringify(selectedRecipient));
-      setLocation("/send-amount");
-    }
-  };
-
-  const handleAddRecipient = () => {
-    createRecipient.mutate(newRecipient, {
-      onSuccess: () => {
-        setShowAddDialog(false);
-        setNewRecipient({
-          name: "",
-          phone: "",
-          email: "",
-          accountNumber: "",
-          bankName: "",
-          country: "Kenya",
-          currency: "KES",
-          recipientType: "mobile_wallet"
-        });
-      }
-    });
-  };
-
-  const countries = [
-    { name: "Kenya", currency: "KES" },
-  ];
 
   const renderGreenPayTransferContent = () => {
     return (
