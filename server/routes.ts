@@ -4465,6 +4465,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send custom email to specific user
+  app.post("/api/admin/send-custom-email", requireAdminAuth, async (req, res) => {
+    try {
+      const { email, subject, message, imageUrl, linkText, linkUrl } = req.body;
+      
+      if (!email || !subject || !message) {
+        return res.status(400).json({ message: "Email, subject, and message are required" });
+      }
+      
+      const { emailService } = await import('./services/email');
+      const { emailTemplates } = await import('./services/email-templates');
+      
+      const html = emailTemplates.custom({
+        message,
+        imageUrl: imageUrl || undefined,
+        linkText: linkText || undefined,
+        linkUrl: linkUrl || undefined,
+      });
+      
+      const result = await emailService.sendEmail(email, subject, html);
+      
+      if (result) {
+        console.log(`Admin sent custom email to ${email} with subject: ${subject}`);
+        res.json({
+          success: true,
+          message: "Custom email sent successfully"
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          message: "Failed to send custom email. Please check your email configuration." 
+        });
+      }
+    } catch (error) {
+      console.error('Error sending custom email:', error);
+      res.status(500).json({ message: "Error sending custom email" });
+    }
+  });
+
   // User search endpoint for transfers
   app.get("/api/users/search", async (req, res) => {
     try {

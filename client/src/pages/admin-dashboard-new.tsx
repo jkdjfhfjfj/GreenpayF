@@ -26,7 +26,8 @@ import {
   Smartphone,
   Banknote,
   Bell,
-  FileText
+  FileText,
+  Mail
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -46,6 +47,7 @@ import SystemLogs from "@/components/admin/system-logs";
 import AdminSupportTab from "@/components/admin/admin-support-tab";
 import SupportTicketManagement from "@/components/admin/support-ticket-management";
 import MessagingSettings from "@/components/admin/messaging-settings";
+import MailManagement from "@/components/admin/mail-management";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -105,6 +107,7 @@ export default function AdminDashboard() {
     { id: "cards", label: "Virtual Cards", icon: CreditCard },
     { id: "pricing", label: "Card Pricing", icon: DollarSign },
     { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "mail", label: "Mail Management", icon: Mail },
     { id: "support", label: "Live Support", icon: Users },
     { id: "tickets", label: "Support Tickets", icon: FileText },
     { id: "logs", label: "System Logs", icon: Activity },
@@ -133,6 +136,8 @@ export default function AdminDashboard() {
         return <CardPriceManagement />;
       case "notifications":
         return <NotificationManagement />;
+      case "mail":
+        return <MailManagement />;
       case "support":
         return <AdminSupportTab />;
       case "tickets":
