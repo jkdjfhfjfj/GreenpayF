@@ -1886,6 +1886,806 @@ var init_exchange_rate = __esm({
   }
 });
 
+// server/services/email-templates.ts
+var baseTemplate, emailTemplates;
+var init_email_templates = __esm({
+  "server/services/email-templates.ts"() {
+    "use strict";
+    baseTemplate = (content) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GreenPay</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+    .email-wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .logo {
+      width: 60px;
+      height: 60px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: bold;
+      color: #10b981;
+    }
+    .header-title {
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+    .text {
+      font-size: 16px;
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .otp-box {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .otp-code {
+      font-size: 36px;
+      font-weight: bold;
+      color: #ffffff;
+      letter-spacing: 8px;
+      margin: 0;
+    }
+    .otp-label {
+      color: #ffffff;
+      font-size: 14px;
+      margin-top: 12px;
+      opacity: 0.9;
+    }
+    .info-box {
+      background-color: #f0fdf4;
+      border-left: 4px solid #10b981;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .warning-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .transaction-box {
+      background-color: #f9fafb;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    .transaction-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .transaction-row:last-child {
+      border-bottom: none;
+    }
+    .transaction-label {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .transaction-value {
+      color: #1f2937;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .amount {
+      font-size: 32px;
+      font-weight: bold;
+      color: #10b981;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff !important;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .button-secondary {
+      display: inline-block;
+      background-color: #f3f4f6;
+      color: #1f2937 !important;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      margin: 10px 5px;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px 20px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer-text {
+      color: #6b7280;
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 8px 0;
+    }
+    .footer-links {
+      margin: 20px 0;
+    }
+    .footer-link {
+      color: #10b981;
+      text-decoration: none;
+      margin: 0 10px;
+      font-size: 14px;
+    }
+    .social-icons {
+      margin: 20px 0;
+    }
+    .social-icon {
+      display: inline-block;
+      width: 36px;
+      height: 36px;
+      background-color: #10b981;
+      border-radius: 50%;
+      margin: 0 8px;
+      color: #ffffff;
+      text-decoration: none;
+      line-height: 36px;
+      font-size: 18px;
+    }
+    .divider {
+      height: 1px;
+      background-color: #e5e7eb;
+      margin: 30px 0;
+    }
+    @media only screen and (max-width: 600px) {
+      .content {
+        padding: 30px 20px;
+      }
+      .otp-code {
+        font-size: 28px;
+        letter-spacing: 6px;
+      }
+      .amount {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="header">
+      <div class="logo">$</div>
+      <h1 class="header-title">GreenPay</h1>
+    </div>
+    ${content}
+    <div class="footer">
+      <p class="footer-text"><strong>GreenPay</strong></p>
+      <p class="footer-text">Send money to Africa safely, quickly, and affordably</p>
+      
+      <div class="footer-links">
+        <a href="https://greenpay.world/help" class="footer-link">Help Center</a>
+        <a href="https://greenpay.world/security" class="footer-link">Security</a>
+        <a href="https://greenpay.world/contact" class="footer-link">Contact Us</a>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <p class="footer-text">This email was sent from GreenPay. Please do not reply to this email.</p>
+      <p class="footer-text">If you didn't request this email, please contact our support team.</p>
+      
+      <p class="footer-text" style="margin-top: 20px;">
+        \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} GreenPay. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+    emailTemplates = {
+      /**
+       * OTP Verification Email
+       */
+      otp: (otpCode, userName) => {
+        const content = `
+      <div class="content">
+        <p class="greeting">Hello${userName ? ` ${userName}` : ""}! \u{1F44B}</p>
+        
+        <p class="text">
+          We received a request to verify your GreenPay account. Use the verification code below to complete the process.
+        </p>
+        
+        <div class="otp-box">
+          <p class="otp-code">${otpCode}</p>
+          <p class="otp-label">Enter this code to verify your account</p>
+        </div>
+        
+        <div class="info-box">
+          <p class="text" style="margin: 0;">
+            <strong>\u23F0 This code expires in 10 minutes</strong><br>
+            For your security, do not share this code with anyone.
+          </p>
+        </div>
+        
+        <p class="text">
+          If you didn't request this code, please ignore this email or contact our support team if you have concerns.
+        </p>
+      </div>
+    `;
+        return baseTemplate(content);
+      },
+      /**
+       * Password Reset Email
+       */
+      passwordReset: (resetCode, userName) => {
+        const content = `
+      <div class="content">
+        <p class="greeting">Hello${userName ? ` ${userName}` : ""}! \u{1F510}</p>
+        
+        <p class="text">
+          We received a request to reset your GreenPay account password. Use the code below to create a new password.
+        </p>
+        
+        <div class="otp-box">
+          <p class="otp-code">${resetCode}</p>
+          <p class="otp-label">Password Reset Code</p>
+        </div>
+        
+        <div class="warning-box">
+          <p class="text" style="margin: 0;">
+            <strong>\u26A0\uFE0F Security Alert</strong><br>
+            This code expires in 10 minutes. If you didn't request a password reset, please secure your account immediately by contacting our support team.
+          </p>
+        </div>
+        
+        <p class="text">
+          After entering this code, you'll be able to create a new secure password for your account.
+        </p>
+      </div>
+    `;
+        return baseTemplate(content);
+      },
+      /**
+       * Welcome Email
+       */
+      welcome: (userName) => {
+        const content = `
+      <div class="content">
+        <p class="greeting">Welcome to GreenPay, ${userName}! \u{1F389}</p>
+        
+        <p class="text">
+          We're thrilled to have you join our community! GreenPay makes sending money to Africa simple, secure, and affordable.
+        </p>
+        
+        <div class="info-box">
+          <p class="text" style="margin: 0;">
+            <strong>\u{1F680} Get Started:</strong><br>
+            \u2022 Complete your profile verification<br>
+            \u2022 Add funds to your account<br>
+            \u2022 Send money to friends and family<br>
+            \u2022 Get your virtual card for online payments
+          </p>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="https://greenpay.world/dashboard" class="button">Go to Dashboard</a>
+        </div>
+        
+        <p class="text">
+          Need help? Our support team is available 24/7 to assist you with any questions.
+        </p>
+        
+        <div style="text-align: center; margin-top: 30px;">
+          <a href="https://greenpay.world/help" class="button-secondary">Visit Help Center</a>
+          <a href="https://greenpay.world/contact" class="button-secondary">Contact Support</a>
+        </div>
+      </div>
+    `;
+        return baseTemplate(content);
+      },
+      /**
+       * Fund Receipt Email
+       */
+      fundReceipt: (amount, currency, sender, userName) => {
+        const content = `
+      <div class="content">
+        <p class="greeting">Hello${userName ? ` ${userName}` : ""}! \u{1F4B0}</p>
+        
+        <p class="text">
+          Great news! You've received money in your GreenPay account.
+        </p>
+        
+        <div class="amount">${currency} ${amount}</div>
+        
+        <div class="transaction-box">
+          <div class="transaction-row">
+            <span class="transaction-label">From</span>
+            <span class="transaction-value">${sender}</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">Amount</span>
+            <span class="transaction-value">${currency} ${amount}</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">Status</span>
+            <span class="transaction-value" style="color: #10b981;">\u2713 Completed</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">Date</span>
+            <span class="transaction-value">${(/* @__PURE__ */ new Date()).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        })}</span>
+          </div>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="https://greenpay.world/transactions" class="button">View Transaction Details</a>
+        </div>
+        
+        <p class="text">
+          Your new balance is now available in your account and ready to use.
+        </p>
+      </div>
+    `;
+        return baseTemplate(content);
+      },
+      /**
+       * Transaction Notification Email
+       */
+      transaction: (type, amount, currency, status, transactionId, userName) => {
+        const action = type === "withdraw" ? "Withdrawal" : type === "send" ? "Transfer" : "Transaction";
+        const statusColor = status === "completed" ? "#10b981" : status === "pending" ? "#f59e0b" : "#ef4444";
+        const statusIcon = status === "completed" ? "\u2713" : status === "pending" ? "\u23F3" : "\u2717";
+        const content = `
+      <div class="content">
+        <p class="greeting">Hello${userName ? ` ${userName}` : ""}!</p>
+        
+        <p class="text">
+          Your ${action.toLowerCase()} has been ${status}.
+        </p>
+        
+        <div class="amount">${currency} ${amount}</div>
+        
+        <div class="transaction-box">
+          <div class="transaction-row">
+            <span class="transaction-label">Type</span>
+            <span class="transaction-value">${action}</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">Amount</span>
+            <span class="transaction-value">${currency} ${amount}</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">Status</span>
+            <span class="transaction-value" style="color: ${statusColor};">${statusIcon} ${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">Transaction ID</span>
+            <span class="transaction-value">${transactionId}</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">Date</span>
+            <span class="transaction-value">${(/* @__PURE__ */ new Date()).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        })}</span>
+          </div>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="https://greenpay.world/transactions" class="button">View All Transactions</a>
+        </div>
+      </div>
+    `;
+        return baseTemplate(content);
+      },
+      /**
+       * Login Alert Email
+       */
+      loginAlert: (location, ip, timestamp2, userName) => {
+        const content = `
+      <div class="content">
+        <p class="greeting">Hello${userName ? ` ${userName}` : ""}! \u{1F510}</p>
+        
+        <p class="text">
+          We detected a new login to your GreenPay account. If this was you, you can safely ignore this email.
+        </p>
+        
+        <div class="transaction-box">
+          <div class="transaction-row">
+            <span class="transaction-label">Location</span>
+            <span class="transaction-value">${location}</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">IP Address</span>
+            <span class="transaction-value">${ip}</span>
+          </div>
+          <div class="transaction-row">
+            <span class="transaction-label">Time</span>
+            <span class="transaction-value">${timestamp2}</span>
+          </div>
+        </div>
+        
+        <div class="warning-box">
+          <p class="text" style="margin: 0;">
+            <strong>\u26A0\uFE0F Was this you?</strong><br>
+            If you don't recognize this login activity, please secure your account immediately by changing your password and enabling two-factor authentication.
+          </p>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="https://greenpay.world/settings/security" class="button">Secure My Account</a>
+        </div>
+        
+        <p class="text">
+          For your security, we recommend using strong, unique passwords and enabling two-factor authentication.
+        </p>
+      </div>
+    `;
+        return baseTemplate(content);
+      },
+      /**
+       * KYC Verified Email
+       */
+      kycVerified: (userName) => {
+        const content = `
+      <div class="content">
+        <p class="greeting">Congratulations, ${userName}! \u2705</p>
+        
+        <p class="text">
+          Your GreenPay account has been successfully verified! You now have full access to all our features.
+        </p>
+        
+        <div class="info-box">
+          <p class="text" style="margin: 0;">
+            <strong>\u{1F389} What's now available:</strong><br>
+            \u2022 Send money internationally without limits<br>
+            \u2022 Request and receive payments<br>
+            \u2022 Order virtual cards for online shopping<br>
+            \u2022 Access premium features and lower fees
+          </p>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="https://greenpay.world/dashboard" class="button">Explore Your Account</a>
+        </div>
+        
+        <p class="text">
+          Thank you for completing the verification process. We're excited to help you with all your money transfer needs!
+        </p>
+      </div>
+    `;
+        return baseTemplate(content);
+      },
+      /**
+       * Card Activation Email
+       */
+      cardActivation: (cardLastFour, userName) => {
+        const content = `
+      <div class="content">
+        <p class="greeting">Hello${userName ? ` ${userName}` : ""}! \u{1F4B3}</p>
+        
+        <p class="text">
+          Great news! Your GreenPay virtual card is now active and ready to use.
+        </p>
+        
+        <div class="transaction-box">
+          <div style="text-align: center; padding: 20px 0;">
+            <div style="font-size: 48px; margin-bottom: 12px;">\u{1F4B3}</div>
+            <p class="transaction-value" style="font-size: 18px;">Card ending in \u2022\u2022\u2022\u2022 ${cardLastFour}</p>
+            <p class="transaction-label">Status: <span style="color: #10b981; font-weight: 600;">Active</span></p>
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <p class="text" style="margin: 0;">
+            <strong>\u{1F6E1}\uFE0F Security Tips:</strong><br>
+            \u2022 Never share your card details with anyone<br>
+            \u2022 Enable transaction notifications<br>
+            \u2022 Set spending limits for extra security<br>
+            \u2022 Review transactions regularly
+          </p>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="https://greenpay.world/cards" class="button">View Card Details</a>
+        </div>
+        
+        <p class="text">
+          Your card can be used for online purchases anywhere that accepts virtual cards. Happy shopping!
+        </p>
+      </div>
+    `;
+        return baseTemplate(content);
+      },
+      /**
+       * Test Email
+       */
+      test: () => {
+        const content = `
+      <div class="content">
+        <p class="greeting">Email Configuration Test \u2705</p>
+        
+        <p class="text">
+          This is a test email to verify that your GreenPay email configuration is working correctly.
+        </p>
+        
+        <div class="info-box">
+          <p class="text" style="margin: 0;">
+            <strong>\u2713 Success!</strong><br>
+            If you're reading this, your SMTP settings are configured correctly and emails are being sent successfully.
+          </p>
+        </div>
+        
+        <p class="text">
+          Your email service is now ready to send notifications to your users for:
+        </p>
+        
+        <ul class="text">
+          <li>OTP verification codes</li>
+          <li>Password reset requests</li>
+          <li>Transaction notifications</li>
+          <li>Login alerts</li>
+          <li>Account updates</li>
+        </ul>
+        
+        <p class="text">
+          You can close this test email. Everything is working perfectly!
+        </p>
+      </div>
+    `;
+        return baseTemplate(content);
+      }
+    };
+  }
+});
+
+// server/services/email.ts
+var email_exports = {};
+__export(email_exports, {
+  EmailService: () => EmailService,
+  emailService: () => emailService
+});
+import nodemailer from "nodemailer";
+var EmailService, emailService;
+var init_email = __esm({
+  "server/services/email.ts"() {
+    "use strict";
+    init_storage();
+    init_email_templates();
+    EmailService = class {
+      transporter = null;
+      credentials = null;
+      /**
+       * Get email credentials from system settings
+       */
+      async getCredentials() {
+        try {
+          const settings = await storage.getSystemSettingsByCategory("email");
+          const host = settings.find((s) => s.key === "smtp_host")?.value;
+          const port = parseInt(settings.find((s) => s.key === "smtp_port")?.value || "465");
+          const secure = settings.find((s) => s.key === "smtp_secure")?.value === "true";
+          const username = settings.find((s) => s.key === "smtp_username")?.value;
+          const password = settings.find((s) => s.key === "smtp_password")?.value;
+          const fromEmail = settings.find((s) => s.key === "from_email")?.value;
+          const fromName = settings.find((s) => s.key === "from_name")?.value || "GreenPay";
+          if (!host || !username || !password || !fromEmail) {
+            console.warn("Email credentials not fully configured");
+            return null;
+          }
+          return { host, port, secure, username, password, fromEmail, fromName };
+        } catch (error) {
+          console.error("Error fetching email credentials:", error);
+          return null;
+        }
+      }
+      /**
+       * Initialize or refresh the SMTP transporter
+       */
+      async initializeTransporter() {
+        try {
+          this.credentials = await this.getCredentials();
+          if (!this.credentials) {
+            return false;
+          }
+          this.transporter = nodemailer.createTransport({
+            host: this.credentials.host,
+            port: this.credentials.port,
+            secure: this.credentials.secure,
+            auth: {
+              user: this.credentials.username,
+              pass: this.credentials.password
+            }
+          });
+          await this.transporter.verify();
+          console.log("\u2705 Email service initialized successfully");
+          return true;
+        } catch (error) {
+          console.error("Email service initialization failed:", error);
+          this.transporter = null;
+          return false;
+        }
+      }
+      /**
+       * Send an email
+       */
+      async sendEmail(to, subject, html) {
+        try {
+          if (!this.transporter) {
+            const initialized = await this.initializeTransporter();
+            if (!initialized || !this.transporter || !this.credentials) {
+              console.warn("Email not sent: Service not configured");
+              return false;
+            }
+          }
+          if (!this.credentials) {
+            this.credentials = await this.getCredentials();
+            if (!this.credentials) {
+              return false;
+            }
+          }
+          const mailOptions = {
+            from: `${this.credentials.fromName} <${this.credentials.fromEmail}>`,
+            to,
+            subject,
+            html
+          };
+          const info = await this.transporter.sendMail(mailOptions);
+          console.log(`\u2705 Email sent successfully to ${to} - MessageId: ${info.messageId}`);
+          return true;
+        } catch (error) {
+          if (error.code === "EAUTH" || error.responseCode === 535) {
+            console.log("Email auth failed, reinitializing transporter...");
+            const initialized = await this.initializeTransporter();
+            if (initialized && this.transporter) {
+              try {
+                const mailOptions = {
+                  from: `${this.credentials?.fromName} <${this.credentials?.fromEmail}>`,
+                  to,
+                  subject,
+                  html
+                };
+                await this.transporter.sendMail(mailOptions);
+                console.log(`\u2705 Email sent successfully to ${to} (after reinit)`);
+                return true;
+              } catch (retryError) {
+                console.error("Email sending error after reinit:", retryError);
+                return false;
+              }
+            }
+          }
+          console.error("Email sending error:", error);
+          return false;
+        }
+      }
+      /**
+       * Send OTP verification code
+       */
+      async sendOTP(email, otpCode, userName) {
+        const subject = "Your GreenPay Verification Code";
+        const html = emailTemplates.otp(otpCode, userName);
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Send password reset code
+       */
+      async sendPasswordReset(email, resetCode, userName) {
+        const subject = "Reset Your GreenPay Password";
+        const html = emailTemplates.passwordReset(resetCode, userName);
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Send welcome email
+       */
+      async sendWelcome(email, userName) {
+        const subject = "Welcome to GreenPay! \u{1F389}";
+        const html = emailTemplates.welcome(userName);
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Send fund receipt notification
+       */
+      async sendFundReceipt(email, amount, currency, sender, userName) {
+        const subject = `You've Received ${currency} ${amount}`;
+        const html = emailTemplates.fundReceipt(amount, currency, sender, userName);
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Send transaction notification
+       */
+      async sendTransactionNotification(email, type, amount, currency, status, transactionId, userName) {
+        const action = type === "withdraw" ? "Withdrawal" : type === "send" ? "Transfer" : "Transaction";
+        const subject = `${action} ${status === "completed" ? "Completed" : "Update"}: ${currency} ${amount}`;
+        const html = emailTemplates.transaction(type, amount, currency, status, transactionId, userName);
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Send login alert
+       */
+      async sendLoginAlert(email, location, ip, timestamp2, userName) {
+        const subject = "\u{1F510} New Login to Your GreenPay Account";
+        const html = emailTemplates.loginAlert(location, ip, timestamp2, userName);
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Send KYC verified notification
+       */
+      async sendKYCVerified(email, userName) {
+        const subject = "\u2705 Your Account is Now Verified!";
+        const html = emailTemplates.kycVerified(userName);
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Send card activation notification
+       */
+      async sendCardActivation(email, cardLastFour, userName) {
+        const subject = "\u{1F4B3} Your Virtual Card is Active!";
+        const html = emailTemplates.cardActivation(cardLastFour, userName);
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Send test email (for admin configuration testing)
+       */
+      async sendTestEmail(email) {
+        const subject = "Test Email from GreenPay";
+        const html = emailTemplates.test();
+        return this.sendEmail(email, subject, html);
+      }
+      /**
+       * Verify email configuration
+       */
+      async verifyConfiguration() {
+        return await this.initializeTransporter();
+      }
+    };
+    emailService = new EmailService();
+  }
+});
+
 // server/services/messaging.ts
 var messaging_exports = {};
 __export(messaging_exports, {
@@ -1898,6 +2698,7 @@ var init_messaging = __esm({
   "server/services/messaging.ts"() {
     "use strict";
     init_storage();
+    init_email();
     MessagingService = class {
       SMS_URL = "https://talkntalk.africa/api/v1/sms/send";
       WHATSAPP_URL_BASE = "https://talkntalk.africa/api/v1/whatsapp/sessions";
@@ -2038,47 +2839,155 @@ var init_messaging = __esm({
         return { sms: smsResult, whatsapp: whatsappResult };
       }
       /**
-       * Send OTP verification code
+       * Send message to all channels (SMS, WhatsApp, and Email)
        */
-      async sendOTP(phone, otpCode) {
+      async sendMultiChannelMessage(phone, email, message) {
+        const credentials = await this.getCredentials();
+        const results = {
+          sms: false,
+          whatsapp: false,
+          email: false
+        };
+        if (credentials) {
+          const [smsResult, whatsappResult] = await Promise.all([
+            this.sendSMS(phone, message, credentials),
+            this.sendWhatsApp(phone, message, credentials)
+          ]);
+          results.sms = smsResult;
+          results.whatsapp = whatsappResult;
+        } else {
+          console.warn("SMS/WhatsApp credentials not configured");
+        }
+        if (email) {
+          console.log("Email will be sent via specialized emailService methods");
+          results.email = true;
+        }
+        return results;
+      }
+      /**
+       * Send OTP verification code via SMS, WhatsApp, and Email
+       */
+      async sendOTP(phone, otpCode, email, userName) {
         const message = `Your verification code is ${otpCode}. Valid for 10 minutes.`;
-        return this.sendMessage(phone, message);
+        const mobileResult = await this.sendMessage(phone, message);
+        let emailResult = false;
+        if (email) {
+          emailResult = await emailService.sendOTP(email, otpCode, userName);
+        }
+        return {
+          sms: mobileResult.sms,
+          whatsapp: mobileResult.whatsapp,
+          email: emailResult
+        };
       }
       /**
-       * Send fund receipt notification
+       * Send password reset code via SMS, WhatsApp, and Email
        */
-      async sendFundReceipt(phone, amount, currency, sender) {
+      async sendPasswordReset(phone, resetCode, email, userName) {
+        const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
+        const mobileResult = await this.sendMessage(phone, message);
+        let emailResult = false;
+        if (email) {
+          emailResult = await emailService.sendPasswordReset(email, resetCode, userName);
+        }
+        return {
+          sms: mobileResult.sms,
+          whatsapp: mobileResult.whatsapp,
+          email: emailResult
+        };
+      }
+      /**
+       * Send fund receipt notification via SMS, WhatsApp, and Email
+       */
+      async sendFundReceipt(phone, amount, currency, sender, email, userName) {
         const message = `You received ${currency} ${amount} from ${sender}. Check your account.`;
-        return this.sendMessage(phone, message);
+        const mobileResult = await this.sendMessage(phone, message);
+        let emailResult = false;
+        if (email) {
+          emailResult = await emailService.sendFundReceipt(email, amount, currency, sender, userName);
+        }
+        return {
+          sms: mobileResult.sms,
+          whatsapp: mobileResult.whatsapp,
+          email: emailResult
+        };
       }
       /**
-       * Send login alert with location and IP
+       * Send login alert with location and IP via SMS, WhatsApp, and Email
        */
-      async sendLoginAlert(phone, location, ip) {
+      async sendLoginAlert(phone, location, ip, email, userName) {
         const message = `New login from ${location} (IP: ${ip}). Not you? Contact support.`;
-        return this.sendMessage(phone, message);
+        const timestamp2 = (/* @__PURE__ */ new Date()).toLocaleString("en-US", {
+          dateStyle: "long",
+          timeStyle: "short"
+        });
+        const mobileResult = await this.sendMessage(phone, message);
+        let emailResult = false;
+        if (email) {
+          emailResult = await emailService.sendLoginAlert(email, location, ip, timestamp2, userName);
+        }
+        return {
+          sms: mobileResult.sms,
+          whatsapp: mobileResult.whatsapp,
+          email: emailResult
+        };
       }
       /**
-       * Send KYC verified notification
+       * Send KYC verified notification via SMS, WhatsApp, and Email
        */
-      async sendKYCVerified(phone) {
+      async sendKYCVerified(phone, email, userName) {
         const message = `Your account is now verified! You can now access all features.`;
-        return this.sendMessage(phone, message);
+        const mobileResult = await this.sendMessage(phone, message);
+        let emailResult = false;
+        if (email && userName) {
+          emailResult = await emailService.sendKYCVerified(email, userName);
+        }
+        return {
+          sms: mobileResult.sms,
+          whatsapp: mobileResult.whatsapp,
+          email: emailResult
+        };
       }
       /**
-       * Send card activation notification
+       * Send card activation notification via SMS, WhatsApp, and Email
        */
-      async sendCardActivation(phone, cardLastFour) {
+      async sendCardActivation(phone, cardLastFour, email, userName) {
         const message = `Your virtual card ending in ${cardLastFour} is now active!`;
-        return this.sendMessage(phone, message);
+        const mobileResult = await this.sendMessage(phone, message);
+        let emailResult = false;
+        if (email) {
+          emailResult = await emailService.sendCardActivation(email, cardLastFour, userName);
+        }
+        return {
+          sms: mobileResult.sms,
+          whatsapp: mobileResult.whatsapp,
+          email: emailResult
+        };
       }
       /**
-       * Send transaction notification
+       * Send transaction notification via SMS, WhatsApp, and Email
        */
-      async sendTransactionNotification(phone, type, amount, currency, status) {
+      async sendTransactionNotification(phone, type, amount, currency, status, transactionId, email, userName) {
         const action = type === "withdraw" ? "Withdrawal" : type === "send" ? "Transfer" : "Transaction";
         const message = `${action} of ${currency} ${amount} ${status}. Check your account for details.`;
-        return this.sendMessage(phone, message);
+        const mobileResult = await this.sendMessage(phone, message);
+        let emailResult = false;
+        if (email && transactionId) {
+          emailResult = await emailService.sendTransactionNotification(
+            email,
+            type,
+            amount,
+            currency,
+            status,
+            transactionId,
+            userName
+          );
+        }
+        return {
+          sms: mobileResult.sms,
+          whatsapp: mobileResult.whatsapp,
+          email: emailResult
+        };
       }
       /**
        * Generate 6-digit OTP code
@@ -3289,15 +4198,21 @@ async function registerRoutes(app2) {
       const otpCode = messagingService2.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
-      const result = await messagingService2.sendOTP(user.phone, otpCode);
-      if (!result.sms && !result.whatsapp) {
+      const result = await messagingService2.sendOTP(
+        user.phone,
+        otpCode,
+        user.email || void 0,
+        user.fullName || void 0
+      );
+      if (!result.sms && !result.whatsapp && !result.email) {
         return res.status(500).json({ message: "Failed to resend verification code" });
       }
       const sentMethods = [];
       if (result.sms) sentMethods.push("SMS");
       if (result.whatsapp) sentMethods.push("WhatsApp");
+      if (result.email) sentMethods.push("Email");
       res.json({
-        message: `New OTP sent via ${sentMethods.join(" and ")}`
+        message: `New OTP sent via ${sentMethods.join(", ")}`
       });
     } catch (error) {
       console.error("Resend OTP error:", error);
@@ -3319,17 +4234,22 @@ async function registerRoutes(app2) {
       const resetCode = messagingService2.generateOTP();
       const resetExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, resetCode, resetExpiry);
-      const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
-      const result = await messagingService2.sendMessage(user.phone, message);
-      if (!result.sms && !result.whatsapp) {
+      const result = await messagingService2.sendPasswordReset(
+        user.phone,
+        resetCode,
+        user.email || void 0,
+        user.fullName || void 0
+      );
+      if (!result.sms && !result.whatsapp && !result.email) {
         return res.status(500).json({ message: "Failed to send reset code" });
       }
       const sentMethods = [];
       if (result.sms) sentMethods.push("SMS");
       if (result.whatsapp) sentMethods.push("WhatsApp");
+      if (result.email) sentMethods.push("Email");
       res.json({
         phone: user.phone,
-        sentVia: sentMethods.join(" and ")
+        sentVia: sentMethods.join(", ")
       });
     } catch (error) {
       console.error("Forgot password error:", error);
@@ -6320,6 +7240,110 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Error sending message:", error);
       res.status(500).json({ message: "Error sending message" });
+    }
+  });
+  app2.get("/api/admin/email-settings", requireAdminAuth, async (req, res) => {
+    try {
+      const smtpHostSetting = await storage.getSystemSetting("email", "smtp_host");
+      const smtpPortSetting = await storage.getSystemSetting("email", "smtp_port");
+      const smtpSecureSetting = await storage.getSystemSetting("email", "smtp_secure");
+      const smtpUsernameSetting = await storage.getSystemSetting("email", "smtp_username");
+      const smtpPasswordSetting = await storage.getSystemSetting("email", "smtp_password");
+      const fromEmailSetting = await storage.getSystemSetting("email", "from_email");
+      const fromNameSetting = await storage.getSystemSetting("email", "from_name");
+      const settings = {
+        smtpHost: smtpHostSetting?.value || "",
+        smtpPort: smtpPortSetting?.value || "465",
+        smtpSecure: smtpSecureSetting?.value || "true",
+        smtpUsername: smtpUsernameSetting?.value || "",
+        smtpPassword: smtpPasswordSetting?.value || "",
+        fromEmail: fromEmailSetting?.value || "",
+        fromName: fromNameSetting?.value || "GreenPay"
+      };
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching email settings:", error);
+      res.status(500).json({ message: "Error fetching email settings" });
+    }
+  });
+  app2.put("/api/admin/email-settings", requireAdminAuth, async (req, res) => {
+    try {
+      const { smtpHost, smtpPort, smtpSecure, smtpUsername, smtpPassword, fromEmail, fromName } = req.body;
+      console.log("Admin updated email settings");
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_host",
+        value: (smtpHost || "").trim(),
+        description: "SMTP server hostname"
+      });
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_port",
+        value: (smtpPort || "465").toString(),
+        description: "SMTP server port"
+      });
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_secure",
+        value: smtpSecure ? "true" : "false",
+        description: "Use SSL/TLS for SMTP"
+      });
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_username",
+        value: (smtpUsername || "").trim(),
+        description: "SMTP username"
+      });
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_password",
+        value: (smtpPassword || "").trim(),
+        description: "SMTP password"
+      });
+      await storage.setSystemSetting({
+        category: "email",
+        key: "from_email",
+        value: (fromEmail || "").trim(),
+        description: "From email address"
+      });
+      await storage.setSystemSetting({
+        category: "email",
+        key: "from_name",
+        value: (fromName || "GreenPay").trim(),
+        description: "From name"
+      });
+      res.json({
+        success: true,
+        message: "Email settings updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating email settings:", error);
+      res.status(500).json({ message: "Error updating email settings" });
+    }
+  });
+  app2.post("/api/admin/send-test-email", requireAdminAuth, async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+      const { emailService: emailService2 } = await Promise.resolve().then(() => (init_email(), email_exports));
+      const result = await emailService2.sendTestEmail(email);
+      if (result) {
+        console.log(`Admin sent test email to ${email}`);
+        res.json({
+          success: true,
+          message: "Test email sent successfully"
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Failed to send test email. Please check your email configuration."
+        });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ message: "Error sending test email" });
     }
   });
   app2.get("/api/users/search", async (req, res) => {

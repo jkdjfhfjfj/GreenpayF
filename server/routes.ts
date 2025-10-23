@@ -4342,6 +4342,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email settings endpoints
+  app.get("/api/admin/email-settings", requireAdminAuth, async (req, res) => {
+    try {
+      const smtpHostSetting = await storage.getSystemSetting("email", "smtp_host");
+      const smtpPortSetting = await storage.getSystemSetting("email", "smtp_port");
+      const smtpSecureSetting = await storage.getSystemSetting("email", "smtp_secure");
+      const smtpUsernameSetting = await storage.getSystemSetting("email", "smtp_username");
+      const smtpPasswordSetting = await storage.getSystemSetting("email", "smtp_password");
+      const fromEmailSetting = await storage.getSystemSetting("email", "from_email");
+      const fromNameSetting = await storage.getSystemSetting("email", "from_name");
+      
+      const settings = {
+        smtpHost: smtpHostSetting?.value || "",
+        smtpPort: smtpPortSetting?.value || "465",
+        smtpSecure: smtpSecureSetting?.value || "true",
+        smtpUsername: smtpUsernameSetting?.value || "",
+        smtpPassword: smtpPasswordSetting?.value || "",
+        fromEmail: fromEmailSetting?.value || "",
+        fromName: fromNameSetting?.value || "GreenPay",
+      };
+      
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching email settings:', error);
+      res.status(500).json({ message: "Error fetching email settings" });
+    }
+  });
+
+  app.put("/api/admin/email-settings", requireAdminAuth, async (req, res) => {
+    try {
+      const { smtpHost, smtpPort, smtpSecure, smtpUsername, smtpPassword, fromEmail, fromName } = req.body;
+      
+      console.log('Admin updated email settings');
+      
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_host",
+        value: (smtpHost || '').trim(),
+        description: "SMTP server hostname"
+      });
+      
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_port",
+        value: (smtpPort || '465').toString(),
+        description: "SMTP server port"
+      });
+      
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_secure",
+        value: smtpSecure ? 'true' : 'false',
+        description: "Use SSL/TLS for SMTP"
+      });
+      
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_username",
+        value: (smtpUsername || '').trim(),
+        description: "SMTP username"
+      });
+      
+      await storage.setSystemSetting({
+        category: "email",
+        key: "smtp_password",
+        value: (smtpPassword || '').trim(),
+        description: "SMTP password"
+      });
+      
+      await storage.setSystemSetting({
+        category: "email",
+        key: "from_email",
+        value: (fromEmail || '').trim(),
+        description: "From email address"
+      });
+      
+      await storage.setSystemSetting({
+        category: "email",
+        key: "from_name",
+        value: (fromName || 'GreenPay').trim(),
+        description: "From name"
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Email settings updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating email settings:', error);
+      res.status(500).json({ message: "Error updating email settings" });
+    }
+  });
+
+  // Send test email endpoint
+  app.post("/api/admin/send-test-email", requireAdminAuth, async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+      
+      const { emailService } = await import('./services/email');
+      const result = await emailService.sendTestEmail(email);
+      
+      if (result) {
+        console.log(`Admin sent test email to ${email}`);
+        res.json({
+          success: true,
+          message: "Test email sent successfully"
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          message: "Failed to send test email. Please check your email configuration." 
+        });
+      }
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      res.status(500).json({ message: "Error sending test email" });
+    }
+  });
+
   // User search endpoint for transfers
   app.get("/api/users/search", async (req, res) => {
     try {
