@@ -62,6 +62,18 @@ const transferSchema = z.object({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication and authorization middleware
+  const requireAuth = (req: any, res: any, next: any) => {
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        message: "Authentication required. Please log in."
+      });
+    }
+    
+    next();
+  };
+
   const requireAdminAuth = (req: any, res: any, next: any) => {
     // Check if admin is authenticated (has valid session)
     const adminId = req.session?.admin?.id;
@@ -4505,7 +4517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User search endpoint for transfers
-  app.get("/api/users/search", async (req, res) => {
+  app.get("/api/users/search", requireAuth, async (req, res) => {
     try {
       const { q: searchQuery } = req.query;
       
@@ -4514,18 +4526,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const users = await storage.getAllUsers();
+      const currentUserId = req.session.userId;
       
-      // Search by email, full name, or phone number, excluding the current user making the request
-      // Use more flexible search logic to handle case sensitivity and partial matches
+      console.log(`User search initiated by ${currentUserId} for query: "${searchQuery}"`);
+      console.log(`Total users in database: ${users.length}`);
+      
+      // Search by email, full name, or phone number, excluding the current user
       const filteredUsers = users
         .filter(user => {
+          // Skip current user and admin users
+          if (user.id === currentUserId || user.isAdmin) {
+            return false;
+          }
+          
           const query = searchQuery.toLowerCase().trim();
           const fullName = (user.fullName || '').toLowerCase().trim();
           const email = (user.email || '').toLowerCase().trim();
           const phone = (user.phone || '').trim();
           
           // Normalize phone numbers to standard format for comparison
-          // Converts all formats (+254xxx, 0xxx, 254xxx, 7xxx) to 7xxx format
           const normalizeToStandardPhone = (p: string) => {
             if (!p) return '';
             const cleaned = p.replace(/[\+\-\s()]/g, '');
@@ -4542,19 +4561,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const normalizedUserPhone = normalizeToStandardPhone(phone);
           const normalizedSearchPhone = normalizeToStandardPhone(searchQuery.trim());
           
-          // Check for exact email match first, then partial matches
-          const emailMatch = email === query || email.includes(query);
+          // Check for matches
+          const emailMatch = email.includes(query);
           const nameMatch = fullName.includes(query) || 
-                           fullName.split(' ').some(part => part.startsWith(query));
+                           fullName.split(' ').some(part => part.toLowerCase().startsWith(query));
           
-          // Enhanced phone matching: compare normalized formats
+          // Enhanced phone matching
           const phoneMatch = normalizedUserPhone && normalizedSearchPhone && (
             normalizedUserPhone === normalizedSearchPhone ||
             normalizedUserPhone.includes(normalizedSearchPhone) ||
             normalizedSearchPhone.includes(normalizedUserPhone)
           );
           
-          return (emailMatch || nameMatch || phoneMatch) && user.id !== req.session?.userId;
+          return emailMatch || nameMatch || phoneMatch;
         })
         .slice(0, 10) // Limit to 10 results
         .map(user => ({
@@ -4564,7 +4583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: user.phone
         }));
       
-      console.log(`User search for "${searchQuery}": found ${filteredUsers.length} users`);
+      console.log(`User search for "${searchQuery}": found ${filteredUsers.length} matching users`);
       res.json({ users: filteredUsers });
     } catch (error) {
       console.error('User search error:', error);
