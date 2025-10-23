@@ -79,7 +79,7 @@ export class EmailService {
   /**
    * Send an email
    */
-  private async sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+  async sendEmail(to: string, subject: string, html: string): Promise<boolean> {
     try {
       // Ensure transporter is initialized
       if (!this.transporter) {

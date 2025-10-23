@@ -15,7 +15,7 @@ import { useRecipients, useCreateRecipient } from "@/hooks/use-recipients";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Send, DollarSign, Users, CheckCircle, Globe } from "lucide-react";
+import { Search, Send, DollarSign, Users, CheckCircle } from "lucide-react";
 
 interface UserSearchResult {
   id: string;
@@ -47,7 +47,6 @@ export default function SendMoneyPage() {
   const [transferDescription, setTransferDescription] = useState("");
   const [greenPaySearchResults, setGreenPaySearchResults] = useState<UserSearchResult[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
-  const [activeTab, setActiveTab] = useState("greenpay");
   
   const { user } = useAuth();
   const { data: recipientData } = useRecipients();
@@ -702,34 +701,22 @@ export default function SendMoneyPage() {
           <p className="text-green-200 text-sm">GreenPay Wallet</p>
         </motion.div>
 
-        {/* Transfer Tabs */}
+        {/* GreenPay User Transfers */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="greenpay" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                GreenPay Users
-              </TabsTrigger>
-              <TabsTrigger value="international" className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                International
-              </TabsTrigger>
-            </TabsList>
-            
-            {/* GreenPay User Transfer Tab */}
-            <TabsContent value="greenpay" className="space-y-4">
-              {renderGreenPayTransferContent()}
-            </TabsContent>
-            
-            {/* International Transfer Tab */}
-            <TabsContent value="international" className="space-y-4">
-              {renderInternationalTransferContent()}
-            </TabsContent>
-          </Tabs>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Send to GreenPay Users
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Transfer money instantly to other GreenPay users - free and instant
+            </p>
+          </div>
+          {renderGreenPayTransferContent()}
         </motion.div>
       </div>
     </div>
