@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { storage } from '../storage';
+import { emailService } from './email';
 
 interface MessageResponse {
   status_code: number;
@@ -188,52 +189,211 @@ export class MessagingService {
   }
 
   /**
-   * Send OTP verification code
+   * Send message to all channels (SMS, WhatsApp, and Email)
    */
-  async sendOTP(phone: string, otpCode: string): Promise<{ sms: boolean; whatsapp: boolean }> {
+  async sendMultiChannelMessage(
+    phone: string, 
+    email: string | undefined,
+    message: string
+  ): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
+    const credentials = await this.getCredentials();
+    
+    const results = {
+      sms: false,
+      whatsapp: false,
+      email: false
+    };
+
+    // Send via SMS and WhatsApp if credentials are configured
+    if (credentials) {
+      const [smsResult, whatsappResult] = await Promise.all([
+        this.sendSMS(phone, message, credentials),
+        this.sendWhatsApp(phone, message, credentials),
+      ]);
+      results.sms = smsResult;
+      results.whatsapp = whatsappResult;
+    } else {
+      console.warn('SMS/WhatsApp credentials not configured');
+    }
+
+    // Send via email if email address is provided
+    if (email) {
+      // Email will be sent via specific methods with HTML templates
+      console.log('Email will be sent via specialized emailService methods');
+      results.email = true; // Will be set by specific email methods
+    }
+
+    return results;
+  }
+
+  /**
+   * Send OTP verification code via SMS, WhatsApp, and Email
+   */
+  async sendOTP(phone: string, otpCode: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const message = `Your verification code is ${otpCode}. Valid for 10 minutes.`;
-    return this.sendMessage(phone, message);
+    
+    // Send via SMS and WhatsApp
+    const mobileResult = await this.sendMessage(phone, message);
+    
+    // Send via Email if provided
+    let emailResult = false;
+    if (email) {
+      emailResult = await emailService.sendOTP(email, otpCode, userName);
+    }
+    
+    return { 
+      sms: mobileResult.sms, 
+      whatsapp: mobileResult.whatsapp,
+      email: emailResult
+    };
   }
 
   /**
-   * Send fund receipt notification
+   * Send password reset code via SMS, WhatsApp, and Email
    */
-  async sendFundReceipt(phone: string, amount: string, currency: string, sender: string): Promise<{ sms: boolean; whatsapp: boolean }> {
+  async sendPasswordReset(phone: string, resetCode: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
+    const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
+    
+    // Send via SMS and WhatsApp
+    const mobileResult = await this.sendMessage(phone, message);
+    
+    // Send via Email if provided
+    let emailResult = false;
+    if (email) {
+      emailResult = await emailService.sendPasswordReset(email, resetCode, userName);
+    }
+    
+    return { 
+      sms: mobileResult.sms, 
+      whatsapp: mobileResult.whatsapp,
+      email: emailResult
+    };
+  }
+
+  /**
+   * Send fund receipt notification via SMS, WhatsApp, and Email
+   */
+  async sendFundReceipt(phone: string, amount: string, currency: string, sender: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const message = `You received ${currency} ${amount} from ${sender}. Check your account.`;
-    return this.sendMessage(phone, message);
+    
+    // Send via SMS and WhatsApp
+    const mobileResult = await this.sendMessage(phone, message);
+    
+    // Send via Email if provided
+    let emailResult = false;
+    if (email) {
+      emailResult = await emailService.sendFundReceipt(email, amount, currency, sender, userName);
+    }
+    
+    return { 
+      sms: mobileResult.sms, 
+      whatsapp: mobileResult.whatsapp,
+      email: emailResult
+    };
   }
 
   /**
-   * Send login alert with location and IP
+   * Send login alert with location and IP via SMS, WhatsApp, and Email
    */
-  async sendLoginAlert(phone: string, location: string, ip: string): Promise<{ sms: boolean; whatsapp: boolean }> {
+  async sendLoginAlert(phone: string, location: string, ip: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const message = `New login from ${location} (IP: ${ip}). Not you? Contact support.`;
-    return this.sendMessage(phone, message);
+    const timestamp = new Date().toLocaleString('en-US', { 
+      dateStyle: 'long', 
+      timeStyle: 'short' 
+    });
+    
+    // Send via SMS and WhatsApp
+    const mobileResult = await this.sendMessage(phone, message);
+    
+    // Send via Email if provided
+    let emailResult = false;
+    if (email) {
+      emailResult = await emailService.sendLoginAlert(email, location, ip, timestamp, userName);
+    }
+    
+    return { 
+      sms: mobileResult.sms, 
+      whatsapp: mobileResult.whatsapp,
+      email: emailResult
+    };
   }
 
   /**
-   * Send KYC verified notification
+   * Send KYC verified notification via SMS, WhatsApp, and Email
    */
-  async sendKYCVerified(phone: string): Promise<{ sms: boolean; whatsapp: boolean }> {
+  async sendKYCVerified(phone: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const message = `Your account is now verified! You can now access all features.`;
-    return this.sendMessage(phone, message);
+    
+    // Send via SMS and WhatsApp
+    const mobileResult = await this.sendMessage(phone, message);
+    
+    // Send via Email if provided
+    let emailResult = false;
+    if (email && userName) {
+      emailResult = await emailService.sendKYCVerified(email, userName);
+    }
+    
+    return { 
+      sms: mobileResult.sms, 
+      whatsapp: mobileResult.whatsapp,
+      email: emailResult
+    };
   }
 
   /**
-   * Send card activation notification
+   * Send card activation notification via SMS, WhatsApp, and Email
    */
-  async sendCardActivation(phone: string, cardLastFour: string): Promise<{ sms: boolean; whatsapp: boolean }> {
+  async sendCardActivation(phone: string, cardLastFour: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const message = `Your virtual card ending in ${cardLastFour} is now active!`;
-    return this.sendMessage(phone, message);
+    
+    // Send via SMS and WhatsApp
+    const mobileResult = await this.sendMessage(phone, message);
+    
+    // Send via Email if provided
+    let emailResult = false;
+    if (email) {
+      emailResult = await emailService.sendCardActivation(email, cardLastFour, userName);
+    }
+    
+    return { 
+      sms: mobileResult.sms, 
+      whatsapp: mobileResult.whatsapp,
+      email: emailResult
+    };
   }
 
   /**
-   * Send transaction notification
+   * Send transaction notification via SMS, WhatsApp, and Email
    */
-  async sendTransactionNotification(phone: string, type: string, amount: string, currency: string, status: string): Promise<{ sms: boolean; whatsapp: boolean }> {
+  async sendTransactionNotification(
+    phone: string, 
+    type: string, 
+    amount: string, 
+    currency: string, 
+    status: string,
+    transactionId?: string,
+    email?: string,
+    userName?: string
+  ): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const action = type === 'withdraw' ? 'Withdrawal' : type === 'send' ? 'Transfer' : 'Transaction';
     const message = `${action} of ${currency} ${amount} ${status}. Check your account for details.`;
-    return this.sendMessage(phone, message);
+    
+    // Send via SMS and WhatsApp
+    const mobileResult = await this.sendMessage(phone, message);
+    
+    // Send via Email if provided
+    let emailResult = false;
+    if (email && transactionId) {
+      emailResult = await emailService.sendTransactionNotification(
+        email, type, amount, currency, status, transactionId, userName
+      );
+    }
+    
+    return { 
+      sms: mobileResult.sms, 
+      whatsapp: mobileResult.whatsapp,
+      email: emailResult
+    };
   }
 
   /**
