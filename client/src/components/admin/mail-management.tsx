@@ -22,10 +22,8 @@ export default function MailManagement() {
 
   const sendEmailMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      return await apiRequest("/api/admin/send-custom-email", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/admin/send-custom-email", data);
+      return response.json();
     },
     onSuccess: () => {
       toast({
