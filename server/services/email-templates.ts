@@ -609,4 +609,56 @@ export const emailTemplates = {
     `;
     return baseTemplate(content);
   },
+
+  /**
+   * Custom Admin Email
+   */
+  custom: (params: { 
+    message: string; 
+    imageUrl?: string; 
+    linkText?: string; 
+    linkUrl?: string;
+  }) => {
+    const formatMessage = (text: string) => {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n• /g, '<br>• ')
+        .replace(/\n/g, '<br>');
+    };
+
+    const imageSection = params.imageUrl ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <img src="${params.imageUrl}" alt="Email Image" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+      </div>
+    ` : '';
+
+    const linkSection = params.linkText && params.linkUrl ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${params.linkUrl}" class="button" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+          ${params.linkText}
+        </a>
+      </div>
+    ` : '';
+
+    const content = `
+      <div class="content">
+        <p class="greeting">Message from GreenPay Team</p>
+        
+        <p class="text">
+          ${formatMessage(params.message)}
+        </p>
+
+        ${imageSection}
+        ${linkSection}
+        
+        <div class="info-box">
+          <p class="text" style="margin: 0;">
+            If you have any questions or need assistance, please don't hesitate to contact our support team.
+          </p>
+        </div>
+      </div>
+    `;
+    return baseTemplate(content);
+  },
 };
