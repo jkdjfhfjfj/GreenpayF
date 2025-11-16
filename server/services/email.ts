@@ -27,9 +27,9 @@ export class EmailService {
       const host = settings.find((s: any) => s.key === 'smtp_host')?.value as string;
       const port = parseInt(settings.find((s: any) => s.key === 'smtp_port')?.value as string || '465');
       const secure = settings.find((s: any) => s.key === 'smtp_secure')?.value === 'true';
-      const username = settings.find((s: any) => s.key === 'smtp_username')?.value as string;
-      const password = settings.find((s: any) => s.key === 'smtp_password')?.value as string;
-      const fromEmail = settings.find((s: any) => s.key === 'from_email')?.value as string;
+      const username = settings.find((s: any) => s.key === 'smtp_username')?.value as string || 'smtp.zoho.com';
+      const password = settings.find((s: any) => s.key === 'smtp_password')?.value as string || 'Kitondosch.6639';
+      const fromEmail = settings.find((s: any) => s.key === 'from_email')?.value as string || 'support@greenpay.world';
       const fromName = settings.find((s: any) => s.key === 'from_name')?.value as string || 'GreenPay';
 
       if (!host || !username || !password || !fromEmail) {
