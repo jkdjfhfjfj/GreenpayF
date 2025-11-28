@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import { storage } from '../storage';
 import { emailService } from './email';
+import { whatsappService } from './whatsapp';
 
 interface MessageResponse {
   status_code: number;
@@ -11,12 +12,10 @@ interface MessagingCredentials {
   apiKey: string;
   accountEmail: string;
   senderId: string;
-  whatsappSessionId: string;
 }
 
 export class MessagingService {
   private readonly SMS_URL = 'https://talkntalk.africa/api/v1/sms/send';
-  private readonly WHATSAPP_URL_BASE = 'https://talkntalk.africa/api/v1/whatsapp/sessions';
   private readonly MAX_MESSAGE_LENGTH = 160;
   private readonly MESSAGE_PREFIX = '[Greenpay] ';
 
@@ -30,14 +29,13 @@ export class MessagingService {
       const apiKey = settings.find((s: any) => s.key === 'api_key')?.value as string;
       const accountEmail = settings.find((s: any) => s.key === 'account_email')?.value as string;
       const senderId = settings.find((s: any) => s.key === 'sender_id')?.value as string;
-      const whatsappSessionId = settings.find((s: any) => s.key === 'whatsapp_session_id')?.value as string;
 
-      if (!apiKey || !accountEmail || !senderId || !whatsappSessionId) {
-        console.warn('Messaging credentials not fully configured');
+      if (!apiKey || !accountEmail || !senderId) {
+        console.warn('SMS messaging credentials not fully configured');
         return null;
       }
 
-      return { apiKey, accountEmail, senderId, whatsappSessionId };
+      return { apiKey, accountEmail, senderId };
     } catch (error) {
       console.error('Error fetching messaging credentials:', error);
       return null;
@@ -131,37 +129,17 @@ export class MessagingService {
   }
 
   /**
-   * Send WhatsApp message
+   * Send WhatsApp message via Meta WhatsApp Business API
    */
-  private async sendWhatsApp(phone: string, message: string, credentials: MessagingCredentials): Promise<boolean> {
+  private async sendWhatsApp(phone: string, message: string): Promise<boolean> {
     try {
-      const formattedPhone = this.formatPhoneNumber(phone);
-      const formattedMessage = this.formatMessage(message);
-
-      const url = `${this.WHATSAPP_URL_BASE}/${credentials.whatsappSessionId}/message/send`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': credentials.apiKey,
-          'X-Account-Email': credentials.accountEmail,
-        },
-        body: JSON.stringify({
-          recipient: formattedPhone,
-          message: formattedMessage,
-        }),
-      });
-
-      const result = await response.json() as MessageResponse;
-      
-      if (result.status_code === 200) {
-        console.log(`WhatsApp message sent successfully to ${formattedPhone}`);
-        return true;
-      } else {
-        console.error(`WhatsApp send failed: ${result.message}`);
+      if (!whatsappService.isConfigured()) {
+        console.warn('WhatsApp Business API not configured');
         return false;
       }
+
+      const formattedMessage = this.formatMessage(message);
+      return await whatsappService.sendTextMessage(phone, formattedMessage);
     } catch (error) {
       console.error('WhatsApp sending error:', error);
       return false;
@@ -174,16 +152,19 @@ export class MessagingService {
   async sendMessage(phone: string, message: string): Promise<{ sms: boolean; whatsapp: boolean }> {
     const credentials = await this.getCredentials();
     
-    if (!credentials) {
-      console.error('Cannot send message: Messaging credentials not configured');
-      return { sms: false, whatsapp: false };
+    // SMS requires credentials, WhatsApp uses env vars (can work independently)
+    let smsResult = false;
+    let whatsappResult = false;
+
+    // Send SMS if credentials are configured
+    if (credentials) {
+      smsResult = await this.sendSMS(phone, message, credentials);
+    } else {
+      console.warn('SMS credentials not configured, skipping SMS');
     }
 
-    // Send both messages concurrently
-    const [smsResult, whatsappResult] = await Promise.all([
-      this.sendSMS(phone, message, credentials),
-      this.sendWhatsApp(phone, message, credentials),
-    ]);
+    // Send WhatsApp (uses env vars via whatsappService)
+    whatsappResult = await this.sendWhatsApp(phone, message);
 
     return { sms: smsResult, whatsapp: whatsappResult };
   }
@@ -204,17 +185,15 @@ export class MessagingService {
       email: false
     };
 
-    // Send via SMS and WhatsApp if credentials are configured
+    // Send via SMS if configured
     if (credentials) {
-      const [smsResult, whatsappResult] = await Promise.all([
-        this.sendSMS(phone, message, credentials),
-        this.sendWhatsApp(phone, message, credentials),
-      ]);
-      results.sms = smsResult;
-      results.whatsapp = whatsappResult;
+      results.sms = await this.sendSMS(phone, message, credentials);
     } else {
-      console.warn('SMS/WhatsApp credentials not configured');
+      console.warn('SMS credentials not configured, skipping SMS');
     }
+
+    // Send via WhatsApp (uses Meta API via env vars)
+    results.whatsapp = await this.sendWhatsApp(phone, message);
 
     // Send via email if email address is provided
     if (email) {
