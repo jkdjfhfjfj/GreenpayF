@@ -9,13 +9,17 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
-import { MessageSquare, Save, Send, CheckCircle, Settings } from "lucide-react";
+import { MessageSquare, Save, Send, CheckCircle, Settings, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface MessagingSettings {
+  // SMS Settings (TalkNTalk)
   apiKey: string;
   accountEmail: string;
   senderId: string;
-  whatsappSessionId: string;
+  // WhatsApp Settings (Meta)
+  whatsappAccessToken: string;
+  whatsappPhoneNumberId: string;
 }
 
 interface User {
@@ -30,7 +34,8 @@ export default function MessagingSettings() {
     apiKey: "",
     accountEmail: "",
     senderId: "",
-    whatsappSessionId: ""
+    whatsappAccessToken: "",
+    whatsappPhoneNumberId: ""
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -114,9 +119,15 @@ export default function MessagingSettings() {
 
       if (response.ok) {
         const result = await response.json();
+        const channels = [];
+        if (result.sms) channels.push('SMS');
+        if (result.whatsapp) channels.push('WhatsApp');
+        
         toast({
           title: "Message Sent",
-          description: `Message sent via ${result.sms ? 'SMS' : ''} ${result.sms && result.whatsapp ? 'and' : ''} ${result.whatsapp ? 'WhatsApp' : ''}`,
+          description: channels.length > 0 
+            ? `Message sent via ${channels.join(' and ')}`
+            : 'Message delivery status unknown',
         });
         setCustomMessage("");
         setSelectedUser("");
@@ -141,29 +152,38 @@ export default function MessagingSettings() {
     return 160 - total;
   };
 
+  const isSmsConfigured = !!(settings.apiKey && settings.accountEmail && settings.senderId);
+  const isWhatsAppConfigured = !!(settings.whatsappAccessToken && settings.whatsappPhoneNumberId);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Messaging Settings</h2>
-          <p className="text-gray-600 mt-1">Configure SMS and WhatsApp messaging via TalkNTalk API</p>
+          <p className="text-gray-600 mt-1">Configure SMS and WhatsApp messaging channels</p>
         </div>
-        <Badge variant="secondary" className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4" />
-          TalkNTalk Integration
-        </Badge>
+        <div className="flex gap-2">
+          <Badge variant={isSmsConfigured ? "default" : "outline"} className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            SMS: {isSmsConfigured ? 'Configured' : 'Not Set'}
+          </Badge>
+          <Badge variant={isWhatsAppConfigured ? "default" : "outline"} className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            WhatsApp: {isWhatsAppConfigured ? 'Configured' : 'Not Set'}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Configuration Settings */}
+        {/* SMS Configuration Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="w-5 h-5" />
-              API Configuration
+              SMS Configuration
             </CardTitle>
             <CardDescription>
-              Update TalkNTalk API credentials for SMS and WhatsApp
+              Configure SMS delivery via TalkNTalk API
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -184,7 +204,7 @@ export default function MessagingSettings() {
                     placeholder="Enter your TalkNTalk API key"
                   />
                   <p className="text-sm text-gray-500">
-                    Your TalkNTalk API key for authentication
+                    Your TalkNTalk API key for SMS authentication
                   </p>
                 </div>
 
@@ -208,107 +228,152 @@ export default function MessagingSettings() {
                     id="senderId"
                     value={settings.senderId}
                     onChange={(e) => setSettings({ ...settings, senderId: e.target.value })}
-                    placeholder="TextSMS"
+                    placeholder="Greenpay"
                   />
                   <p className="text-sm text-gray-500">
                     SMS sender ID (alphanumeric, max 11 characters)
                   </p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="whatsappSessionId">WhatsApp Session ID</Label>
-                  <Input
-                    id="whatsappSessionId"
-                    value={settings.whatsappSessionId}
-                    onChange={(e) => setSettings({ ...settings, whatsappSessionId: e.target.value })}
-                    placeholder="Enter WhatsApp session ID"
-                  />
-                  <p className="text-sm text-gray-500">
-                    WhatsApp business session ID from TalkNTalk dashboard
-                  </p>
-                </div>
-
-                <Button 
-                  onClick={handleSave} 
-                  disabled={loading}
-                  className="w-full"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {loading ? 'Saving...' : 'Save Settings'}
-                </Button>
               </>
             )}
           </CardContent>
         </Card>
 
-        {/* Send Individual Message */}
+        {/* WhatsApp Configuration Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Send className="w-5 h-5" />
-              Send Message to User
+              <Settings className="w-5 h-5" />
+              WhatsApp Configuration
             </CardTitle>
             <CardDescription>
-              Send a custom message to any user via SMS and WhatsApp
+              Configure WhatsApp delivery via Meta Business API
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="user">Select User</Label>
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {usersData?.map((user: User) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.fullName} ({user.phone})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="message">Message</Label>
-              <Textarea
-                id="message"
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                placeholder="Enter your message (without [Greenpay] prefix)"
-                rows={4}
-                maxLength={149} // 160 - 11 chars for "[Greenpay] "
-              />
-              <div className="flex justify-between text-sm">
-                <p className="text-gray-500">
-                  Message will be prefixed with "[Greenpay]"
-                </p>
-                <p className={`${calculateRemainingChars() < 0 ? 'text-red-500' : 'text-gray-500'}`}>
-                  {calculateRemainingChars()} chars remaining
-                </p>
+            {initialLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mr-3" />
+                <span className="text-sm text-muted-foreground">Loading settings...</span>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappAccessToken">Access Token</Label>
+                  <Input
+                    id="whatsappAccessToken"
+                    type="password"
+                    value={settings.whatsappAccessToken}
+                    onChange={(e) => setSettings({ ...settings, whatsappAccessToken: e.target.value })}
+                    placeholder="Enter your Meta access token"
+                  />
+                  <p className="text-sm text-gray-500">
+                    Your Meta WhatsApp Business API access token
+                  </p>
+                </div>
 
-            <Button 
-              onClick={handleSendMessage} 
-              disabled={sendingMessage || !selectedUser || !customMessage.trim() || calculateRemainingChars() < 0}
-              className="w-full"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              {sendingMessage ? 'Sending...' : 'Send Message (SMS + WhatsApp)'}
-            </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
+                  <Input
+                    id="whatsappPhoneNumberId"
+                    value={settings.whatsappPhoneNumberId}
+                    onChange={(e) => setSettings({ ...settings, whatsappPhoneNumberId: e.target.value })}
+                    placeholder="1234567890"
+                  />
+                  <p className="text-sm text-gray-500">
+                    Your WhatsApp Business phone number ID from Meta
+                  </p>
+                </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800 flex items-start gap-2">
-                <span className="material-icons text-sm mt-0.5">info</span>
-                <span>
-                  Messages are sent concurrently via both SMS and WhatsApp. All messages are automatically prefixed with "[Greenpay]".
-                </span>
-              </p>
-            </div>
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Set up Meta Business account at developers.facebook.com and create WhatsApp Business app
+                  </AlertDescription>
+                </Alert>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      <Button 
+        onClick={handleSave} 
+        disabled={loading}
+        className="w-full"
+        size="lg"
+      >
+        <Save className="w-4 h-4 mr-2" />
+        {loading ? 'Saving...' : 'Save All Settings'}
+      </Button>
+
+      {/* Send Individual Message */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Send className="w-5 h-5" />
+            Send Test Message
+          </CardTitle>
+          <CardDescription>
+            Send a test message to any user via all configured channels
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="user">Select User</Label>
+            <Select value={selectedUser} onValueChange={setSelectedUser}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a user" />
+              </SelectTrigger>
+              <SelectContent>
+                {usersData?.map((user: User) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.fullName} ({user.phone})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="message">Message</Label>
+            <Textarea
+              id="message"
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Enter your message (without [Greenpay] prefix)"
+              rows={4}
+              maxLength={149}
+            />
+            <div className="flex justify-between text-sm">
+              <p className="text-gray-500">
+                Message will be prefixed with "[Greenpay]"
+              </p>
+              <p className={`${calculateRemainingChars() < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                {calculateRemainingChars()} chars remaining
+              </p>
+            </div>
+          </div>
+
+          <Button 
+            onClick={handleSendMessage} 
+            disabled={sendingMessage || !selectedUser || !customMessage.trim() || calculateRemainingChars() < 0}
+            className="w-full"
+          >
+            <Send className="w-4 h-4 mr-2" />
+            {sendingMessage ? 'Sending...' : `Send Test Message${isSmsConfigured && isWhatsAppConfigured ? ' (SMS + WhatsApp)' : isSmsConfigured ? ' (SMS Only)' : isWhatsAppConfigured ? ' (WhatsApp Only)' : ''}`}
+          </Button>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800 flex items-start gap-2">
+              <span className="material-icons text-sm mt-0.5">info</span>
+              <span>
+                Messages are sent via all configured channels. All messages are automatically prefixed with "[Greenpay]".
+              </span>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Automatic Notifications Info */}
       <Card>
@@ -326,9 +391,10 @@ export default function MessagingSettings() {
             <div className="space-y-2">
               <h4 className="font-medium text-gray-900">User Actions:</h4>
               <ul className="space-y-1 text-gray-600">
-                <li>• <strong>OTP Verification:</strong> Login verification code</li>
+                <li>• <strong>OTP Verification:</strong> Login/signup verification code</li>
                 <li>• <strong>Fund Receipt:</strong> Money received notification</li>
                 <li>• <strong>Login Alert:</strong> Location and IP on new login</li>
+                <li>• <strong>Password Reset:</strong> Password reset code</li>
               </ul>
             </div>
             <div className="space-y-2">
@@ -343,30 +409,30 @@ export default function MessagingSettings() {
         </CardContent>
       </Card>
 
-      {/* Important Notes */}
+      {/* Setup Guide */}
       <Card>
         <CardHeader>
-          <CardTitle>Important Notes</CardTitle>
+          <CardTitle>Setup Guide</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Message Format:</h4>
-              <ul className="space-y-1">
-                <li>• All messages start with "[Greenpay]" prefix</li>
-                <li>• Maximum 160 characters including prefix</li>
-                <li>• Messages sent concurrently via SMS & WhatsApp</li>
-                <li>• Phone numbers auto-formatted to Kenya (254xxx)</li>
-              </ul>
+              <h4 className="font-medium text-gray-900 mb-2">SMS (TalkNTalk):</h4>
+              <ol className="space-y-1 text-gray-600 list-decimal list-inside">
+                <li>Sign up at talkntalk.africa</li>
+                <li>Get your API key and account email</li>
+                <li>Create a sender ID</li>
+                <li>Fill SMS settings above</li>
+              </ol>
             </div>
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">API Requirements:</h4>
-              <ul className="space-y-1">
-                <li>• Valid TalkNTalk API credentials required</li>
-                <li>• WhatsApp session must be active</li>
-                <li>• Sender ID must be approved by TalkNTalk</li>
-                <li>• Test with individual message before relying on auto notifications</li>
-              </ul>
+              <h4 className="font-medium text-gray-900 mb-2">WhatsApp (Meta):</h4>
+              <ol className="space-y-1 text-gray-600 list-decimal list-inside">
+                <li>Create Meta Business account</li>
+                <li>Create WhatsApp Business app</li>
+                <li>Get Phone Number ID & Access Token</li>
+                <li>Fill WhatsApp settings above</li>
+              </ol>
             </div>
           </div>
         </CardContent>
