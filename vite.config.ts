@@ -29,6 +29,12 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    middlewareMode: false,
+    hmr: {
+      host: process.env.REPL_SLUG ? `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'localhost',
+      port: 443,
+      protocol: process.env.REPL_SLUG ? 'wss' : 'ws',
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],
