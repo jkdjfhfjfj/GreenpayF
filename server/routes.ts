@@ -4264,13 +4264,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
-      const whatsappSessionSetting = await storage.getSystemSetting("messaging", "whatsapp_session_id");
+      const whatsappAccessTokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
+      const whatsappPhoneNumberIdSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
       
       const settings = {
         apiKey: apiKeySetting?.value || "",
         accountEmail: emailSetting?.value || "",
         senderId: senderIdSetting?.value || "",
-        whatsappSessionId: whatsappSessionSetting?.value || "",
+        whatsappAccessToken: whatsappAccessTokenSetting?.value || "",
+        whatsappPhoneNumberId: whatsappPhoneNumberIdSetting?.value || "",
       };
       
       res.json(settings);
@@ -4282,15 +4284,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/messaging-settings", async (req, res) => {
     try {
-      const { apiKey, accountEmail, senderId, whatsappSessionId } = req.body;
+      const { apiKey, accountEmail, senderId, whatsappAccessToken, whatsappPhoneNumberId } = req.body;
       
-      console.log('Admin updated messaging settings');
+      console.log('Admin updated messaging settings (SMS via TalkNTalk, WhatsApp via Meta)');
       
+      // SMS Settings (TalkNTalk)
       await storage.setSystemSetting({
         category: "messaging",
         key: "api_key",
         value: (apiKey || '').trim(),
-        description: "TalkNTalk API key for SMS and WhatsApp"
+        description: "TalkNTalk API key for SMS"
       });
       
       await storage.setSystemSetting({
@@ -4307,12 +4310,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: "SMS sender ID"
       });
       
+      // WhatsApp Settings (Meta Business API)
       await storage.setSystemSetting({
         category: "messaging",
-        key: "whatsapp_session_id",
-        value: (whatsappSessionId || '').trim(),
-        description: "WhatsApp business session ID"
+        key: "whatsapp_access_token",
+        value: (whatsappAccessToken || '').trim(),
+        description: "Meta WhatsApp Business API access token"
       });
+      
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "whatsapp_phone_number_id",
+        value: (whatsappPhoneNumberId || '').trim(),
+        description: "Meta WhatsApp Business phone number ID"
+      });
+      
+      // Update WhatsApp service with new credentials
+      process.env.WHATSAPP_ACCESS_TOKEN = (whatsappAccessToken || '').trim();
+      process.env.WHATSAPP_PHONE_NUMBER_ID = (whatsappPhoneNumberId || '').trim();
       
       res.json({ 
         success: true, 
