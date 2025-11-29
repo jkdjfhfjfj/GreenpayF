@@ -512,6 +512,21 @@ export const whatsappConfig = pgTable("whatsapp_config", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// User Activity Log - Track pages visited, actions, attempts
+export const userActivityLog = pgTable("user_activity_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  activityType: text("activity_type").notNull(), // page_visit, action, attempt, form_submission
+  page: text("page"), // /send-money, /airtime, /dashboard, etc.
+  action: text("action"), // submit_transfer, buy_airtime, fill_kyc, etc.
+  description: text("description"), // Human-readable description
+  status: text("status"), // success, failed, pending
+  metadata: jsonb("metadata"), // Additional details like form data, errors
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas for new tables
 export const insertSavingsGoalSchema = createInsertSchema(savingsGoals).omit({
   id: true,
@@ -569,6 +584,11 @@ export const insertWhatsappConfigSchema = createInsertSchema(whatsappConfig).omi
   updatedAt: true,
 });
 
+export const insertUserActivityLogSchema = createInsertSchema(userActivityLog).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types for new tables
 export type SavingsGoal = typeof savingsGoals.$inferSelect;
 export type InsertSavingsGoal = z.infer<typeof insertSavingsGoalSchema>;
@@ -588,3 +608,5 @@ export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
 export type InsertWhatsappMessage = z.infer<typeof insertWhatsappMessageSchema>;
 export type WhatsappConfig = typeof whatsappConfig.$inferSelect;
 export type InsertWhatsappConfig = z.infer<typeof insertWhatsappConfigSchema>;
+export type UserActivityLog = typeof userActivityLog.$inferSelect;
+export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
