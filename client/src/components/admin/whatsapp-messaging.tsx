@@ -84,6 +84,8 @@ export default function WhatsAppMessaging() {
     refetchInterval: 2000,
   });
 
+  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -189,8 +191,6 @@ export default function WhatsAppMessaging() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
 
   if (!whatsappConfigured) {
     return (
