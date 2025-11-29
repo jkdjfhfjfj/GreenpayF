@@ -55,6 +55,13 @@ export default function AdminSettings() {
     admin_alerts: true
   });
 
+  const [whatsapp, setWhatsapp] = useState({
+    phone_number_id: "",
+    business_account_id: "",
+    access_token: "",
+    is_active: false
+  });
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -103,6 +110,46 @@ export default function AdminSettings() {
     Object.entries(notifications).forEach(([key, value]) => {
       updateSettingMutation.mutate({ key, value: value.toString() });
     });
+  };
+
+  const handleSaveWhatsApp = async () => {
+    if (!whatsapp.phone_number_id || !whatsapp.business_account_id || !whatsapp.access_token) {
+      toast({
+        title: "Error",
+        description: "Please fill in all WhatsApp configuration fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await apiRequest("POST", "/api/admin/whatsapp/config", {
+        phoneNumberId: whatsapp.phone_number_id,
+        businessAccountId: whatsapp.business_account_id,
+        accessToken: whatsapp.access_token,
+        isActive: whatsapp.is_active
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "WhatsApp configuration saved successfully",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/whatsapp/config"] });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save WhatsApp configuration",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while saving WhatsApp configuration",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
@@ -164,7 +211,8 @@ export default function AdminSettings() {
                   <Input
                     id="phone_number_id"
                     placeholder="Your WhatsApp phone number ID from Meta"
-                    defaultValue=""
+                    value={whatsapp.phone_number_id}
+                    onChange={(e) => setWhatsapp({ ...whatsapp, phone_number_id: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -172,7 +220,8 @@ export default function AdminSettings() {
                   <Input
                     id="business_account_id"
                     placeholder="Your WhatsApp Business Account ID"
-                    defaultValue=""
+                    value={whatsapp.business_account_id}
+                    onChange={(e) => setWhatsapp({ ...whatsapp, business_account_id: e.target.value })}
                   />
                 </div>
               </div>
@@ -183,16 +232,23 @@ export default function AdminSettings() {
                   id="access_token"
                   type="password"
                   placeholder="Your Meta access token with whatsapp_business_messaging permission"
-                  defaultValue=""
+                  value={whatsapp.access_token}
+                  onChange={(e) => setWhatsapp({ ...whatsapp, access_token: e.target.value })}
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="whatsapp_active" defaultChecked={false} className="w-4 h-4" />
+                <input 
+                  type="checkbox" 
+                  id="whatsapp_active" 
+                  checked={whatsapp.is_active} 
+                  onChange={(e) => setWhatsapp({ ...whatsapp, is_active: e.target.checked })}
+                  className="w-4 h-4" 
+                />
                 <Label htmlFor="whatsapp_active">Enable WhatsApp Messaging</Label>
               </div>
 
-              <Button className="w-full">
+              <Button className="w-full" onClick={handleSaveWhatsApp}>
                 <Save className="w-4 h-4 mr-2" />
                 Save WhatsApp Configuration
               </Button>
