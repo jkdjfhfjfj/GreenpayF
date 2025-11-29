@@ -17,6 +17,37 @@ export class WhatsAppService {
   }
 
   /**
+   * Safely extract string value from database result or env var
+   */
+  private extractStringValue(value: any): string {
+    if (!value) return '';
+    
+    // If it's already a string, return it trimmed
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    
+    // If it's an object with a value property (shouldn't happen but handle it)
+    if (typeof value === 'object' && value.value && typeof value.value === 'string') {
+      return value.value.trim();
+    }
+    
+    // If it's a number or boolean, convert to string
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).trim();
+    }
+    
+    // Last resort - convert to JSON string and strip if needed
+    const strValue = String(value).trim();
+    if (strValue === '[object Object]') {
+      console.warn('[WhatsApp] ⚠️ Received [object Object] - value is not serializable:', value);
+      return '';
+    }
+    
+    return strValue;
+  }
+
+  /**
    * Load credentials from environment variables and database
    */
   private async loadCredentials(): Promise<void> {
@@ -25,23 +56,34 @@ export class WhatsAppService {
       const tokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
       const phoneSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
       
-      // Ensure both are strings - database might return number types
-      this.accessToken = String(tokenSetting?.value || process.env.WHATSAPP_ACCESS_TOKEN || '');
-      this.phoneNumberId = String(phoneSetting?.value || process.env.WHATSAPP_PHONE_NUMBER_ID || '');
+      // Safely extract string values
+      const dbToken = tokenSetting?.value ? this.extractStringValue(tokenSetting.value) : '';
+      const dbPhoneId = phoneSetting?.value ? this.extractStringValue(phoneSetting.value) : '';
       
-      if (this.accessToken.trim() && this.phoneNumberId.trim()) {
-        console.log('[WhatsApp] ✓ Credentials loaded successfully', {
-          tokenLength: this.accessToken.length,
-          phoneIdLength: this.phoneNumberId.length
-        });
+      this.accessToken = dbToken || process.env.WHATSAPP_ACCESS_TOKEN || '';
+      this.phoneNumberId = dbPhoneId || process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+      
+      console.log('[WhatsApp] Credentials load result:', {
+        hasTokenFromDb: !!dbToken,
+        hasTokenFromEnv: !!process.env.WHATSAPP_ACCESS_TOKEN,
+        hasPhoneFromDb: !!dbPhoneId,
+        hasPhoneFromEnv: !!process.env.WHATSAPP_PHONE_NUMBER_ID,
+        usingToken: this.accessToken.length > 0,
+        usingPhone: this.phoneNumberId.length > 0,
+        tokenLength: this.accessToken.length,
+        phoneIdLength: this.phoneNumberId.length
+      });
+      
+      if (this.accessToken && this.phoneNumberId) {
+        console.log('[WhatsApp] ✓ Credentials loaded successfully');
       } else {
-        console.warn('[WhatsApp] ⚠️ Credentials not found. Token:', !!this.accessToken?.trim(), 'Phone ID:', !!this.phoneNumberId?.trim());
+        console.warn('[WhatsApp] ⚠️ Credentials incomplete - Token:', !!this.accessToken, 'Phone ID:', !!this.phoneNumberId);
       }
     } catch (error) {
       console.error('[WhatsApp] Error loading credentials from database:', error);
       // Fallback to env vars
-      this.accessToken = String(process.env.WHATSAPP_ACCESS_TOKEN || '');
-      this.phoneNumberId = String(process.env.WHATSAPP_PHONE_NUMBER_ID || '');
+      this.accessToken = this.extractStringValue(process.env.WHATSAPP_ACCESS_TOKEN);
+      this.phoneNumberId = this.extractStringValue(process.env.WHATSAPP_PHONE_NUMBER_ID);
     }
   }
 
