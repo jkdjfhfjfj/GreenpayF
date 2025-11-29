@@ -468,6 +468,13 @@ export const loginHistory = pgTable("login_history", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// User sessions table for express-session with PostgreSQL store (connect-pg-simple)
+export const userSessions = pgTable("user_sessions", {
+  sid: varchar("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
+
 export const whatsappConversations = pgTable("whatsapp_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   phoneNumber: text("phone_number").notNull().unique(),
