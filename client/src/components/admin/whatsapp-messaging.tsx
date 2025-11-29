@@ -33,9 +33,27 @@ export default function WhatsAppMessaging() {
   const [, setLocation] = useLocation();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
+  const [whatsappConfigured, setWhatsappConfigured] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Load messaging settings to check if WhatsApp is configured
+  const { data: messagingSettings } = useQuery({
+    queryKey: ['/api/admin/messaging-settings'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/messaging-settings");
+      return response.json();
+    },
+  });
+
+  useEffect(() => {
+    if (messagingSettings?.whatsappAccessToken && messagingSettings?.whatsappPhoneNumberId) {
+      setWhatsappConfigured(true);
+    } else {
+      setWhatsappConfigured(false);
+    }
+  }, [messagingSettings]);
 
   const { data: conversations = [] } = useQuery<WhatsAppConversation[]>({
     queryKey: ['/api/admin/whatsapp/conversations'],
@@ -127,6 +145,33 @@ export default function WhatsAppMessaging() {
   }, [messages]);
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+
+  if (!whatsappConfigured) {
+    return (
+      <div className="space-y-4">
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <div className="text-lg">⚠️</div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-900">WhatsApp Not Configured</h3>
+                <p className="text-sm text-yellow-800 mt-1">
+                  Please configure your WhatsApp Business credentials in the Messaging Settings to start messaging users.
+                </p>
+                <Button 
+                  size="sm" 
+                  className="mt-3"
+                  onClick={() => setLocation("/admin/mail-management?tab=messaging-settings")}
+                >
+                  Go to Messaging Settings
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

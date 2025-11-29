@@ -6236,7 +6236,13 @@ Sitemap: https://greenpay.world/sitemap.xml`;
               for (const message of messages) {
                 const phoneNumber = change.value?.contacts?.[0]?.wa_id;
                 const type = message.type; // text, image, video, file, audio
-                const config = await storage.getWhatsappConfig();
+                
+                // Get credentials from messaging settings
+                const [accessTokenSetting] = await Promise.all([
+                  storage.getSystemSetting("messaging", "whatsapp_access_token")
+                ]);
+                const accessToken = accessTokenSetting?.value;
+                
                 let content = '';
                 let mediaUrl = '';
 
@@ -6249,7 +6255,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   const caption = message.image.caption || 'Sent an image';
                   try {
                     const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
-                      headers: { 'Authorization': `Bearer ${config?.accessToken}` }
+                      headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
                     mediaUrl = mediaData.url || '';
@@ -6263,7 +6269,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   const caption = message.video.caption || 'Sent a video';
                   try {
                     const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
-                      headers: { 'Authorization': `Bearer ${config?.accessToken}` }
+                      headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
                     mediaUrl = mediaData.url || '';
@@ -6277,7 +6283,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   const filename = message.document.filename || 'Sent a file';
                   try {
                     const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
-                      headers: { 'Authorization': `Bearer ${config?.accessToken}` }
+                      headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
                     mediaUrl = mediaData.url || '';
@@ -6290,7 +6296,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   const mediaId = message.audio.id;
                   try {
                     const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
-                      headers: { 'Authorization': `Bearer ${config?.accessToken}` }
+                      headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
                     mediaUrl = mediaData.url || '';
@@ -6376,24 +6382,27 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      const config = await storage.getWhatsappConfig();
-      console.log('[WhatsApp Send] Config retrieved:', { config: !!config, token: config?.accessToken?.substring(0, 20), phoneId: config?.phoneNumberId });
-      
-      if (!config) {
-        console.error('[WhatsApp Send] No config found in database');
-        return res.status(400).json({ message: "WhatsApp configuration not found. Please configure in admin settings." });
-      }
+      // Get credentials from messaging settings
+      const [accessTokenSetting, phoneIdSetting] = await Promise.all([
+        storage.getSystemSetting("messaging", "whatsapp_access_token"),
+        storage.getSystemSetting("messaging", "whatsapp_phone_number_id")
+      ]);
 
-      if (!config.accessToken?.trim() || !config.phoneNumberId?.trim()) {
-        console.error('[WhatsApp Send] Config incomplete:', { hasToken: !!config.accessToken?.trim(), hasPhoneId: !!config.phoneNumberId?.trim() });
-        return res.status(400).json({ message: `WhatsApp not configured. Missing: ${!config.accessToken?.trim() ? 'access token' : ''} ${!config.phoneNumberId?.trim() ? 'phone ID' : ''}` });
+      const accessToken = accessTokenSetting?.value;
+      const phoneNumberId = phoneIdSetting?.value;
+      
+      console.log('[WhatsApp Send] Credentials retrieved:', { hasToken: !!accessToken, hasPhoneId: !!phoneNumberId });
+      
+      if (!accessToken?.trim() || !phoneNumberId?.trim()) {
+        console.error('[WhatsApp Send] Credentials incomplete');
+        return res.status(400).json({ message: "WhatsApp not configured in Messaging Settings. Please configure credentials first." });
       }
 
       // Clean phone number - ensure it starts with country code
       const cleanPhone = phoneNumber.replace(/\D/g, '');
       const finalPhone = cleanPhone.startsWith('254') ? cleanPhone : '254' + cleanPhone.slice(-9);
       
-      const apiUrl = `https://graph.instagram.com/v18.0/${config.phoneNumberId}/messages`;
+      const apiUrl = `https://graph.instagram.com/v18.0/${phoneNumberId}/messages`;
       let payload: any = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -6421,7 +6430,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       const apiResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${config.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
