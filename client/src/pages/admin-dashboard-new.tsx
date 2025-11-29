@@ -27,7 +27,8 @@ import {
   Banknote,
   Bell,
   FileText,
-  Mail
+  Mail,
+  MessageSquare
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -48,6 +49,7 @@ import AdminSupportTab from "@/components/admin/admin-support-tab";
 import SupportTicketManagement from "@/components/admin/support-ticket-management";
 import MessagingSettings from "@/components/admin/messaging-settings";
 import MailManagement from "@/components/admin/mail-management";
+import WhatsAppTemplates from "@/components/admin/whatsapp-templates";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -114,6 +116,7 @@ export default function AdminDashboard() {
     { id: "payhero", label: "PayHero Settings", icon: Smartphone },
     { id: "manual-payment", label: "Manual Payment", icon: DollarSign },
     { id: "messaging", label: "Messaging Settings", icon: Bell },
+    { id: "templates", label: "WhatsApp Templates", icon: MessageSquare },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "settings", label: "Settings", icon: Settings },
   ];
@@ -150,6 +153,8 @@ export default function AdminDashboard() {
         return <PayHeroSettings />;
       case "messaging":
         return <MessagingSettings />;
+      case "templates":
+        return <WhatsAppTemplates />;
       case "analytics":
         return <AdminAnalyticsTab dashboardData={dashboardData} />;
       case "settings":
