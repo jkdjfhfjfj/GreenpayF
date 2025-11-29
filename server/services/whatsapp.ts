@@ -192,7 +192,8 @@ export class WhatsAppService {
 
   /**
    * Send OTP via template message
-   * Requires template to be created in WhatsApp Business Manager first
+   * Uses Meta WhatsApp Business API v24.0
+   * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/send-message
    */
   async sendOTP(phoneNumber: string, otpCode: string): Promise<boolean> {
     // Refresh credentials before sending
@@ -209,16 +210,28 @@ export class WhatsAppService {
 
       const payload = {
         messaging_product: 'whatsapp',
+        recipient_type: 'individual',
         to: formattedPhone,
         type: 'template',
         template: {
-          name: 'otp_verification',
+          name: 'otp',
           language: {
-            code: 'en',
+            code: 'en_US',
           },
           components: [
             {
               type: 'body',
+              parameters: [
+                {
+                  type: 'text',
+                  text: otpCode,
+                },
+              ],
+            },
+            {
+              type: 'button',
+              sub_type: 'url',
+              index: '0',
               parameters: [
                 {
                   type: 'text',
@@ -590,26 +603,42 @@ export class WhatsAppService {
   }
 
   /**
-   * Create all required WhatsApp templates
+   * Create all required WhatsApp templates via Meta API
    */
   async createAllTemplates(): Promise<{ success: string[]; failed: string[] }> {
     const results = { success: [], failed: [] };
 
-    // OTP Verification template
-    const otpSuccess = await this.createTemplate('otp_verification', 'TRANSACTIONAL', [
+    // OTP template
+    const otpSuccess = await this.createTemplate('otp', 'TRANSACTIONAL', [
       {
         type: 'BODY',
-        text: 'Your verification code is {{1}}. Valid for 10 minutes.'
+        text: 'Your verification code is {{1}}. Valid for 10 minutes.',
+        example: {
+          body_text: [['366777']]
+        }
+      },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          {
+            type: 'URL',
+            text: 'Verify',
+            url: 'https://example.com/verify?code={{1}}'
+          }
+        ]
       }
     ]);
-    if (otpSuccess) results.success.push('otp_verification');
-    else results.failed.push('otp_verification');
+    if (otpSuccess) results.success.push('otp');
+    else results.failed.push('otp');
 
     // Password Reset template
     const pwdSuccess = await this.createTemplate('password_reset', 'TRANSACTIONAL', [
       {
         type: 'BODY',
-        text: 'Your password reset code is {{1}}. Valid for 10 minutes.'
+        text: 'Your password reset code is {{1}}. Valid for 10 minutes.',
+        example: {
+          body_text: [['123456']]
+        }
       }
     ]);
     if (pwdSuccess) results.success.push('password_reset');
@@ -629,7 +658,10 @@ export class WhatsAppService {
     const cardSuccess = await this.createTemplate('card_activation', 'TRANSACTIONAL', [
       {
         type: 'BODY',
-        text: 'Your virtual card ending in {{1}} has been activated and is ready to use.'
+        text: 'Your virtual card ending in {{1}} has been activated and is ready to use.',
+        example: {
+          body_text: [['4242']]
+        }
       }
     ]);
     if (cardSuccess) results.success.push('card_activation');
@@ -639,7 +671,10 @@ export class WhatsAppService {
     const fundSuccess = await this.createTemplate('fund_receipt', 'TRANSACTIONAL', [
       {
         type: 'BODY',
-        text: 'You have received {{1}}{{2}} from {{3}}. Your new balance is available in your wallet.'
+        text: 'You have received {{1}}{{2}} from {{3}}. Your new balance is available in your wallet.',
+        example: {
+          body_text: [['USD', '100.00', 'John Doe']]
+        }
       }
     ]);
     if (fundSuccess) results.success.push('fund_receipt');
@@ -649,7 +684,10 @@ export class WhatsAppService {
     const loginSuccess = await this.createTemplate('login_alert', 'TRANSACTIONAL', [
       {
         type: 'BODY',
-        text: 'New login detected on your account from {{1}} ({{2}}). If this wasn\'t you, please secure your account immediately.'
+        text: 'New login detected on your account from {{1}} ({{2}}). If this wasn\'t you, please secure your account immediately.',
+        example: {
+          body_text: [['Nairobi, Kenya', '197.89.23.45']]
+        }
       }
     ]);
     if (loginSuccess) results.success.push('login_alert');

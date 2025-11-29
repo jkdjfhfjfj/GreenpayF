@@ -4454,6 +4454,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create WhatsApp templates via Meta API
+  app.post("/api/admin/whatsapp/create-templates", requireAdminAuth, async (req, res) => {
+    try {
+      const { whatsappService } = await import('./services/whatsapp');
+      
+      console.log('[Admin] Creating WhatsApp templates...');
+      const results = await whatsappService.createAllTemplates();
+      
+      const response = {
+        message: "WhatsApp template creation completed",
+        success: results.success,
+        failed: results.failed,
+        successCount: results.success.length,
+        failedCount: results.failed.length,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('[Admin] Template creation results:', response);
+      res.json(response);
+    } catch (error) {
+      console.error('[Admin] Create templates error:', error);
+      res.status(500).json({ 
+        message: "Failed to create templates",
+        error: String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Verification settings endpoints
   app.get("/api/admin/verification-settings", requireAdminAuth, async (req, res) => {
     try {

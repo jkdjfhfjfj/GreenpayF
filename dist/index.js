@@ -2730,6 +2730,11 @@ var init_email = __esm({
 });
 
 // server/services/whatsapp.ts
+var whatsapp_exports = {};
+__export(whatsapp_exports, {
+  WhatsAppService: () => WhatsAppService,
+  whatsappService: () => whatsappService
+});
 import fetch6 from "node-fetch";
 var WhatsAppService, whatsappService;
 var init_whatsapp = __esm({
@@ -2883,7 +2888,8 @@ var init_whatsapp = __esm({
       }
       /**
        * Send OTP via template message
-       * Requires template to be created in WhatsApp Business Manager first
+       * Uses Meta WhatsApp Business API v24.0
+       * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/send-message
        */
       async sendOTP(phoneNumber, otpCode) {
         await this.refreshCredentials();
@@ -2896,16 +2902,28 @@ var init_whatsapp = __esm({
           const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
           const payload = {
             messaging_product: "whatsapp",
+            recipient_type: "individual",
             to: formattedPhone,
             type: "template",
             template: {
-              name: "otp_verification",
+              name: "otp",
               language: {
-                code: "en"
+                code: "en_US"
               },
               components: [
                 {
                   type: "body",
+                  parameters: [
+                    {
+                      type: "text",
+                      text: otpCode
+                    }
+                  ]
+                },
+                {
+                  type: "button",
+                  sub_type: "url",
+                  index: "0",
                   parameters: [
                     {
                       type: "text",
@@ -3183,6 +3201,130 @@ var init_whatsapp = __esm({
        */
       generateOTP() {
         return Math.floor(1e5 + Math.random() * 9e5).toString();
+      }
+      /**
+       * Create WhatsApp template via Meta API
+       * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/message-templates
+       */
+      async createTemplate(templateName, category, content) {
+        try {
+          if (!this.accessToken) {
+            console.error("[WhatsApp] \u2717 Cannot create template - access token not configured");
+            return false;
+          }
+          const wabaIdSetting = await storage.getSystemSetting("messaging", "whatsapp_business_account_id");
+          if (!wabaIdSetting?.value) {
+            console.error("[WhatsApp] \u2717 WhatsApp Business Account ID not configured");
+            return false;
+          }
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaIdSetting.value}/message_templates`;
+          const payload = {
+            name: templateName,
+            language: "en_US",
+            category,
+            components: content
+          };
+          console.log(`[WhatsApp] Creating template "${templateName}"...`);
+          const response = await fetch6(url, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const responseData = await response.json();
+          if (response.ok && responseData.id) {
+            console.log(`[WhatsApp] \u2713 Template "${templateName}" created successfully (ID: ${responseData.id})`);
+            return true;
+          } else {
+            console.error(`[WhatsApp] \u2717 Template creation failed: ${responseData.error?.message || "Unknown error"}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error creating template:", error);
+          return false;
+        }
+      }
+      /**
+       * Create all required WhatsApp templates via Meta API
+       */
+      async createAllTemplates() {
+        const results = { success: [], failed: [] };
+        const otpSuccess = await this.createTemplate("otp", "TRANSACTIONAL", [
+          {
+            type: "BODY",
+            text: "Your verification code is {{1}}. Valid for 10 minutes.",
+            example: {
+              body_text: [["366777"]]
+            }
+          },
+          {
+            type: "BUTTONS",
+            buttons: [
+              {
+                type: "URL",
+                text: "Verify",
+                url: "https://example.com/verify?code={{1}}"
+              }
+            ]
+          }
+        ]);
+        if (otpSuccess) results.success.push("otp");
+        else results.failed.push("otp");
+        const pwdSuccess = await this.createTemplate("password_reset", "TRANSACTIONAL", [
+          {
+            type: "BODY",
+            text: "Your password reset code is {{1}}. Valid for 10 minutes.",
+            example: {
+              body_text: [["123456"]]
+            }
+          }
+        ]);
+        if (pwdSuccess) results.success.push("password_reset");
+        else results.failed.push("password_reset");
+        const kycSuccess = await this.createTemplate("kyc_verified", "TRANSACTIONAL", [
+          {
+            type: "BODY",
+            text: "Congratulations! Your account has been verified. You can now enjoy all GreenPay features."
+          }
+        ]);
+        if (kycSuccess) results.success.push("kyc_verified");
+        else results.failed.push("kyc_verified");
+        const cardSuccess = await this.createTemplate("card_activation", "TRANSACTIONAL", [
+          {
+            type: "BODY",
+            text: "Your virtual card ending in {{1}} has been activated and is ready to use.",
+            example: {
+              body_text: [["4242"]]
+            }
+          }
+        ]);
+        if (cardSuccess) results.success.push("card_activation");
+        else results.failed.push("card_activation");
+        const fundSuccess = await this.createTemplate("fund_receipt", "TRANSACTIONAL", [
+          {
+            type: "BODY",
+            text: "You have received {{1}}{{2}} from {{3}}. Your new balance is available in your wallet.",
+            example: {
+              body_text: [["USD", "100.00", "John Doe"]]
+            }
+          }
+        ]);
+        if (fundSuccess) results.success.push("fund_receipt");
+        else results.failed.push("fund_receipt");
+        const loginSuccess = await this.createTemplate("login_alert", "TRANSACTIONAL", [
+          {
+            type: "BODY",
+            text: "New login detected on your account from {{1}} ({{2}}). If this wasn't you, please secure your account immediately.",
+            example: {
+              body_text: [["Nairobi, Kenya", "197.89.23.45"]]
+            }
+          }
+        ]);
+        if (loginSuccess) results.success.push("login_alert");
+        else results.failed.push("login_alert");
+        return results;
       }
     };
     whatsappService = new WhatsAppService();
@@ -7869,6 +8011,30 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Error updating message toggles:", error);
       res.status(500).json({ message: "Error updating message toggles" });
+    }
+  });
+  app2.post("/api/admin/whatsapp/create-templates", requireAdminAuth, async (req, res) => {
+    try {
+      const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+      console.log("[Admin] Creating WhatsApp templates...");
+      const results = await whatsappService2.createAllTemplates();
+      const response = {
+        message: "WhatsApp template creation completed",
+        success: results.success,
+        failed: results.failed,
+        successCount: results.success.length,
+        failedCount: results.failed.length,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      console.log("[Admin] Template creation results:", response);
+      res.json(response);
+    } catch (error) {
+      console.error("[Admin] Create templates error:", error);
+      res.status(500).json({
+        message: "Failed to create templates",
+        error: String(error),
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
     }
   });
   app2.get("/api/admin/verification-settings", requireAdminAuth, async (req, res) => {
