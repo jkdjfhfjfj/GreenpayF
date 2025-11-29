@@ -407,10 +407,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         delete (req.session as any).loginIp;
         delete (req.session as any).loginLocation;
         
-        // Send login alert via SMS and WhatsApp
+        // Send login alert via SMS, WhatsApp, and Email
         const { messagingService } = await import('./services/messaging');
-        messagingService.sendLoginAlert(user.phone, loginLocation, loginIp || 'Unknown IP')
-          .catch(err => console.error('Login alert error:', err));
+        const { mailtrapService } = await import('./services/mailtrap');
+        
+        Promise.all([
+          messagingService.sendLoginAlert(user.phone, loginLocation, loginIp || 'Unknown IP'),
+          user.email ? mailtrapService.sendLoginAlert(
+            user.email,
+            user.firstName || 'User',
+            user.lastName || '',
+            loginLocation,
+            loginIp || 'Unknown IP',
+            req.headers['user-agent'] || 'Unknown Device'
+          ) : Promise.resolve(false)
+        ]).catch(err => console.error('Login alert error:', err));
         
         // Send in-app notification
         notificationService.sendSecurityNotification(
@@ -2455,13 +2466,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update user KYC status
         await storage.updateUser(updatedKyc.userId, { kycStatus: status });
         
-        // Send KYC verified notification via SMS and WhatsApp
+        // Send KYC verified notification via SMS, WhatsApp, and Email
         if (status === 'verified') {
           const user = await storage.getUser(updatedKyc.userId);
           if (user) {
             const { messagingService } = await import('./services/messaging');
-            messagingService.sendKYCVerified(user.phone)
-              .catch(err => console.error('KYC notification error:', err));
+            const { mailtrapService } = await import('./services/mailtrap');
+            
+            Promise.all([
+              messagingService.sendKYCVerified(user.phone),
+              user.email ? mailtrapService.sendKYCVerified(
+                user.email,
+                user.firstName || 'User',
+                user.lastName || ''
+              ) : Promise.resolve(false)
+            ]).catch(err => console.error('KYC notification error:', err));
           }
         }
       }
