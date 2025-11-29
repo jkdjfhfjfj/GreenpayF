@@ -6521,18 +6521,28 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       console.log('[WhatsApp Send] Meta API response:', { status: apiResponse.status, msgId: apiData.messages?.[0]?.id, error: apiData.error });
 
       if (apiResponse.ok && apiData.messages?.[0]?.id) {
-        const content = mediaUrl ? `${message}\n[${mediaType.toUpperCase()}] ${mediaUrl}` : message;
+        // Extract filename from URL if available
+        let fileName = 'media';
+        if (mediaUrl) {
+          const urlParts = new URL(mediaUrl).pathname.split('/');
+          fileName = urlParts[urlParts.length - 1] || 'media';
+        }
+
         const msgRecord = await storage.createWhatsappMessage({
           conversationId,
           phoneNumber,
-          content,
+          content: message || `[${mediaType?.toUpperCase() || 'FILE'}]`,
           isFromAdmin: true,
           status: 'sent',
-          messageId: apiData.messages[0].id
+          messageId: apiData.messages[0].id,
+          messageType: mediaUrl ? mediaType || 'file' : 'text',
+          fileUrl: mediaUrl,
+          fileName: mediaUrl ? fileName : null,
+          fileSize: null // We don't have file size on send, but DB can store it
         });
 
         await storage.updateWhatsappConversation(conversationId, { lastMessageAt: new Date() });
-        console.log('[WhatsApp Send] Message saved successfully:', { msgId: msgRecord.id });
+        console.log('[WhatsApp Send] Message saved successfully:', { msgId: msgRecord.id, hasMedia: !!mediaUrl });
         res.json({ success: true, message: msgRecord });
       } else {
         const errorMsg = apiData.error?.message || 'Unknown error from Meta API';

@@ -26,6 +26,10 @@ interface WhatsAppMessage {
   content: string;
   isFromAdmin: boolean;
   status: string;
+  messageType?: string; // text, image, video, file
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
   createdAt: string;
 }
 
@@ -247,10 +251,8 @@ export default function WhatsAppMessaging() {
                     <div className="text-center text-muted-foreground py-8">No messages yet</div>
                   ) : (
                     [...messages].reverse().map(msg => {
-                      // Parse media URLs from message content
-                      const urlRegex = /(https?:\/\/[^\s\n]+)/g;
-                      const urls = msg.content.match(urlRegex) || [];
-                      const textContent = msg.content.replace(urlRegex, '').trim();
+                      // Use dedicated media fields from database
+                      const hasMedia = msg.messageType && msg.messageType !== 'text' && msg.fileUrl;
                       
                       return (
                         <div
@@ -264,47 +266,40 @@ export default function WhatsAppMessaging() {
                                 : 'bg-gray-200 text-gray-900'
                             }`}
                           >
-                            {textContent && <p className="text-sm">{textContent}</p>}
-                            {urls.map((url, idx) => {
-                              const isImage = /\.(jpg|jpeg|png|gif|webp)/i.test(url);
-                              const isVideo = /\.(mp4|mov|avi|webm)/i.test(url);
-                              const isPdf = /\.pdf$/i.test(url);
-                              
-                              if (isImage) {
-                                return (
+                            {msg.content && <p className="text-sm">{msg.content}</p>}
+                            
+                            {/* Render media using dedicated database fields */}
+                            {hasMedia && (
+                              <>
+                                {msg.messageType === 'image' && (
                                   <img
-                                    key={idx}
-                                    src={url}
-                                    alt="Message media"
+                                    src={msg.fileUrl}
+                                    alt={msg.fileName || 'Message media'}
                                     className="max-w-full h-auto rounded cursor-pointer hover:opacity-80 max-h-64"
-                                    onClick={() => window.open(url, '_blank')}
+                                    onClick={() => window.open(msg.fileUrl, '_blank')}
                                   />
-                                );
-                              } else if (isVideo) {
-                                return (
+                                )}
+                                {msg.messageType === 'video' && (
                                   <video
-                                    key={idx}
                                     controls
                                     className="max-w-full h-auto rounded"
                                     style={{ maxHeight: '200px' }}
                                   >
-                                    <source src={url} type="video/mp4" />
+                                    <source src={msg.fileUrl} type="video/mp4" />
                                   </video>
-                                );
-                              } else {
-                                return (
+                                )}
+                                {(msg.messageType === 'file' || msg.messageType === 'document') && (
                                   <a
-                                    key={idx}
-                                    href={url}
+                                    href={msg.fileUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="block text-xs underline break-all hover:opacity-80"
                                   >
-                                    {isPdf ? '📄 PDF Document' : '📎 Download File'}
+                                    {msg.fileName?.endsWith('.pdf') ? '📄 PDF Document' : '📎 ' + (msg.fileName || 'Download File')}
                                   </a>
-                                );
-                              }
-                            })}
+                                )}
+                              </>
+                            )}
                             <div className="flex items-center gap-1 mt-1 text-xs opacity-70">
                               <Clock className="w-3 h-3" />
                               {format(new Date(msg.createdAt), 'HH:mm')}
