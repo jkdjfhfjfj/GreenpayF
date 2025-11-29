@@ -6236,7 +6236,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
-  // WhatsApp webhook - receive messages
+  // WhatsApp webhook - receive messages and status updates
   app.post("/api/whatsapp/webhook", async (req, res) => {
     try {
       const body = req.body;
@@ -6246,6 +6246,24 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         for (const entry of entries) {
           const changes = entry.changes || [];
           for (const change of changes) {
+            // Handle message status updates (delivered, read, sent, failed)
+            if (change.field === "message_status") {
+              const statuses = change.value?.statuses || [];
+              for (const status of statuses) {
+                const messageId = status.id;
+                const statusType = status.status; // sent, delivered, read, failed
+                console.log('[WhatsApp] Message status update:', { messageId, status: statusType, timestamp: status.timestamp });
+                
+                // Update message status in database
+                const messages = await storage.getWhatsappMessageByMessageId(messageId);
+                if (messages && messages.length > 0) {
+                  await storage.updateWhatsappMessageStatus(messages[0].id, statusType);
+                  console.log('[WhatsApp] Updated message status to:', statusType);
+                }
+              }
+            }
+            
+            // Handle messages
             if (change.field === "messages") {
               const messages = change.value?.messages || [];
               for (const message of messages) {
