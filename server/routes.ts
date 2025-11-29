@@ -4867,26 +4867,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/search", requireAuth, async (req, res) => {
     try {
       const { q: searchQuery } = req.query;
+      const currentUserId = req.session?.userId;
+      
+      console.log('=== USER SEARCH DEBUG ===');
+      console.log('Search Query:', { q: searchQuery, type: typeof searchQuery });
+      console.log('Current User ID:', currentUserId);
+      console.log('Query Parameter received:', req.query);
       
       if (!searchQuery || typeof searchQuery !== 'string' || searchQuery.length < 2) {
+        console.log('Query too short or invalid, returning empty array');
         return res.json({ users: [] });
       }
       
-      const users = await storage.getAllUsers();
-      const currentUserId = req.session.userId;
+      const allUsers = await storage.getAllUsers();
+      console.log(`[Search] Total users in database: ${allUsers.length}`);
       
-      console.log(`User search initiated by ${currentUserId} for query: "${searchQuery}"`);
-      console.log(`Total users in database: ${users.length}`);
+      if (allUsers.length === 0) {
+        console.warn('[Search] ⚠️ No users found in database!');
+      } else {
+        console.log('[Search] Sample users:', allUsers.slice(0, 3).map(u => ({ 
+          id: u.id, 
+          fullName: u.fullName, 
+          email: u.email 
+        })));
+      }
+      
+      const query = searchQuery.toLowerCase().trim();
+      console.log(`[Search] Searching for: "${query}"`);
       
       // Search by email, full name, or phone number, excluding the current user
-      const filteredUsers = users
-        .filter(user => {
+      const filteredUsers = allUsers
+        .filter((user, idx) => {
           // Skip current user and admin users
-          if (user.id === currentUserId || user.isAdmin) {
+          if (user.id === currentUserId) {
+            console.log(`[Search] Skipping current user: ${user.email}`);
+            return false;
+          }
+          if (user.isAdmin) {
+            console.log(`[Search] Skipping admin user: ${user.email}`);
             return false;
           }
           
-          const query = searchQuery.toLowerCase().trim();
           const fullName = (user.fullName || '').toLowerCase().trim();
           const email = (user.email || '').toLowerCase().trim();
           const phone = (user.phone || '').trim();
@@ -4920,7 +4941,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             normalizedSearchPhone.includes(normalizedUserPhone)
           );
           
-          return emailMatch || nameMatch || phoneMatch;
+          const isMatch = emailMatch || nameMatch || phoneMatch;
+          if (isMatch) {
+            console.log(`[Search] ✓ Match found: ${email} | fullName: ${fullName} | emailMatch: ${emailMatch} | nameMatch: ${nameMatch} | phoneMatch: ${phoneMatch}`);
+          }
+          
+          return isMatch;
         })
         .slice(0, 10) // Limit to 10 results
         .map(user => ({
@@ -4930,10 +4956,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: user.phone
         }));
       
-      console.log(`User search for "${searchQuery}": found ${filteredUsers.length} matching users`);
+      console.log(`[Search] Final results: found ${filteredUsers.length} matching users`);
+      console.log('[Search] Filtered users:', filteredUsers);
       res.json({ users: filteredUsers });
     } catch (error) {
-      console.error('User search error:', error);
+      console.error('[Search] Error searching users:', error);
       res.status(500).json({ message: "Error searching users" });
     }
   });
@@ -4943,20 +4970,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fromUserId, toUserId, amount, currency, description } = req.body;
       
+      console.log('=== TRANSFER DEBUG ===');
+      console.log('Request Body:', { fromUserId, toUserId, amount, currency });
+      
       if (!fromUserId || !toUserId || !amount || !currency) {
+        console.error('[Transfer] Missing required fields:', { fromUserId: !!fromUserId, toUserId: !!toUserId, amount: !!amount, currency: !!currency });
         return res.status(400).json({ message: "Missing required fields" });
       }
 
       const transferAmount = parseFloat(amount);
       if (transferAmount <= 0) {
+        console.error('[Transfer] Invalid amount:', transferAmount);
         return res.status(400).json({ message: "Invalid transfer amount" });
       }
 
       // Get both users
+      console.log('[Transfer] Fetching users...');
       const fromUser = await storage.getUser(fromUserId);
       const toUser = await storage.getUser(toUserId);
+      
+      console.log('[Transfer] From User:', { found: !!fromUser, id: fromUserId, email: fromUser?.email });
+      console.log('[Transfer] To User:', { found: !!toUser, id: toUserId, email: toUser?.email });
 
       if (!fromUser || !toUser) {
+        console.error('[Transfer] User not found - fromUser:', !!fromUser, 'toUser:', !!toUser);
         return res.status(404).json({ message: "User not found" });
       }
 

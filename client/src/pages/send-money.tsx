@@ -50,14 +50,22 @@ export default function SendMoneyPage() {
   // Search GreenPay users
   const searchGreenPayUsersMutation = useMutation({
     mutationFn: async (search: string) => {
-      const response = await apiRequest("GET", `/api/users/search?q=${encodeURIComponent(search)}`);
-      return response.json();
+      const encodedSearch = encodeURIComponent(search);
+      const url = `/api/users/search?q=${encodedSearch}`;
+      console.log('[Frontend API] Calling:', url);
+      const response = await apiRequest("GET", url);
+      console.log('[Frontend API] Response status:', response.status);
+      const data = await response.json();
+      console.log('[Frontend API] Response data:', data);
+      return data;
     },
     onSuccess: (data) => {
+      console.log('[Frontend Search Success] Found users:', data.users);
       setGreenPaySearchResults(data.users || []);
       setIsSearchingUsers(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('[Frontend Search Error] Search failed:', error);
       setGreenPaySearchResults([]);
       setIsSearchingUsers(false);
     }
@@ -102,11 +110,14 @@ export default function SendMoneyPage() {
   });
 
   const handleGreenPayUserSearch = async (term: string) => {
+    console.log('[Frontend Search] User typed:', term);
     if (term.length < 2) {
+      console.log('[Frontend Search] Term too short, clearing results');
       setGreenPaySearchResults([]);
       return;
     }
     
+    console.log('[Frontend Search] Starting search for:', term);
     setIsSearchingUsers(true);
     searchGreenPayUsersMutation.mutate(term);
   };
@@ -126,11 +137,20 @@ export default function SendMoneyPage() {
   };
 
   const handleGreenPayTransfer = () => {
-    if (!selectedGreenPayUser || !transferAmount || !user) return;
+    console.log('[Frontend Transfer] Starting transfer...');
+    console.log('[Frontend Transfer] Selected user:', selectedGreenPayUser);
+    console.log('[Frontend Transfer] Current user ID:', user?.id);
+    console.log('[Frontend Transfer] Amount:', transferAmount);
+    
+    if (!selectedGreenPayUser || !transferAmount || !user) {
+      console.error('[Frontend Transfer] Missing data:', { selectedUser: !!selectedGreenPayUser, amount: !!transferAmount, user: !!user });
+      return;
+    }
 
     const amount = parseFloat(transferAmount);
     
     if (amount <= 0) {
+      console.error('[Frontend Transfer] Invalid amount:', amount);
       toast({
         title: "Invalid Amount",
         description: "Please enter a valid amount greater than 0.",
@@ -140,6 +160,7 @@ export default function SendMoneyPage() {
     }
 
     if (amount > realTimeBalance) {
+      console.error('[Frontend Transfer] Insufficient balance:', { available: realTimeBalance, requested: amount });
       toast({
         title: "Insufficient Balance",
         description: "You don't have enough balance for this transfer.",
@@ -148,13 +169,16 @@ export default function SendMoneyPage() {
       return;
     }
 
-    greenPayTransferMutation.mutate({
+    const transferPayload = {
       fromUserId: user.id,
       toUserId: selectedGreenPayUser.id,
       amount: transferAmount,
       currency: "USD",
       description: transferDescription || `Transfer to ${selectedGreenPayUser.fullName}`
-    });
+    };
+    
+    console.log('[Frontend Transfer] Sending payload:', transferPayload);
+    greenPayTransferMutation.mutate(transferPayload);
   };
 
   // Check if user has virtual card requirement
