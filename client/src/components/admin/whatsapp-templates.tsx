@@ -222,6 +222,13 @@ export default function WhatsAppTemplates() {
           </CardContent>
         </Card>
       )}
+
+      {/* Send Template Modal */}
+      <SendTemplateModal
+        isOpen={showSendModal}
+        onClose={() => setShowSendModal(false)}
+        templates={templates}
+      />
     </div>
   );
 }
