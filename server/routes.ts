@@ -6278,11 +6278,13 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   // Get WhatsApp conversations (admin)
   app.get("/api/admin/whatsapp/conversations", requireAdminAuth, async (req, res) => {
     try {
+      console.log('[WhatsApp] Fetching conversations');
       const conversations = await storage.getWhatsappConversations();
-      res.json(conversations);
+      console.log('[WhatsApp] Found conversations:', { count: conversations?.length || 0 });
+      res.json(conversations || []);
     } catch (error) {
-      console.error("[Admin] Get WhatsApp conversations error:", error);
-      res.status(500).json({ message: "Failed to fetch conversations" });
+      console.error("[WhatsApp] Get conversations error:", error);
+      res.status(500).json({ message: "Failed to fetch conversations", error: String(error) });
     }
   });
 
@@ -6301,36 +6303,68 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   app.post("/api/admin/whatsapp/send", requireAdminAuth, async (req, res) => {
     try {
       const { conversationId, phoneNumber, message } = req.body;
+      console.log('[WhatsApp Send] Received request:', { conversationId, phoneNumber, messageLength: message?.length });
+      
       if (!conversationId || !phoneNumber || !message) {
+        console.error('[WhatsApp Send] Missing fields:', { conversationId, phoneNumber, message });
         return res.status(400).json({ message: "Missing required fields" });
       }
 
       const config = await storage.getWhatsappConfig();
+      console.log('[WhatsApp Send] Config check:', { hasToken: !!config?.accessToken, hasPhoneId: !!config?.phoneNumberId });
+      
       if (!config?.accessToken || !config?.phoneNumberId) {
-        return res.status(400).json({ message: "WhatsApp not configured" });
+        console.error('[WhatsApp Send] WhatsApp not configured');
+        return res.status(400).json({ message: "WhatsApp not configured. Please configure in admin settings." });
       }
 
       const { whatsappService } = await import('./services/whatsapp');
-      const result = await whatsappService.sendMessage(phoneNumber, message, config.accessToken, config.phoneNumberId);
+      console.log('[WhatsApp Send] Calling sendMessage method');
+      
+      // Send text message via WhatsApp API
+      const url = `https://graph.instagram.com/v18.0/${config.phoneNumberId}/messages`;
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber.replace(/\D/g, ''),
+        type: "text",
+        text: { body: message }
+      };
 
-      if (result.success) {
+      console.log('[WhatsApp Send] Sending to Meta API:', { url, phone: phoneNumber });
+      
+      const apiResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const apiData = await apiResponse.json();
+      console.log('[WhatsApp Send] Meta API response:', { status: apiResponse.status, success: apiData.messages?.[0]?.id });
+
+      if (apiResponse.ok && apiData.messages?.[0]?.id) {
         const msgRecord = await storage.createWhatsappMessage({
           conversationId,
           phoneNumber,
           content: message,
           isFromAdmin: true,
           status: 'sent',
-          messageId: result.messageId
+          messageId: apiData.messages[0].id
         });
 
         await storage.updateWhatsappConversation(conversationId, { lastMessageAt: new Date() });
+        console.log('[WhatsApp Send] Message saved successfully:', { msgId: msgRecord.id });
         res.json({ success: true, message: msgRecord });
       } else {
-        res.status(500).json({ message: "Failed to send message" });
+        console.error('[WhatsApp Send] API failed:', apiData);
+        res.status(500).json({ message: apiData.error?.message || "Failed to send message" });
       }
     } catch (error) {
-      console.error("[Admin] Send WhatsApp message error:", error);
-      res.status(500).json({ message: "Failed to send message" });
+      console.error("[WhatsApp Send] Error:", error);
+      res.status(500).json({ message: "Failed to send message", error: String(error) });
     }
   });
 
