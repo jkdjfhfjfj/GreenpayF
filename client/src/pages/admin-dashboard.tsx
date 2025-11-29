@@ -32,6 +32,7 @@ import KycManagement from "@/components/admin/kyc-management";
 import TransactionManagement from "@/components/admin/transaction-management";
 import VirtualCardManagement from "@/components/admin/virtual-card-management";
 import AdminSettings from "@/components/admin/admin-settings";
+import MessagingSettings from "@/components/admin/messaging-settings";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -141,12 +142,13 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="kyc">KYC</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="cards">Virtual Cards</TabsTrigger>
+            <TabsTrigger value="messaging">Messaging</TabsTrigger>
             <TabsTrigger value="logs">Security Logs</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -308,6 +310,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="cards">
             <AdminCardsTab />
+          </TabsContent>
+
+          <TabsContent value="messaging">
+            <MessagingSettings />
           </TabsContent>
 
           <TabsContent value="logs">
