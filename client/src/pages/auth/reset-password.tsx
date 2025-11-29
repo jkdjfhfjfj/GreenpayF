@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
       >
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onClick={() => setLocation("/auth/forgot-password")}
+          onClick={() => setLocation("/login")}
           className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
           data-testid="button-back"
         >
