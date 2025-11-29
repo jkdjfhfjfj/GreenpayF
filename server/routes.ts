@@ -6235,9 +6235,30 @@ Sitemap: https://greenpay.world/sitemap.xml`;
               const messages = change.value?.messages || [];
               for (const message of messages) {
                 const phoneNumber = change.value?.contacts?.[0]?.wa_id;
-                const text = message.text?.body;
+                const type = message.type; // text, image, video, file, audio
+                let content = '';
+                let mediaUrl = '';
 
-                if (phoneNumber && text) {
+                // Handle different message types
+                if (type === 'text' && message.text?.body) {
+                  content = message.text.body;
+                } else if (type === 'image' && message.image) {
+                  content = `[Image] ${message.image.caption || 'Sent an image'}`;
+                  mediaUrl = message.image.link || '';
+                } else if (type === 'video' && message.video) {
+                  content = `[Video] ${message.video.caption || 'Sent a video'}`;
+                  mediaUrl = message.video.link || '';
+                } else if (type === 'file' && message.document) {
+                  content = `[File] ${message.document.filename || 'Sent a file'}`;
+                  mediaUrl = message.document.link || '';
+                } else if (type === 'audio' && message.audio) {
+                  content = '[Audio message]';
+                  mediaUrl = message.audio.link || '';
+                } else {
+                  continue; // Skip unknown types
+                }
+
+                if (phoneNumber && content) {
                   let conversation = await storage.getWhatsappConversation(phoneNumber);
                   if (!conversation) {
                     conversation = await storage.createWhatsappConversation({
@@ -6253,13 +6274,13 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   await storage.createWhatsappMessage({
                     conversationId: conversation.id,
                     phoneNumber,
-                    content: text,
+                    content: mediaUrl ? `${content}\n${mediaUrl}` : content,
                     isFromAdmin: false,
                     status: 'received',
                     messageId: message.id
                   });
 
-                  console.log(`[WhatsApp] Received message from ${phoneNumber}: ${text}`);
+                  console.log(`[WhatsApp] Received ${type} message from ${phoneNumber}: ${content}`);
                 }
               }
             }
@@ -6302,11 +6323,11 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   // Send WhatsApp message (admin)
   app.post("/api/admin/whatsapp/send", requireAdminAuth, async (req, res) => {
     try {
-      const { conversationId, phoneNumber, message } = req.body;
-      console.log('[WhatsApp Send] Received request:', { conversationId, phoneNumber, messageLength: message?.length });
+      const { conversationId, phoneNumber, message, mediaUrl, mediaType } = req.body;
+      console.log('[WhatsApp Send] Received request:', { conversationId, phoneNumber, hasMedia: !!mediaUrl, mediaType });
       
       if (!conversationId || !phoneNumber || !message) {
-        console.error('[WhatsApp Send] Missing fields:', { conversationId, phoneNumber, message });
+        console.error('[WhatsApp Send] Missing fields');
         return res.status(400).json({ message: "Missing required fields" });
       }
 
@@ -6318,22 +6339,36 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         return res.status(400).json({ message: "WhatsApp not configured. Please configure in admin settings." });
       }
 
-      const { whatsappService } = await import('./services/whatsapp');
-      console.log('[WhatsApp Send] Calling sendMessage method');
+      // Clean phone number - ensure it starts with country code
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
+      const finalPhone = cleanPhone.startsWith('254') ? cleanPhone : '254' + cleanPhone.slice(-9);
       
-      // Send text message via WhatsApp API
-      const url = `https://graph.instagram.com/v18.0/${config.phoneNumberId}/messages`;
-      const payload = {
+      const apiUrl = `https://graph.instagram.com/v18.0/${config.phoneNumberId}/messages`;
+      let payload: any = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        to: phoneNumber.replace(/\D/g, ''),
-        type: "text",
-        text: { body: message }
+        to: finalPhone,
       };
 
-      console.log('[WhatsApp Send] Sending to Meta API:', { url, phone: phoneNumber });
-      
-      const apiResponse = await fetch(url, {
+      if (mediaUrl && mediaType) {
+        // Send media message
+        const typeMap: any = { 'image': 'image', 'video': 'video', 'file': 'document', 'audio': 'audio' };
+        const waType = typeMap[mediaType] || 'document';
+        
+        payload.type = waType;
+        payload[waType] = { link: mediaUrl };
+        if (message) {
+          payload[waType].caption = message;
+        }
+        console.log('[WhatsApp Send] Sending media:', { type: waType, phone: finalPhone });
+      } else {
+        // Send text message
+        payload.type = "text";
+        payload.text = { body: message };
+        console.log('[WhatsApp Send] Sending text:', { phone: finalPhone });
+      }
+
+      const apiResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${config.accessToken}`,
@@ -6343,13 +6378,14 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       });
 
       const apiData = await apiResponse.json();
-      console.log('[WhatsApp Send] Meta API response:', { status: apiResponse.status, success: apiData.messages?.[0]?.id });
+      console.log('[WhatsApp Send] Meta API response:', { status: apiResponse.status, msgId: apiData.messages?.[0]?.id, error: apiData.error });
 
       if (apiResponse.ok && apiData.messages?.[0]?.id) {
+        const content = mediaUrl ? `${message}\n[${mediaType.toUpperCase()}] ${mediaUrl}` : message;
         const msgRecord = await storage.createWhatsappMessage({
           conversationId,
           phoneNumber,
-          content: message,
+          content,
           isFromAdmin: true,
           status: 'sent',
           messageId: apiData.messages[0].id
@@ -6359,8 +6395,9 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         console.log('[WhatsApp Send] Message saved successfully:', { msgId: msgRecord.id });
         res.json({ success: true, message: msgRecord });
       } else {
-        console.error('[WhatsApp Send] API failed:', apiData);
-        res.status(500).json({ message: apiData.error?.message || "Failed to send message" });
+        const errorMsg = apiData.error?.message || 'Unknown error from Meta API';
+        console.error('[WhatsApp Send] API error:', { status: apiResponse.status, error: errorMsg, data: apiData });
+        res.status(500).json({ message: `Failed to send message: ${errorMsg}` });
       }
     } catch (error) {
       console.error("[WhatsApp Send] Error:", error);

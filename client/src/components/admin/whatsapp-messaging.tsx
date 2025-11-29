@@ -57,38 +57,68 @@ export default function WhatsAppMessaging() {
     refetchInterval: 2000,
   });
 
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+
   const sendMutation = useMutation({
-    mutationFn: async (data: { conversationId: string; phoneNumber: string; message: string }) => {
+    mutationFn: async (data: { conversationId: string; phoneNumber: string; message: string; mediaUrl?: string; mediaType?: string }) => {
       const response = await apiRequest("POST", "/api/admin/whatsapp/send", data);
       return response.json();
     },
     onSuccess: () => {
       setMessageText("");
+      setMediaFile(null);
       queryClient.invalidateQueries({ queryKey: ['/api/admin/whatsapp/messages', selectedConversationId] });
       toast({
         title: "Message sent",
         description: "WhatsApp message sent successfully",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to send message",
+        description: error?.message || "Failed to send message",
         variant: "destructive",
       });
     },
   });
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!selectedConversationId || !messageText.trim()) return;
 
     const conversation = conversations.find(c => c.id === selectedConversationId);
     if (!conversation) return;
 
+    let mediaUrl = undefined;
+    let mediaType = undefined;
+
+    if (mediaFile) {
+      // Upload media to Cloudinary
+      const formData = new FormData();
+      formData.append('file', mediaFile);
+      
+      try {
+        const uploadResponse = await apiRequest("POST", "/api/upload", formData);
+        const uploadData = await uploadResponse.json();
+        mediaUrl = uploadData.url;
+        mediaType = mediaFile.type.startsWith('image/') ? 'image' : 
+                   mediaFile.type.startsWith('video/') ? 'video' : 'file';
+        console.log('[WhatsApp] Media uploaded:', { mediaUrl, mediaType });
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to upload media file",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     sendMutation.mutate({
       conversationId: selectedConversationId,
       phoneNumber: conversation.phoneNumber,
       message: messageText.trim(),
+      mediaUrl,
+      mediaType,
     });
   };
 
@@ -211,6 +241,17 @@ export default function WhatsAppMessaging() {
               </ScrollArea>
 
               <div className="border-t p-4 space-y-2">
+                {mediaFile && (
+                  <div className="text-xs bg-blue-50 p-2 rounded flex justify-between items-center">
+                    <span>📎 {mediaFile.name}</span>
+                    <button 
+                      onClick={() => setMediaFile(null)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Input
                     placeholder="Type a message..."
@@ -224,6 +265,25 @@ export default function WhatsAppMessaging() {
                     }}
                     disabled={sendMutation.isPending}
                   />
+                  <input
+                    type="file"
+                    id="media-upload"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setMediaFile(e.target.files[0]);
+                      }
+                    }}
+                    accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('media-upload')?.click()}
+                    disabled={sendMutation.isPending}
+                  >
+                    📎
+                  </Button>
                   <Button
                     onClick={handleSendMessage}
                     disabled={sendMutation.isPending || !messageText.trim()}
