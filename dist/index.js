@@ -2751,17 +2751,20 @@ var init_whatsapp = __esm({
         try {
           const tokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
           const phoneSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
-          this.accessToken = tokenSetting?.value || process.env.WHATSAPP_ACCESS_TOKEN;
-          this.phoneNumberId = phoneSetting?.value || process.env.WHATSAPP_PHONE_NUMBER_ID;
-          if (this.accessToken && this.phoneNumberId) {
-            console.log("[WhatsApp] \u2713 Credentials loaded successfully");
+          this.accessToken = String(tokenSetting?.value || process.env.WHATSAPP_ACCESS_TOKEN || "");
+          this.phoneNumberId = String(phoneSetting?.value || process.env.WHATSAPP_PHONE_NUMBER_ID || "");
+          if (this.accessToken.trim() && this.phoneNumberId.trim()) {
+            console.log("[WhatsApp] \u2713 Credentials loaded successfully", {
+              tokenLength: this.accessToken.length,
+              phoneIdLength: this.phoneNumberId.length
+            });
           } else {
-            console.warn("[WhatsApp] \u26A0\uFE0F Credentials not found. Token:", !!this.accessToken, "Phone ID:", !!this.phoneNumberId);
+            console.warn("[WhatsApp] \u26A0\uFE0F Credentials not found. Token:", !!this.accessToken?.trim(), "Phone ID:", !!this.phoneNumberId?.trim());
           }
         } catch (error) {
           console.error("[WhatsApp] Error loading credentials from database:", error);
-          this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-          this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+          this.accessToken = String(process.env.WHATSAPP_ACCESS_TOKEN || "");
+          this.phoneNumberId = String(process.env.WHATSAPP_PHONE_NUMBER_ID || "");
         }
       }
       /**
@@ -2772,14 +2775,18 @@ var init_whatsapp = __esm({
         await this.loadCredentials();
       }
       checkCredentials() {
-        const hasToken = !!(this.accessToken && this.accessToken.trim());
-        const hasPhoneId = !!(this.phoneNumberId && this.phoneNumberId.trim());
+        const tokenStr = String(this.accessToken || "");
+        const phoneStr = String(this.phoneNumberId || "");
+        const hasToken = !!(tokenStr && tokenStr.trim());
+        const hasPhoneId = !!(phoneStr && phoneStr.trim());
         if (!hasToken || !hasPhoneId) {
           console.warn("[WhatsApp] Configuration missing:", {
             hasToken,
             hasPhoneId,
-            tokenLength: this.accessToken?.length || 0,
-            phoneIdLength: this.phoneNumberId?.length || 0
+            tokenLength: tokenStr.length,
+            phoneIdLength: phoneStr.length,
+            tokenType: typeof this.accessToken,
+            phoneIdType: typeof this.phoneNumberId
           });
         }
         return hasToken && hasPhoneId;
