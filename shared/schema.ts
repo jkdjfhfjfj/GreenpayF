@@ -486,6 +486,10 @@ export const whatsappMessages = pgTable("whatsapp_messages", {
   isFromAdmin: boolean("is_from_admin").default(false),
   status: text("status").default("sent"),
   messageId: text("message_id"),
+  messageType: text("message_type").default("text"), // text, file, image, video
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
