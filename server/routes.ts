@@ -6236,24 +6236,69 @@ Sitemap: https://greenpay.world/sitemap.xml`;
               for (const message of messages) {
                 const phoneNumber = change.value?.contacts?.[0]?.wa_id;
                 const type = message.type; // text, image, video, file, audio
+                const config = await storage.getWhatsappConfig();
                 let content = '';
                 let mediaUrl = '';
 
                 // Handle different message types
                 if (type === 'text' && message.text?.body) {
                   content = message.text.body;
-                } else if (type === 'image' && message.image) {
-                  content = `[Image] ${message.image.caption || 'Sent an image'}`;
-                  mediaUrl = message.image.link || '';
-                } else if (type === 'video' && message.video) {
-                  content = `[Video] ${message.video.caption || 'Sent a video'}`;
-                  mediaUrl = message.video.link || '';
-                } else if (type === 'file' && message.document) {
-                  content = `[File] ${message.document.filename || 'Sent a file'}`;
-                  mediaUrl = message.document.link || '';
-                } else if (type === 'audio' && message.audio) {
-                  content = '[Audio message]';
-                  mediaUrl = message.audio.link || '';
+                } else if (type === 'image' && message.image?.id) {
+                  // Fetch media URL from Meta API
+                  const mediaId = message.image.id;
+                  const caption = message.image.caption || 'Sent an image';
+                  try {
+                    const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
+                      headers: { 'Authorization': `Bearer ${config?.accessToken}` }
+                    });
+                    const mediaData = await mediaResponse.json();
+                    mediaUrl = mediaData.url || '';
+                    content = `[Image] ${caption}`;
+                  } catch (err) {
+                    console.error('[WhatsApp] Failed to fetch image URL:', err);
+                    content = `[Image] ${caption}`;
+                  }
+                } else if (type === 'video' && message.video?.id) {
+                  const mediaId = message.video.id;
+                  const caption = message.video.caption || 'Sent a video';
+                  try {
+                    const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
+                      headers: { 'Authorization': `Bearer ${config?.accessToken}` }
+                    });
+                    const mediaData = await mediaResponse.json();
+                    mediaUrl = mediaData.url || '';
+                    content = `[Video] ${caption}`;
+                  } catch (err) {
+                    console.error('[WhatsApp] Failed to fetch video URL:', err);
+                    content = `[Video] ${caption}`;
+                  }
+                } else if (type === 'file' && message.document?.id) {
+                  const mediaId = message.document.id;
+                  const filename = message.document.filename || 'Sent a file';
+                  try {
+                    const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
+                      headers: { 'Authorization': `Bearer ${config?.accessToken}` }
+                    });
+                    const mediaData = await mediaResponse.json();
+                    mediaUrl = mediaData.url || '';
+                    content = `[File] ${filename}`;
+                  } catch (err) {
+                    console.error('[WhatsApp] Failed to fetch file URL:', err);
+                    content = `[File] ${filename}`;
+                  }
+                } else if (type === 'audio' && message.audio?.id) {
+                  const mediaId = message.audio.id;
+                  try {
+                    const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
+                      headers: { 'Authorization': `Bearer ${config?.accessToken}` }
+                    });
+                    const mediaData = await mediaResponse.json();
+                    mediaUrl = mediaData.url || '';
+                    content = '[Audio message]';
+                  } catch (err) {
+                    console.error('[WhatsApp] Failed to fetch audio URL:', err);
+                    content = '[Audio message]';
+                  }
                 } else {
                   continue; // Skip unknown types
                 }
@@ -6280,7 +6325,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                     messageId: message.id
                   });
 
-                  console.log(`[WhatsApp] Received ${type} message from ${phoneNumber}: ${content}`);
+                  console.log(`[WhatsApp] Received ${type} message from ${phoneNumber}: ${content}`, mediaUrl ? `URL: ${mediaUrl}` : '');
                 }
               }
             }

@@ -130,25 +130,6 @@ export default function WhatsAppMessaging() {
 
   return (
     <div className="space-y-4">
-      {/* Config Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-blue-900">WhatsApp Configuration Needed</p>
-          <p className="text-xs text-blue-700">Add your Meta Business credentials to start messaging</p>
-        </div>
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={() => {
-            console.log('[WhatsApp UI] Configure button clicked, navigating to settings');
-            setLocation("/admin/dashboard?tab=settings");
-          }}
-          className="gap-2"
-        >
-          <Settings className="w-4 h-4" />
-          Configure
-        </Button>
-      </div>
 
       <div className="grid grid-cols-3 gap-4 h-[600px]">
       {/* Conversations List */}
