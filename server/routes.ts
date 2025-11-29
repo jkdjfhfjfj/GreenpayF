@@ -5943,7 +5943,9 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   // Get Mailtrap settings
   app.get("/api/admin/mailtrap-settings", requireAdminAuth, async (req, res) => {
     try {
-      const isConfigured = !!process.env.MAILTRAP_API_KEY;
+      const setting = await storage.getSystemSetting("email", "mailtrap_api_key");
+      const apiKey = setting?.value || process.env.MAILTRAP_API_KEY || '';
+      const isConfigured = !!apiKey;
       res.json({
         apiKey: isConfigured ? '●●●●●●●●' : '',
         isConfigured
@@ -5961,16 +5963,18 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         return res.status(400).json({ message: "API key is required" });
       }
 
-      // Save API key to environment variable
-      process.env.MAILTRAP_API_KEY = apiKey.trim();
+      const trimmedKey = apiKey.trim();
 
-      // Also track in database that it's configured
+      // Save API key to database (secure storage)
       await storage.setSystemSetting({
         category: "email",
-        key: "mailtrap_configured",
-        value: "true",
-        description: "Flag indicating Mailtrap is configured (actual API key is in environment)"
+        key: "mailtrap_api_key",
+        value: trimmedKey,
+        description: "Mailtrap API key for email sending"
       });
+
+      // Also set in environment for current session
+      process.env.MAILTRAP_API_KEY = trimmedKey;
 
       const { mailtrapService } = await import('./services/mailtrap');
       await mailtrapService.refreshApiKey();

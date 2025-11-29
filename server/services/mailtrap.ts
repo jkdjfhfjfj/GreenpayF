@@ -28,18 +28,30 @@ export class MailtrapService {
   }
 
   /**
-   * Load Mailtrap API key from environment variables
+   * Load Mailtrap API key from database or environment
    */
   private async loadApiKey(): Promise<void> {
     try {
-      this.apiKey = process.env.MAILTRAP_API_KEY || null;
-      if (this.apiKey) {
-        console.log('[Mailtrap] ✓ API key loaded from environment');
+      // Try to load from database first
+      const setting = await storage.getSystemSetting("email", "mailtrap_api_key");
+      
+      if (setting?.value) {
+        this.apiKey = setting.value;
+        process.env.MAILTRAP_API_KEY = setting.value;
+        console.log('[Mailtrap] ✓ API key loaded from database');
       } else {
-        console.warn('[Mailtrap] ⚠️ API key not configured in environment');
+        // Fallback to environment variable or default
+        this.apiKey = process.env.MAILTRAP_API_KEY || '3aac21f265f8750724b1d9bfeff9a712';
+        if (process.env.MAILTRAP_API_KEY) {
+          console.log('[Mailtrap] ✓ API key loaded from environment');
+        } else {
+          console.log('[Mailtrap] ✓ Using default API key');
+        }
       }
     } catch (error) {
       console.error('[Mailtrap] Error loading API key:', error);
+      // Use default on error
+      this.apiKey = process.env.MAILTRAP_API_KEY || '3aac21f265f8750724b1d9bfeff9a712';
     }
   }
 
