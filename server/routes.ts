@@ -5973,10 +5973,35 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
-  // Admin: Send custom template to user (multi-channel)
-  app.post("/api/admin/send-to-user", requireAdminAuth, async (req, res) => {
+  // Test Mailtrap template by UUID
+  app.post("/api/admin/send-template-test", requireAdminAuth, async (req, res) => {
     try {
-      const { userId, templateName, parameters } = req.body;
+      const { email, templateUuid, parameters } = req.body;
+      if (!email || !templateUuid) {
+        return res.status(400).json({ message: "Email and template UUID are required" });
+      }
+
+      const { mailtrapService } = await import('./services/mailtrap');
+      const success = await mailtrapService.sendTemplate(email, templateUuid, parameters || {});
+
+      res.json({ 
+        success,
+        message: success ? 'Template sent successfully' : 'Failed to send template'
+      });
+    } catch (error) {
+      console.error('[Admin] Send template test error:', error);
+      res.status(500).json({ message: "Failed to send template" });
+    }
+  });
+
+  // Send Mailtrap template to specific user (multi-channel)
+  app.post("/api/admin/send-template-to-user", requireAdminAuth, async (req, res) => {
+    try {
+      const { userId, templateUuid, parameters } = req.body;
+      if (!userId || !templateUuid) {
+        return res.status(400).json({ message: "User ID and template UUID are required" });
+      }
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -5989,20 +6014,21 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       // Send concurrently across all channels
       const results = await Promise.all([
         // Email via Mailtrap
-        user.email ? mailtrapService.sendCustomTemplate(user.email, templateName, parameters) : Promise.resolve(false),
-        // WhatsApp template
-        whatsappService.isConfigured() ? whatsappService.sendTextMessage(user.phone, JSON.stringify(parameters)) : Promise.resolve(false),
-        // SMS
-        messagingService.sendSMS(user.phone, JSON.stringify(parameters))
+        user.email ? mailtrapService.sendTemplate(user.email, templateUuid, parameters || {}) : Promise.resolve(false),
+        // WhatsApp text
+        whatsappService.isConfigured() ? whatsappService.sendTextMessage(user.phone, JSON.stringify(parameters || {})) : Promise.resolve(false),
+        // SMS text
+        messagingService.sendSMS(user.phone, JSON.stringify(parameters || {}))
       ]);
 
       res.json({ 
         success: results[0] || results[1] || results[2],
-        channels: { email: results[0], whatsapp: results[1], sms: results[2] }
+        channels: { email: results[0], whatsapp: results[1], sms: results[2] },
+        message: 'Template sent to user across configured channels'
       });
     } catch (error) {
-      console.error('[Admin] Send to user error:', error);
-      res.status(500).json({ message: "Failed to send message" });
+      console.error('[Admin] Send template to user error:', error);
+      res.status(500).json({ message: "Failed to send template to user" });
     }
   });
 

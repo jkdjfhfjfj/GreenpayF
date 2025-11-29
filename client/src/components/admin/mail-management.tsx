@@ -3,11 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Send, ImagePlus, Link as LinkIcon, Bold, Italic, Underline, List, AlertCircle, Loader2, CheckCircle, Save } from "lucide-react";
+import { Mail, Send, AlertCircle, Loader2, CheckCircle, Save, Plus, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { useMutation } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function MailManagement() {
@@ -18,16 +16,22 @@ export default function MailManagement() {
   const [savingMailtrap, setSavingMailtrap] = useState(false);
   const [testingMailtrap, setTestingMailtrap] = useState(false);
   
-  const [formData, setFormData] = useState({
-    email: "",
-    subject: "",
-    message: "",
-    imageUrl: "",
-    linkText: "",
-    linkUrl: "",
-  });
+  // Test template state
+  const [testTemplateUuid, setTestTemplateUuid] = useState("");
+  const [testTemplateEmail, setTestTemplateEmail] = useState("");
+  const [testParams, setTestParams] = useState<Record<string, string>>({});
+  const [sendingTestTemplate, setSendingTestTemplate] = useState(false);
+  
+  // Send to user state
+  const [userId, setUserId] = useState("");
+  const [templateUuid, setTemplateUuid] = useState("");
+  const [userParams, setUserParams] = useState<Record<string, string>>({});
+  const [sendingToUser, setSendingToUser] = useState(false);
+  
+  // Parameter key-value input
+  const [paramKey, setParamKey] = useState("");
+  const [paramValue, setParamValue] = useState("");
 
-  // Load Mailtrap settings on mount
   useEffect(() => {
     loadMailtrapSettings();
   }, []);
@@ -117,102 +121,131 @@ export default function MailManagement() {
     }
   };
 
-  const sendEmailMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const response = await apiRequest("POST", "/api/admin/send-custom-email", data);
-      return response.json();
-    },
-    onSuccess: () => {
+  const addTestParameter = () => {
+    if (!paramKey.trim()) {
       toast({
-        title: "Email sent successfully",
-        description: "The custom email has been delivered to the user.",
-      });
-      setFormData({
-        email: "",
-        subject: "",
-        message: "",
-        imageUrl: "",
-        linkText: "",
-        linkUrl: "",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to send email",
-        description: error.message || "An error occurred while sending the email.",
+        title: "Validation Error",
+        description: "Parameter key is required",
         variant: "destructive",
       });
-    },
-  });
+      return;
+    }
+    setTestParams({ ...testParams, [paramKey]: paramValue });
+    setParamKey("");
+    setParamValue("");
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.email || !formData.subject || !formData.message) {
+  const removeTestParameter = (key: string) => {
+    const newParams = { ...testParams };
+    delete newParams[key];
+    setTestParams(newParams);
+  };
+
+  const handleSendTestTemplate = async () => {
+    if (!testTemplateUuid.trim() || !testTemplateEmail.trim()) {
       toast({
-        title: "Missing required fields",
-        description: "Please fill in email, subject, and message fields.",
+        title: "Validation Error",
+        description: "Template UUID and email are required",
         variant: "destructive",
       });
       return;
     }
 
-    sendEmailMutation.mutate(formData);
+    setSendingTestTemplate(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/send-template-test', {
+        email: testTemplateEmail.trim(),
+        templateUuid: testTemplateUuid.trim(),
+        parameters: testParams
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Template email sent successfully",
+        });
+        setTestTemplateUuid("");
+        setTestTemplateEmail("");
+        setTestParams({});
+      } else {
+        throw new Error('Failed to send template');
+      }
+    } catch (error) {
+      toast({
+        title: "Send Failed",
+        description: "Failed to send template email",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTestTemplate(false);
+    }
   };
 
-  const insertFormatting = (type: string) => {
-    const textarea = document.getElementById('message-textarea') as HTMLTextAreaElement;
-    if (!textarea) return;
+  const addUserParameter = () => {
+    if (!paramKey.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Parameter key is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    setUserParams({ ...userParams, [paramKey]: paramValue });
+    setParamKey("");
+    setParamValue("");
+  };
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = formData.message.substring(start, end);
-    
-    let formattedText = '';
-    let cursorOffset = 0;
+  const removeUserParameter = (key: string) => {
+    const newParams = { ...userParams };
+    delete newParams[key];
+    setUserParams(newParams);
+  };
 
-    switch (type) {
-      case 'bold':
-        formattedText = `**${selectedText}**`;
-        cursorOffset = 2;
-        break;
-      case 'italic':
-        formattedText = `*${selectedText}*`;
-        cursorOffset = 1;
-        break;
-      case 'underline':
-        formattedText = `<u>${selectedText}</u>`;
-        cursorOffset = 3;
-        break;
-      case 'list':
-        formattedText = `\n• ${selectedText}`;
-        cursorOffset = 3;
-        break;
-      default:
-        formattedText = selectedText;
+  const handleSendToUser = async () => {
+    if (!userId.trim() || !templateUuid.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "User ID and template UUID are required",
+        variant: "destructive",
+      });
+      return;
     }
 
-    const newMessage = 
-      formData.message.substring(0, start) +
-      formattedText +
-      formData.message.substring(end);
+    setSendingToUser(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/send-template-to-user', {
+        userId: userId.trim(),
+        templateUuid: templateUuid.trim(),
+        parameters: userParams
+      });
 
-    setFormData({ ...formData, message: newMessage });
-    
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + cursorOffset,
-        start + cursorOffset + selectedText.length
-      );
-    }, 0);
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Template sent to user successfully across all channels",
+        });
+        setUserId("");
+        setTemplateUuid("");
+        setUserParams({});
+      } else {
+        throw new Error('Failed to send to user');
+      }
+    } catch (error) {
+      toast({
+        title: "Send Failed",
+        description: "Failed to send template to user",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingToUser(false);
+    }
   };
 
   return (
     <div className="p-6 space-y-6">
       <div>
         <h2 className="text-3xl font-bold text-gray-900">Mail Management</h2>
-        <p className="text-gray-600 mt-1">Send custom emails to specific users with formatting, images, and links</p>
+        <p className="text-gray-600 mt-1">Manage Mailtrap templates and send transactional emails to users</p>
       </div>
 
       {/* Mailtrap Settings Card */}
@@ -269,7 +302,7 @@ export default function MailManagement() {
           {mailtrapConfigured && (
             <div className="space-y-4 p-4 border-t">
               <div className="space-y-2">
-                <Label htmlFor="test-email">Send Test Email</Label>
+                <Label htmlFor="test-email">Send Quick Test Email</Label>
                 <Input
                   id="test-email"
                   type="email"
@@ -285,179 +318,100 @@ export default function MailManagement() {
                 className="w-full"
                 variant="outline"
               >
-                {testingMailtrap ? 'Sending...' : 'Send Test Email'}
+                {testingMailtrap ? 'Sending...' : 'Send Quick Test'}
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="w-5 h-5" />
-            Compose Custom Email
-          </CardTitle>
-          <CardDescription>
-            Send personalized emails to users with rich formatting options
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Recipient Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="user@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-              <p className="text-xs text-gray-500">Enter the email address of the user you want to send this message to</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="subject">Email Subject *</Label>
-              <Input
-                id="subject"
-                placeholder="Enter email subject"
-                value={formData.subject}
-                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="message-textarea">Message *</Label>
-              <div className="border rounded-lg">
-                <div className="flex items-center gap-1 p-2 border-b bg-gray-50">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => insertFormatting('bold')}
-                    title="Bold"
-                  >
-                    <Bold className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => insertFormatting('italic')}
-                    title="Italic"
-                  >
-                    <Italic className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => insertFormatting('underline')}
-                    title="Underline"
-                  >
-                    <Underline className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => insertFormatting('list')}
-                    title="Bullet List"
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                </div>
-                <Textarea
-                  id="message-textarea"
-                  placeholder="Enter your message here. Use the toolbar above to format text."
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  className="min-h-[200px] border-0 focus-visible:ring-0 resize-none"
-                  required
-                />
-              </div>
-              <p className="text-xs text-gray-500">
-                Select text and use formatting buttons above. Supports: **bold**, *italic*, &lt;u&gt;underline&lt;/u&gt;, and • bullet points
-              </p>
-            </div>
-
-            <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
-              <h3 className="font-semibold text-sm flex items-center gap-2">
-                <ImagePlus className="w-4 h-4" />
-                Optional: Add Image
-              </h3>
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                />
-                <p className="text-xs text-gray-500">Paste the URL of an image to include in the email</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
-              <h3 className="font-semibold text-sm flex items-center gap-2">
-                <LinkIcon className="w-4 h-4" />
-                Optional: Add Call-to-Action Link
-              </h3>
+      {mailtrapConfigured && (
+        <>
+          {/* Test Template Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5" />
+                Test Mailtrap Template
+              </CardTitle>
+              <CardDescription>
+                Send a Mailtrap template by UUID to test it
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="linkText">Link Text</Label>
+                  <Label htmlFor="test-uuid">Template UUID *</Label>
                   <Input
-                    id="linkText"
-                    placeholder="Click here"
-                    value={formData.linkText}
-                    onChange={(e) => setFormData({ ...formData, linkText: e.target.value })}
+                    id="test-uuid"
+                    placeholder="e.g., 64254a5b-a2ba-4b7d-aa41-5a0907c836db"
+                    value={testTemplateUuid}
+                    onChange={(e) => setTestTemplateUuid(e.target.value)}
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="linkUrl">Link URL</Label>
+                  <Label htmlFor="test-email-addr">Email Address *</Label>
                   <Input
-                    id="linkUrl"
-                    type="url"
-                    placeholder="https://example.com"
-                    value={formData.linkUrl}
-                    onChange={(e) => setFormData({ ...formData, linkUrl: e.target.value })}
+                    id="test-email-addr"
+                    type="email"
+                    placeholder="recipient@example.com"
+                    value={testTemplateEmail}
+                    onChange={(e) => setTestTemplateEmail(e.target.value)}
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-500">Add a button link to direct users to a specific page</p>
-            </div>
 
-            <div className="flex items-center gap-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
-              <p className="text-sm text-blue-800">
-                This email will be sent from your configured SMTP server. Make sure email settings are properly configured in Messaging Settings.
-              </p>
-            </div>
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+                <h3 className="font-semibold text-sm">Template Parameters</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <Input
+                    placeholder="Parameter key (e.g., first_name)"
+                    value={paramKey}
+                    onChange={(e) => setParamKey(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Parameter value"
+                    value={paramValue}
+                    onChange={(e) => setParamValue(e.target.value)}
+                  />
+                  <Button
+                    onClick={addTestParameter}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
 
-            <div className="flex justify-end gap-3">
+                {Object.keys(testParams).length > 0 && (
+                  <div className="space-y-2">
+                    {Object.entries(testParams).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between bg-white p-2 rounded border">
+                        <span className="text-sm">
+                          <span className="font-semibold">{key}:</span> {value}
+                        </span>
+                        <Button
+                          onClick={() => removeTestParameter(key)}
+                          variant="ghost"
+                          size="sm"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <Button
-                type="button"
-                variant="outline"
-                onClick={() => setFormData({
-                  email: "",
-                  subject: "",
-                  message: "",
-                  imageUrl: "",
-                  linkText: "",
-                  linkUrl: "",
-                })}
+                onClick={handleSendTestTemplate}
+                disabled={sendingTestTemplate}
+                className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                Clear Form
-              </Button>
-              <Button
-                type="submit"
-                disabled={sendEmailMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {sendEmailMutation.isPending ? (
+                {sendingTestTemplate ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Sending...
@@ -465,14 +419,119 @@ export default function MailManagement() {
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Send Email
+                    Send Template
                   </>
                 )}
               </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
+          {/* Send to User Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5" />
+                Send Template to User (Multi-Channel)
+              </CardTitle>
+              <CardDescription>
+                Send a Mailtrap template to a specific user via Email, SMS, and WhatsApp
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="user-id">User ID *</Label>
+                  <Input
+                    id="user-id"
+                    placeholder="e.g., user_123abc"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template-uuid">Template UUID *</Label>
+                  <Input
+                    id="template-uuid"
+                    placeholder="e.g., 64254a5b-a2ba-4b7d-aa41-5a0907c836db"
+                    value={templateUuid}
+                    onChange={(e) => setTemplateUuid(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+                <h3 className="font-semibold text-sm">Template Parameters</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <Input
+                    placeholder="Parameter key (e.g., otp)"
+                    value={paramKey}
+                    onChange={(e) => setParamKey(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Parameter value"
+                    value={paramValue}
+                    onChange={(e) => setParamValue(e.target.value)}
+                  />
+                  <Button
+                    onClick={addUserParameter}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
+
+                {Object.keys(userParams).length > 0 && (
+                  <div className="space-y-2">
+                    {Object.entries(userParams).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between bg-white p-2 rounded border">
+                        <span className="text-sm">
+                          <span className="font-semibold">{key}:</span> {value}
+                        </span>
+                        <Button
+                          onClick={() => removeUserParameter(key)}
+                          variant="ghost"
+                          size="sm"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  Message will be sent via Email (Mailtrap), SMS, and WhatsApp simultaneously
+                </AlertDescription>
+              </Alert>
+
+              <Button
+                onClick={handleSendToUser}
+                disabled={sendingToUser}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                {sendingToUser ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send to User
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
