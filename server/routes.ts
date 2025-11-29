@@ -225,17 +225,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      // Check admin settings for login OTP requirement
+      const enableOtpSetting = await storage.getSystemSetting("verification", "enable_phone_otp_login");
+      const enableOtpLogin = enableOtpSetting?.value !== 'false'; // Default to true if not set
+      
       // Check if messaging credentials are configured
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
-      const whatsappSessionSetting = await storage.getSystemSetting("messaging", "whatsapp_session_id");
+      const whatsappAccessToken = await storage.getSystemSetting("messaging", "whatsapp_access_token");
       
-      const credentialsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value && whatsappSessionSetting?.value);
+      const credentialsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value && whatsappAccessToken?.value);
+      const shouldRequireOtp = credentialsConfigured && enableOtpLogin;
       
-      // If messaging credentials are not configured, allow direct login
-      if (!credentialsConfigured) {
-        console.warn('Messaging credentials not configured - allowing direct login');
+      // If OTP login is disabled or messaging credentials not configured, allow direct login
+      if (!shouldRequireOtp) {
+        console.log('OTP login disabled or messaging not configured - allowing direct login');
         
         // Direct login without OTP (only when messaging is not configured)
         req.session.regenerate((err) => {
@@ -280,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Messaging is configured - OTP is REQUIRED
+      // OTP login is required - send verification code
       const { messagingService } = await import('./services/messaging');
       const otpCode = messagingService.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -289,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
 
       // Send OTP via SMS and WhatsApp concurrently
-      const result = await messagingService.sendOTP(user.phone, otpCode);
+      const result = await messagingService.sendOTP(user.phone, otpCode, user.fullName);
 
       // When messaging is configured, OTP delivery failure is an error (don't bypass)
       if (!result.sms && !result.whatsapp) {
