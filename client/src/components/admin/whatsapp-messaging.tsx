@@ -33,6 +33,11 @@ interface WhatsAppMessage {
   createdAt: string;
 }
 
+interface TypingStatus {
+  phoneNumber: string;
+  isTyping: boolean;
+}
+
 export default function WhatsAppMessaging() {
   const [, setLocation] = useLocation();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -80,6 +85,35 @@ export default function WhatsAppMessaging() {
   });
 
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleTyping = () => {
+    if (selectedConversation && selectedConversationId) {
+      // Send typing indicator to user
+      apiRequest("POST", "/api/admin/whatsapp/typing", {
+        phoneNumber: selectedConversation.phoneNumber
+      }).catch(err => console.error('Failed to send typing indicator:', err));
+    }
+  };
+
+  useEffect(() => {
+    // Debounce typing indicator - send every 3 seconds while typing
+    if (messageText.trim() && selectedConversation) {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      handleTyping();
+      typingTimeoutRef.current = setTimeout(() => {
+        typingTimeoutRef.current = null;
+      }, 3000);
+    }
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [messageText, selectedConversation]);
 
   const sendMutation = useMutation({
     mutationFn: async (data: { conversationId: string; phoneNumber: string; message: string; mediaUrl?: string; mediaType?: string }) => {
@@ -250,15 +284,16 @@ export default function WhatsAppMessaging() {
                   {messages.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">No messages yet</div>
                   ) : (
-                    [...messages].reverse().map(msg => {
-                      // Use dedicated media fields from database
-                      const hasMedia = msg.messageType && msg.messageType !== 'text' && msg.fileUrl;
-                      
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex ${msg.isFromAdmin ? 'justify-end' : 'justify-start'}`}
-                        >
+                    <>
+                      {[...messages].reverse().map(msg => {
+                        // Use dedicated media fields from database
+                        const hasMedia = msg.messageType && msg.messageType !== 'text' && msg.fileUrl;
+                        
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex ${msg.isFromAdmin ? 'justify-end' : 'justify-start'}`}
+                          >
                           <div
                             className={`max-w-xs px-4 py-2 rounded-lg space-y-2 ${
                               msg.isFromAdmin
@@ -309,10 +344,27 @@ export default function WhatsAppMessaging() {
                             </div>
                           </div>
                         </div>
-                      );
-                    })
+                        );
+                      })}
+                      
+                      {/* Typing indicator for user */}
+                      {typingUsers.has(selectedConversation?.phoneNumber || '') && (
+                        <div className="flex justify-start">
+                          <div className="bg-gray-200 text-gray-900 px-4 py-2 rounded-lg">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs">typing</span>
+                              <div className="flex gap-0.5">
+                                <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </>
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
 

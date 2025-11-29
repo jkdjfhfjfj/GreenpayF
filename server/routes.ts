@@ -6263,11 +6263,27 @@ Sitemap: https://greenpay.world/sitemap.xml`;
               }
             }
             
-            // Handle typing indicator notifications
+            // Handle typing indicator and online status
             if (change.field === "message_template_status_update") {
               const statuses = change.value?.statuses || [];
               for (const status of statuses) {
                 console.log('[WhatsApp] Template status:', { status: status.status });
+              }
+            }
+            
+            // Handle messaging product status (includes typing_on, typing_off, read)
+            if (change.field === "message_template_status_update" || change.field === "messaging_product") {
+              const phoneNumber = change.value?.contacts?.[0]?.wa_id;
+              
+              // Check for typing indicators in the webhook
+              if (change.value?.messages) {
+                for (const msg of change.value.messages) {
+                  if (msg.type === 'typing') {
+                    console.log('[WhatsApp] User typing indicator received from:', phoneNumber);
+                  } else if (msg.type === 'read') {
+                    console.log('[WhatsApp] User read receipt received from:', phoneNumber);
+                  }
+                }
               }
             }
             
@@ -6502,6 +6518,61 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     } catch (error) {
       console.error("[Admin] Get WhatsApp messages error:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Send typing indicator
+  app.post("/api/admin/whatsapp/typing", requireAdminAuth, async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      const [accessTokenSetting, phoneIdSetting] = await Promise.all([
+        storage.getSystemSetting("messaging", "whatsapp_access_token"),
+        storage.getSystemSetting("messaging", "whatsapp_phone_number_id")
+      ]);
+
+      const accessToken = accessTokenSetting?.value;
+      const phoneNumberId = String(phoneIdSetting?.value || '').trim();
+
+      if (!accessToken?.trim() || !phoneNumberId) {
+        return res.status(400).json({ message: "WhatsApp not configured" });
+      }
+
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
+      const finalPhone = cleanPhone.startsWith('254') ? cleanPhone : '254' + cleanPhone.slice(-9);
+
+      const apiUrl = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: finalPhone,
+        type: "typing"
+      };
+
+      const apiResponse = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (apiResponse.ok) {
+        console.log('[WhatsApp] Typing indicator sent to:', finalPhone);
+        res.json({ success: true, message: "Typing indicator sent" });
+      } else {
+        const error = await apiResponse.json();
+        console.error('[WhatsApp] Failed to send typing indicator:', error);
+        res.status(apiResponse.status).json({ success: false, error });
+      }
+    } catch (error) {
+      console.error("[WhatsApp] Typing indicator error:", error);
+      res.status(500).json({ message: "Failed to send typing indicator" });
     }
   });
 
