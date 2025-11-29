@@ -3790,6 +3790,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User search endpoint for transfers (MUST come before /api/users/:id)
+  app.get("/api/users/search", requireAuth, async (req, res) => {
+    try {
+      const { q: searchQuery } = req.query;
+      const currentUserId = req.session?.userId;
+      
+      console.log('=== USER SEARCH DEBUG ===');
+      console.log('Search Query:', { q: searchQuery, type: typeof searchQuery });
+      console.log('Current User ID:', currentUserId);
+      console.log('Query Parameter received:', req.query);
+      
+      if (!searchQuery || typeof searchQuery !== 'string' || searchQuery.length < 2) {
+        console.log('Query too short or invalid, returning empty array');
+        return res.json({ users: [] });
+      }
+      
+      const allUsers = await storage.getAllUsers();
+      console.log(`[Search] Total users in database: ${allUsers.length}`);
+      
+      if (allUsers.length === 0) {
+        console.warn('[Search] ⚠️ No users found in database!');
+      } else {
+        console.log('[Search] Sample users:', allUsers.slice(0, 3).map(u => ({ 
+          id: u.id, 
+          fullName: u.fullName, 
+          email: u.email 
+        })));
+      }
+      
+      const query = searchQuery.toLowerCase().trim();
+      console.log(`[Search] Searching for: "${query}"`);
+      
+      // Search by email, full name, or phone number, excluding the current user
+      const filteredUsers = allUsers
+        .filter((user, idx) => {
+          // Skip current user and admin users
+          if (user.id === currentUserId) {
+            console.log(`[Search] Skipping current user: ${user.email}`);
+            return false;
+          }
+          if (user.isAdmin) {
+            console.log(`[Search] Skipping admin user: ${user.email}`);
+            return false;
+          }
+          
+          const fullName = (user.fullName || '').toLowerCase().trim();
+          const email = (user.email || '').toLowerCase().trim();
+          const phone = (user.phone || '').trim();
+          
+          // Normalize phone numbers to standard format for comparison
+          const normalizeToStandardPhone = (p: string) => {
+            if (!p) return '';
+            const cleaned = p.replace(/[\+\-\s()]/g, '');
+            
+            // Handle different Kenyan formats
+            if (cleaned.startsWith('254')) {
+              return cleaned.substring(3); // Remove 254 prefix -> 7xxx
+            } else if (cleaned.startsWith('0')) {
+              return cleaned.substring(1); // Remove 0 prefix -> 7xxx
+            }
+            return cleaned; // Already in 7xxx format or other
+          };
+          
+          const normalizedUserPhone = normalizeToStandardPhone(phone);
+          const normalizedSearchPhone = normalizeToStandardPhone(searchQuery.trim());
+          
+          // Check for matches
+          const emailMatch = email.includes(query);
+          const nameMatch = fullName.includes(query) || 
+                           fullName.split(' ').some(part => part.toLowerCase().startsWith(query));
+          
+          // Enhanced phone matching
+          const phoneMatch = normalizedUserPhone && normalizedSearchPhone && (
+            normalizedUserPhone === normalizedSearchPhone ||
+            normalizedUserPhone.includes(normalizedSearchPhone) ||
+            normalizedSearchPhone.includes(normalizedUserPhone)
+          );
+          
+          const isMatch = emailMatch || nameMatch || phoneMatch;
+          if (isMatch) {
+            console.log(`[Search] ✓ Match found: ${email} | fullName: ${fullName} | emailMatch: ${emailMatch} | nameMatch: ${nameMatch} | phoneMatch: ${phoneMatch}`);
+          }
+          
+          return isMatch;
+        })
+        .slice(0, 10) // Limit to 10 results
+        .map(user => ({
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone
+        }));
+      
+      console.log(`[Search] Final results: found ${filteredUsers.length} matching users`);
+      console.log('[Search] Filtered users:', filteredUsers);
+      res.json({ users: filteredUsers });
+    } catch (error) {
+      console.error('[Search] Error searching users:', error);
+      res.status(500).json({ message: "Error searching users" });
+    }
+  });
+
   // Get user by ID (for refreshing user data)
   app.get("/api/users/:id", async (req, res) => {
     try {
@@ -4860,108 +4962,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error sending custom email:', error);
       res.status(500).json({ message: "Error sending custom email" });
-    }
-  });
-
-  // User search endpoint for transfers
-  app.get("/api/users/search", requireAuth, async (req, res) => {
-    try {
-      const { q: searchQuery } = req.query;
-      const currentUserId = req.session?.userId;
-      
-      console.log('=== USER SEARCH DEBUG ===');
-      console.log('Search Query:', { q: searchQuery, type: typeof searchQuery });
-      console.log('Current User ID:', currentUserId);
-      console.log('Query Parameter received:', req.query);
-      
-      if (!searchQuery || typeof searchQuery !== 'string' || searchQuery.length < 2) {
-        console.log('Query too short or invalid, returning empty array');
-        return res.json({ users: [] });
-      }
-      
-      const allUsers = await storage.getAllUsers();
-      console.log(`[Search] Total users in database: ${allUsers.length}`);
-      
-      if (allUsers.length === 0) {
-        console.warn('[Search] ⚠️ No users found in database!');
-      } else {
-        console.log('[Search] Sample users:', allUsers.slice(0, 3).map(u => ({ 
-          id: u.id, 
-          fullName: u.fullName, 
-          email: u.email 
-        })));
-      }
-      
-      const query = searchQuery.toLowerCase().trim();
-      console.log(`[Search] Searching for: "${query}"`);
-      
-      // Search by email, full name, or phone number, excluding the current user
-      const filteredUsers = allUsers
-        .filter((user, idx) => {
-          // Skip current user and admin users
-          if (user.id === currentUserId) {
-            console.log(`[Search] Skipping current user: ${user.email}`);
-            return false;
-          }
-          if (user.isAdmin) {
-            console.log(`[Search] Skipping admin user: ${user.email}`);
-            return false;
-          }
-          
-          const fullName = (user.fullName || '').toLowerCase().trim();
-          const email = (user.email || '').toLowerCase().trim();
-          const phone = (user.phone || '').trim();
-          
-          // Normalize phone numbers to standard format for comparison
-          const normalizeToStandardPhone = (p: string) => {
-            if (!p) return '';
-            const cleaned = p.replace(/[\+\-\s()]/g, '');
-            
-            // Handle different Kenyan formats
-            if (cleaned.startsWith('254')) {
-              return cleaned.substring(3); // Remove 254 prefix -> 7xxx
-            } else if (cleaned.startsWith('0')) {
-              return cleaned.substring(1); // Remove 0 prefix -> 7xxx
-            }
-            return cleaned; // Already in 7xxx format or other
-          };
-          
-          const normalizedUserPhone = normalizeToStandardPhone(phone);
-          const normalizedSearchPhone = normalizeToStandardPhone(searchQuery.trim());
-          
-          // Check for matches
-          const emailMatch = email.includes(query);
-          const nameMatch = fullName.includes(query) || 
-                           fullName.split(' ').some(part => part.toLowerCase().startsWith(query));
-          
-          // Enhanced phone matching
-          const phoneMatch = normalizedUserPhone && normalizedSearchPhone && (
-            normalizedUserPhone === normalizedSearchPhone ||
-            normalizedUserPhone.includes(normalizedSearchPhone) ||
-            normalizedSearchPhone.includes(normalizedUserPhone)
-          );
-          
-          const isMatch = emailMatch || nameMatch || phoneMatch;
-          if (isMatch) {
-            console.log(`[Search] ✓ Match found: ${email} | fullName: ${fullName} | emailMatch: ${emailMatch} | nameMatch: ${nameMatch} | phoneMatch: ${phoneMatch}`);
-          }
-          
-          return isMatch;
-        })
-        .slice(0, 10) // Limit to 10 results
-        .map(user => ({
-          id: user.id,
-          fullName: user.fullName,
-          email: user.email,
-          phone: user.phone
-        }));
-      
-      console.log(`[Search] Final results: found ${filteredUsers.length} matching users`);
-      console.log('[Search] Filtered users:', filteredUsers);
-      res.json({ users: filteredUsers });
-    } catch (error) {
-      console.error('[Search] Error searching users:', error);
-      res.status(500).json({ message: "Error searching users" });
     }
   });
 
