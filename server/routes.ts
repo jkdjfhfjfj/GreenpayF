@@ -4989,49 +4989,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fromUser = await storage.getUser(fromUserId);
       const toUser = await storage.getUser(toUserId);
       
-      console.log('[Transfer] From User:', { found: !!fromUser, id: fromUserId, email: fromUser?.email });
-      console.log('[Transfer] To User:', { found: !!toUser, id: toUserId, email: toUser?.email });
+      console.log('[Transfer] From User:', { found: !!fromUser, balance: fromUser?.balance, email: fromUser?.email });
+      console.log('[Transfer] To User:', { found: !!toUser, balance: toUser?.balance, email: toUser?.email });
 
       if (!fromUser || !toUser) {
         console.error('[Transfer] User not found - fromUser:', !!fromUser, 'toUser:', !!toUser);
         return res.status(404).json({ message: "User not found" });
       }
 
-      // FETCH ALL TRANSACTIONS BEFORE CREATING NEW ONES (to avoid double-counting)
-      const senderTransactionsBefore = await storage.getTransactionsByUserId(fromUserId);
-      const recipientTransactionsBefore = await storage.getTransactionsByUserId(toUserId);
-      
-      // Calculate sender balance from EXISTING transactions only
-      const senderBalance = senderTransactionsBefore.reduce((balance, txn) => {
-        if (txn.status === 'completed') {
-          if (txn.type === 'receive' || txn.type === 'deposit') {
-            return balance + parseFloat(txn.amount);
-          } else if (txn.type === 'send' || txn.type === 'withdraw') {
-            return balance - parseFloat(txn.amount) - parseFloat(txn.fee || '0');
-          }
-        }
-        return balance;
-      }, parseFloat(fromUser.balance || '0'));
+      // Use balance field directly (it's already the current state!)
+      const senderBalance = parseFloat(fromUser.balance || '0');
+      const recipientBalance = parseFloat(toUser.balance || '0');
 
       if (senderBalance < transferAmount) {
+        console.error('[Transfer] Insufficient balance:', { senderBalance, transferAmount });
         return res.status(400).json({ message: "Insufficient balance" });
       }
 
-      // Calculate recipient balance from EXISTING transactions only
-      const recipientBalance = recipientTransactionsBefore.reduce((balance, txn) => {
-        if (txn.status === 'completed') {
-          if (txn.type === 'receive' || txn.type === 'deposit') {
-            return balance + parseFloat(txn.amount);
-          } else if (txn.type === 'send' || txn.type === 'withdraw') {
-            return balance - parseFloat(txn.amount) - parseFloat(txn.fee || '0');
-          }
-        }
-        return balance;
-      }, parseFloat(toUser.balance || '0'));
-
-      // Calculate new balances (only add/subtract transfer amount ONCE)
+      // Calculate new balances - simple arithmetic
       const senderNewBalance = senderBalance - transferAmount;
       const recipientNewBalance = recipientBalance + transferAmount;
+      
+      console.log('[Transfer] Balance calculation:', { 
+        senderOld: senderBalance, 
+        senderNew: senderNewBalance, 
+        recipientOld: recipientBalance, 
+        recipientNew: recipientNewBalance,
+        transferAmount 
+      });
 
       // Create transfer transactions
       const now = new Date().toISOString();
