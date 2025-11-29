@@ -30,10 +30,6 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[[ports]]
-localPort = 36959
-externalPort = 80
-
 [deployment]
 run = ["node", "dist/index.js"]
 deploymentTarget = "autoscale"
