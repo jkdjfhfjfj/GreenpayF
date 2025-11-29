@@ -212,29 +212,76 @@ export default function WhatsAppMessaging() {
                   {messages.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">No messages yet</div>
                   ) : (
-                    messages.map(msg => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.isFromAdmin ? 'justify-end' : 'justify-start'}`}
-                      >
+                    messages.map(msg => {
+                      // Parse media URLs from message content
+                      const urlRegex = /(https?:\/\/[^\s\n]+)/g;
+                      const urls = msg.content.match(urlRegex) || [];
+                      const textContent = msg.content.replace(urlRegex, '').trim();
+                      
+                      return (
                         <div
-                          className={`max-w-xs px-4 py-2 rounded-lg ${
-                            msg.isFromAdmin
-                              ? 'bg-green-500 text-white'
-                              : 'bg-gray-200 text-gray-900'
-                          }`}
+                          key={msg.id}
+                          className={`flex ${msg.isFromAdmin ? 'justify-end' : 'justify-start'}`}
                         >
-                          <p className="text-sm">{msg.content}</p>
-                          <div className="flex items-center gap-1 mt-1 text-xs opacity-70">
-                            <Clock className="w-3 h-3" />
-                            {format(new Date(msg.createdAt), 'HH:mm')}
-                            {msg.isFromAdmin && msg.status === 'sent' && (
-                              <CheckCircle2 className="w-3 h-3" />
-                            )}
+                          <div
+                            className={`max-w-xs px-4 py-2 rounded-lg space-y-2 ${
+                              msg.isFromAdmin
+                                ? 'bg-green-500 text-white'
+                                : 'bg-gray-200 text-gray-900'
+                            }`}
+                          >
+                            {textContent && <p className="text-sm">{textContent}</p>}
+                            {urls.map((url, idx) => {
+                              const isImage = /\.(jpg|jpeg|png|gif|webp)/i.test(url);
+                              const isVideo = /\.(mp4|mov|avi|webm)/i.test(url);
+                              const isPdf = /\.pdf$/i.test(url);
+                              
+                              if (isImage) {
+                                return (
+                                  <img
+                                    key={idx}
+                                    src={url}
+                                    alt="Message media"
+                                    className="max-w-full h-auto rounded cursor-pointer hover:opacity-80 max-h-64"
+                                    onClick={() => window.open(url, '_blank')}
+                                  />
+                                );
+                              } else if (isVideo) {
+                                return (
+                                  <video
+                                    key={idx}
+                                    controls
+                                    className="max-w-full h-auto rounded"
+                                    style={{ maxHeight: '200px' }}
+                                  >
+                                    <source src={url} type="video/mp4" />
+                                  </video>
+                                );
+                              } else {
+                                return (
+                                  <a
+                                    key={idx}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-xs underline break-all hover:opacity-80"
+                                  >
+                                    {isPdf ? '📄 PDF Document' : '📎 Download File'}
+                                  </a>
+                                );
+                              }
+                            })}
+                            <div className="flex items-center gap-1 mt-1 text-xs opacity-70">
+                              <Clock className="w-3 h-3" />
+                              {format(new Date(msg.createdAt), 'HH:mm')}
+                              {msg.isFromAdmin && msg.status === 'sent' && (
+                                <CheckCircle2 className="w-3 h-3" />
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                   <div ref={messagesEndRef} />
                 </div>
@@ -274,7 +321,7 @@ export default function WhatsAppMessaging() {
                         setMediaFile(e.target.files[0]);
                       }
                     }}
-                    accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                    accept="image/*,video/*,application/pdf,.doc,.docx,.txt"
                   />
                   <Button
                     variant="outline"

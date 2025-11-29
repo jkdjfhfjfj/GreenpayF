@@ -6332,11 +6332,16 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       }
 
       const config = await storage.getWhatsappConfig();
-      console.log('[WhatsApp Send] Config check:', { hasToken: !!config?.accessToken, hasPhoneId: !!config?.phoneNumberId });
+      console.log('[WhatsApp Send] Config retrieved:', { config: !!config, token: config?.accessToken?.substring(0, 20), phoneId: config?.phoneNumberId });
       
-      if (!config?.accessToken || !config?.phoneNumberId) {
-        console.error('[WhatsApp Send] WhatsApp not configured');
-        return res.status(400).json({ message: "WhatsApp not configured. Please configure in admin settings." });
+      if (!config) {
+        console.error('[WhatsApp Send] No config found in database');
+        return res.status(400).json({ message: "WhatsApp configuration not found. Please configure in admin settings." });
+      }
+
+      if (!config.accessToken?.trim() || !config.phoneNumberId?.trim()) {
+        console.error('[WhatsApp Send] Config incomplete:', { hasToken: !!config.accessToken?.trim(), hasPhoneId: !!config.phoneNumberId?.trim() });
+        return res.status(400).json({ message: `WhatsApp not configured. Missing: ${!config.accessToken?.trim() ? 'access token' : ''} ${!config.phoneNumberId?.trim() ? 'phone ID' : ''}` });
       }
 
       // Clean phone number - ensure it starts with country code
@@ -6409,8 +6414,10 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   app.get("/api/admin/whatsapp/config", requireAdminAuth, async (req, res) => {
     try {
       let config = await storage.getWhatsappConfig();
+      console.log('[WhatsApp Config] Get request - config exists:', !!config, 'has token:', !!config?.accessToken);
       if (!config) {
         config = await storage.initWhatsappConfig();
+        console.log('[WhatsApp Config] Initialized new config');
       }
       res.json({
         phoneNumberId: config.phoneNumberId || '',
@@ -6428,12 +6435,16 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   app.post("/api/admin/whatsapp/config", requireAdminAuth, async (req, res) => {
     try {
       const { phoneNumberId, businessAccountId, accessToken, isActive } = req.body;
+      console.log('[WhatsApp Config] Saving config:', { phoneNumberId: !!phoneNumberId, businessAccountId: !!businessAccountId, accessToken: !!accessToken, isActive });
+      
       const updated = await storage.updateWhatsappConfig({
         phoneNumberId,
         businessAccountId,
         accessToken,
         isActive
       });
+      
+      console.log('[WhatsApp Config] Saved successfully:', { hasToken: !!updated?.accessToken, hasPhoneId: !!updated?.phoneNumberId });
       
       if (updated) {
         res.json({ success: true, config: updated });
