@@ -206,7 +206,7 @@ export class MessagingService {
   }
 
   /**
-   * Send OTP verification code via SMS, WhatsApp (template), and Email
+   * Send OTP verification code via SMS, WhatsApp (template), and Email (CONCURRENT)
    */
   async sendOTP(phone: string, otpCode: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const enableSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
@@ -214,29 +214,23 @@ export class MessagingService {
       return { sms: false, whatsapp: false, email: false };
     }
 
+    const { mailtrapService } = await import('./mailtrap');
     const credentials = await this.getCredentials();
-    let smsResult = false;
-    let whatsappResult = false;
-    
-    if (credentials) {
-      const message = `Your verification code is ${otpCode}. Valid for 10 minutes.`;
-      smsResult = await this.sendSMS(phone, message, credentials);
-    }
-    
-    if (whatsappService.isConfigured()) {
-      whatsappResult = await whatsappService.sendOTP(phone, otpCode);
-    }
-    
-    let emailResult = false;
-    if (email) {
-      emailResult = await emailService.sendOTP(email, otpCode, userName);
-    }
+    const firstName = userName?.split(' ')[0] || 'User';
+    const lastName = userName?.split(' ').slice(1).join(' ') || '';
+
+    // Send all channels concurrently
+    const [smsResult, whatsappResult, emailResult] = await Promise.all([
+      credentials ? this.sendSMS(phone, `Your verification code is ${otpCode}. Valid for 10 minutes.`, credentials) : Promise.resolve(false),
+      whatsappService.isConfigured() ? whatsappService.sendOTP(phone, otpCode) : Promise.resolve(false),
+      email ? mailtrapService.sendOTP(email, firstName, lastName, otpCode) : Promise.resolve(false)
+    ]);
     
     return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
   }
 
   /**
-   * Send password reset code via SMS, WhatsApp (template), and Email
+   * Send password reset code via SMS, WhatsApp (template), and Email (CONCURRENT)
    */
   async sendPasswordReset(phone: string, resetCode: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const enableSetting = await storage.getSystemSetting("messaging", "enable_password_reset_messages");
@@ -244,23 +238,17 @@ export class MessagingService {
       return { sms: false, whatsapp: false, email: false };
     }
 
+    const { mailtrapService } = await import('./mailtrap');
     const credentials = await this.getCredentials();
-    let smsResult = false;
-    let whatsappResult = false;
-    
-    if (credentials) {
-      const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
-      smsResult = await this.sendSMS(phone, message, credentials);
-    }
-    
-    if (whatsappService.isConfigured()) {
-      whatsappResult = await whatsappService.sendPasswordReset(phone, resetCode);
-    }
-    
-    let emailResult = false;
-    if (email) {
-      emailResult = await emailService.sendPasswordReset(email, resetCode, userName);
-    }
+    const firstName = userName?.split(' ')[0] || 'User';
+    const lastName = userName?.split(' ').slice(1).join(' ') || '';
+
+    // Send all channels concurrently
+    const [smsResult, whatsappResult, emailResult] = await Promise.all([
+      credentials ? this.sendSMS(phone, `Your password reset code is ${resetCode}. Valid for 10 minutes.`, credentials) : Promise.resolve(false),
+      whatsappService.isConfigured() ? whatsappService.sendPasswordReset(phone, resetCode) : Promise.resolve(false),
+      email ? mailtrapService.sendPasswordReset(email, firstName, lastName, resetCode) : Promise.resolve(false)
+    ]);
     
     return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
   }

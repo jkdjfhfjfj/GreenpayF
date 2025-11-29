@@ -5910,6 +5910,102 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
+  // Get Mailtrap settings
+  app.get("/api/admin/mailtrap-settings", requireAdminAuth, async (req, res) => {
+    try {
+      const apiKeySetting = await storage.getSystemSetting("email", "mailtrap_api_key");
+      res.json({
+        apiKey: apiKeySetting?.value ? '●●●●●●●●' : '',
+        isConfigured: !!apiKeySetting?.value
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching Mailtrap settings" });
+    }
+  });
+
+  // Save Mailtrap API key
+  app.post("/api/admin/mailtrap-settings", requireAdminAuth, async (req, res) => {
+    try {
+      const { apiKey } = req.body;
+      if (!apiKey) {
+        return res.status(400).json({ message: "API key is required" });
+      }
+
+      await storage.setSystemSetting({
+        category: "email",
+        key: "mailtrap_api_key",
+        value: apiKey.trim(),
+        description: "Mailtrap API token for sending transactional emails"
+      });
+
+      const { mailtrapService } = await import('./services/mailtrap');
+      await mailtrapService.refreshApiKey();
+
+      res.json({ success: true, message: "Mailtrap API key saved successfully" });
+    } catch (error) {
+      console.error('Error saving Mailtrap settings:', error);
+      res.status(500).json({ message: "Error saving Mailtrap settings" });
+    }
+  });
+
+  // Send test email via Mailtrap
+  app.post("/api/admin/mailtrap-test", requireAdminAuth, async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const { mailtrapService } = await import('./services/mailtrap');
+      const success = await mailtrapService.sendCustomTemplate(email, 'placeholder-test', {
+        first_name: 'Test',
+        last_name: 'User'
+      });
+
+      if (success) {
+        res.json({ success: true, message: "Test email sent successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      res.status(500).json({ message: "Error sending test email" });
+    }
+  });
+
+  // Admin: Send custom template to user (multi-channel)
+  app.post("/api/admin/send-to-user", requireAdminAuth, async (req, res) => {
+    try {
+      const { userId, templateName, parameters } = req.body;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { mailtrapService } = await import('./services/mailtrap');
+      const { whatsappService } = await import('./services/whatsapp');
+      const { messagingService } = await import('./services/messaging');
+
+      // Send concurrently across all channels
+      const results = await Promise.all([
+        // Email via Mailtrap
+        user.email ? mailtrapService.sendCustomTemplate(user.email, templateName, parameters) : Promise.resolve(false),
+        // WhatsApp template
+        whatsappService.isConfigured() ? whatsappService.sendTextMessage(user.phone, JSON.stringify(parameters)) : Promise.resolve(false),
+        // SMS
+        messagingService.sendSMS(user.phone, JSON.stringify(parameters))
+      ]);
+
+      res.json({ 
+        success: results[0] || results[1] || results[2],
+        channels: { email: results[0], whatsapp: results[1], sms: results[2] }
+      });
+    } catch (error) {
+      console.error('[Admin] Send to user error:', error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
   // Send initial system info
   setTimeout(() => {
     LogStreamService.broadcast(
