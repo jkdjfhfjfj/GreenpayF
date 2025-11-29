@@ -216,6 +216,18 @@ export interface IStorage {
   // Login History operations
   createLoginHistory(history: InsertLoginHistory): Promise<LoginHistory>;
   getLoginHistoryByUserId(userId: string, limit?: number): Promise<LoginHistory[]>;
+
+  // WhatsApp operations
+  getWhatsappConversations(): Promise<WhatsappConversation[]>;
+  getWhatsappConversation(phoneNumber: string): Promise<WhatsappConversation | undefined>;
+  createWhatsappConversation(conversation: InsertWhatsappConversation): Promise<WhatsappConversation>;
+  updateWhatsappConversation(id: string, updates: Partial<WhatsappConversation>): Promise<WhatsappConversation | undefined>;
+  createWhatsappMessage(message: InsertWhatsappMessage): Promise<WhatsappMessage>;
+  getWhatsappMessages(conversationId: string): Promise<WhatsappMessage[]>;
+  updateWhatsappMessageStatus(id: string, status: string): Promise<WhatsappMessage | undefined>;
+  getWhatsappConfig(): Promise<WhatsappConfig | undefined>;
+  updateWhatsappConfig(updates: Partial<WhatsappConfig>): Promise<WhatsappConfig | undefined>;
+  initWhatsappConfig(): Promise<WhatsappConfig>;
 }
 
 export class MemStorage implements IStorage {
@@ -1895,6 +1907,65 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(loginHistory.createdAt))
       .limit(limit);
     return history;
+  }
+
+  // WhatsApp operations
+  async getWhatsappConversations(): Promise<WhatsappConversation[]> {
+    return await db.select().from(whatsappConversations).orderBy(desc(whatsappConversations.lastMessageAt));
+  }
+
+  async getWhatsappConversation(phoneNumber: string): Promise<WhatsappConversation | undefined> {
+    const [conv] = await db.select().from(whatsappConversations).where(eq(whatsappConversations.phoneNumber, phoneNumber));
+    return conv || undefined;
+  }
+
+  async createWhatsappConversation(conversation: InsertWhatsappConversation): Promise<WhatsappConversation> {
+    const [conv] = await db.insert(whatsappConversations).values(conversation).returning();
+    return conv;
+  }
+
+  async updateWhatsappConversation(id: string, updates: Partial<WhatsappConversation>): Promise<WhatsappConversation | undefined> {
+    const [conv] = await db.update(whatsappConversations).set(updates).where(eq(whatsappConversations.id, id)).returning();
+    return conv || undefined;
+  }
+
+  async createWhatsappMessage(message: InsertWhatsappMessage): Promise<WhatsappMessage> {
+    const [msg] = await db.insert(whatsappMessages).values(message).returning();
+    return msg;
+  }
+
+  async getWhatsappMessages(conversationId: string): Promise<WhatsappMessage[]> {
+    return await db.select().from(whatsappMessages).where(eq(whatsappMessages.conversationId, conversationId)).orderBy(desc(whatsappMessages.createdAt));
+  }
+
+  async updateWhatsappMessageStatus(id: string, status: string): Promise<WhatsappMessage | undefined> {
+    const [msg] = await db.update(whatsappMessages).set({ status }).where(eq(whatsappMessages.id, id)).returning();
+    return msg || undefined;
+  }
+
+  async getWhatsappConfig(): Promise<WhatsappConfig | undefined> {
+    const [config] = await db.select().from(whatsappConfig);
+    return config || undefined;
+  }
+
+  async updateWhatsappConfig(updates: Partial<WhatsappConfig>): Promise<WhatsappConfig | undefined> {
+    const [config] = await db.select().from(whatsappConfig).limit(1);
+    if (!config) return await this.initWhatsappConfig();
+    const [updated] = await db.update(whatsappConfig).set(updates).where(eq(whatsappConfig.id, config.id)).returning();
+    return updated || undefined;
+  }
+
+  async initWhatsappConfig(): Promise<WhatsappConfig> {
+    const existing = await this.getWhatsappConfig();
+    if (existing) return existing;
+    const [config] = await db.insert(whatsappConfig).values({
+      phoneNumberId: '',
+      businessAccountId: '',
+      accessToken: '',
+      verifyToken: 'greenpay_verify_token_2024',
+      isActive: false
+    }).returning();
+    return config;
   }
 }
 
