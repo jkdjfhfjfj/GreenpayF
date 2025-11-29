@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ForgotPasswordPage() {
-  const [, setLocation] = useNavigate();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [contact, setContact] = useState("");
   const [loading, setLoading] = useState(false);
