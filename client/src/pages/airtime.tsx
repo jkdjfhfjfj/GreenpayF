@@ -118,23 +118,15 @@ export default function AirtimePage() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setLocation("/dashboard")}
-              className="mr-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+              className="mr-3"
             >
               <span className="material-icons">arrow_back</span>
             </motion.button>
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="p-3 bg-white/20 backdrop-blur-sm rounded-full"
-                >
-                  <Smartphone className="w-6 h-6" />
-                </motion.div>
-                <h1 className="text-3xl font-bold">Buy Airtime</h1>
-              </div>
-              <p className="text-sm text-white/90">Instant mobile top-up for all networks</p>
+              <h1 className="text-xl font-bold flex items-center">
+                Buy Airtime
+              </h1>
+              <p className="text-sm text-white/80">Instant mobile top-up</p>
             </div>
           </div>
 
