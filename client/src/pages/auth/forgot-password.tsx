@@ -132,7 +132,7 @@ export default function ForgotPasswordPage() {
           <Button
             variant="ghost"
             className="w-full"
-            onClick={() => setLocation("/auth/login")}
+            onClick={() => setLocation("/login")}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Login
