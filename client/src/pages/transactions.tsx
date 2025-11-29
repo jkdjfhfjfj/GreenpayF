@@ -1,18 +1,35 @@
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { formatNumber, getCurrencySymbol } from "@/lib/formatters";
 import { generateTransactionPDF } from "@/lib/pdf-export";
-import { Download } from "lucide-react";
+import { Download, Mail, Filter, X } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type TransactionFilter = "all" | "sent" | "received" | "pending";
+
+interface AdvancedFilters {
+  status?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  currency?: string;
+  type?: string;
+}
 
 export default function TransactionsPage() {
   const [, setLocation] = useLocation();
   const [activeFilter, setActiveFilter] = useState<TransactionFilter>("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showEmailExport, setShowEmailExport] = useState(false);
+  const [exportEmail, setExportEmail] = useState("");
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({});
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const { data: transactionData, isLoading } = useQuery({
     queryKey: ["/api/transactions", user?.id],
@@ -22,16 +39,69 @@ export default function TransactionsPage() {
   const transactions = (transactionData as any)?.transactions || [];
 
   const filteredTransactions = transactions.filter((transaction: any) => {
+    // Basic filter
+    let basicPass = true;
     switch (activeFilter) {
       case "sent":
-        return transaction.type === "send";
+        basicPass = transaction.type === "send";
+        break;
       case "received":
-        return transaction.type === "receive";
+        basicPass = transaction.type === "receive";
+        break;
       case "pending":
-        return transaction.status === "pending";
+        basicPass = transaction.status === "pending";
+        break;
       default:
-        return true;
+        basicPass = true;
     }
+    
+    if (!basicPass) return false;
+
+    // Advanced filters
+    if (advancedFilters.status && transaction.status !== advancedFilters.status) return false;
+    if (advancedFilters.currency && transaction.currency !== advancedFilters.currency) return false;
+    if (advancedFilters.type && transaction.type !== advancedFilters.type) return false;
+    if (advancedFilters.minAmount && parseFloat(transaction.amount) < advancedFilters.minAmount) return false;
+    if (advancedFilters.maxAmount && parseFloat(transaction.amount) > advancedFilters.maxAmount) return false;
+    
+    if (advancedFilters.dateFrom) {
+      const txnDate = new Date(transaction.createdAt);
+      const filterDate = new Date(advancedFilters.dateFrom);
+      if (txnDate < filterDate) return false;
+    }
+    
+    if (advancedFilters.dateTo) {
+      const txnDate = new Date(transaction.createdAt);
+      const filterDate = new Date(advancedFilters.dateTo);
+      if (txnDate > filterDate) return false;
+    }
+    
+    return true;
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const response = await apiRequest("POST", "/api/transactions/export-email", {
+        email,
+        transactions: filteredTransactions,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Transaction report sent to your email!",
+      });
+      setShowEmailExport(false);
+      setExportEmail("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send export email",
+        variant: "destructive",
+      });
+    },
   });
 
   const getTransactionIcon = (type: string, status: string) => {
@@ -101,16 +171,37 @@ export default function TransactionsPage() {
           <div className="flex items-center space-x-2">
             <motion.button
               whileTap={{ scale: 0.95 }}
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center space-x-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors"
+              title="Advanced Filters"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-medium">Filters</span>
+            </motion.button>
+            
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowEmailExport(true)}
+              disabled={filteredTransactions.length === 0}
+              className="flex items-center space-x-1 px-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Export & Send via Email"
+            >
+              <Mail className="h-4 w-4" />
+              <span className="text-sm font-medium">Email Export</span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               onClick={() => {
-                if (transactions.length > 0) {
-                  generateTransactionPDF(transactions, {
+                if (filteredTransactions.length > 0) {
+                  generateTransactionPDF(filteredTransactions, {
                     fullName: user?.fullName,
                     email: user?.email,
                     phone: user?.phone
                   });
                 }
               }}
-              disabled={transactions.length === 0}
+              disabled={filteredTransactions.length === 0}
               className="flex items-center space-x-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="button-export-pdf"
             >
@@ -121,7 +212,7 @@ export default function TransactionsPage() {
         </div>
         
         {/* Filter Tabs */}
-        <div className="flex space-x-1 bg-muted p-1 rounded-lg">
+        <div className="flex space-x-1 bg-muted p-1 rounded-lg mb-4">
           {[
             { id: "all", label: "All" },
             { id: "sent", label: "Sent" },
@@ -142,6 +233,161 @@ export default function TransactionsPage() {
             </button>
           ))}
         </div>
+
+        {/* Advanced Filters */}
+        {showAdvancedFilters && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-muted p-4 rounded-lg space-y-3"
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold text-sm">Advanced Filters</h3>
+              <button
+                onClick={() => {
+                  setAdvancedFilters({});
+                  setShowAdvancedFilters(false);
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Clear All
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Status Filter */}
+              <select
+                value={advancedFilters.status || ""}
+                onChange={(e) => setAdvancedFilters({ ...advancedFilters, status: e.target.value || undefined })}
+                className="px-3 py-2 text-sm border rounded-md bg-background"
+              >
+                <option value="">All Status</option>
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+
+              {/* Type Filter */}
+              <select
+                value={advancedFilters.type || ""}
+                onChange={(e) => setAdvancedFilters({ ...advancedFilters, type: e.target.value || undefined })}
+                className="px-3 py-2 text-sm border rounded-md bg-background"
+              >
+                <option value="">All Types</option>
+                <option value="send">Sent</option>
+                <option value="receive">Received</option>
+                <option value="deposit">Deposit</option>
+                <option value="withdraw">Withdraw</option>
+                <option value="card_purchase">Card Purchase</option>
+              </select>
+
+              {/* Currency Filter */}
+              <select
+                value={advancedFilters.currency || ""}
+                onChange={(e) => setAdvancedFilters({ ...advancedFilters, currency: e.target.value || undefined })}
+                className="px-3 py-2 text-sm border rounded-md bg-background"
+              >
+                <option value="">All Currency</option>
+                <option value="USD">USD</option>
+                <option value="KES">KES</option>
+              </select>
+
+              {/* Min Amount */}
+              <input
+                type="number"
+                placeholder="Min Amount"
+                value={advancedFilters.minAmount || ""}
+                onChange={(e) => setAdvancedFilters({ ...advancedFilters, minAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+                className="px-3 py-2 text-sm border rounded-md bg-background"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Max Amount */}
+              <input
+                type="number"
+                placeholder="Max Amount"
+                value={advancedFilters.maxAmount || ""}
+                onChange={(e) => setAdvancedFilters({ ...advancedFilters, maxAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+                className="px-3 py-2 text-sm border rounded-md bg-background"
+              />
+
+              {/* Date From */}
+              <input
+                type="date"
+                value={advancedFilters.dateFrom || ""}
+                onChange={(e) => setAdvancedFilters({ ...advancedFilters, dateFrom: e.target.value || undefined })}
+                className="px-3 py-2 text-sm border rounded-md bg-background"
+              />
+
+              {/* Date To */}
+              <input
+                type="date"
+                value={advancedFilters.dateTo || ""}
+                onChange={(e) => setAdvancedFilters({ ...advancedFilters, dateTo: e.target.value || undefined })}
+                className="px-3 py-2 text-sm border rounded-md bg-background"
+              />
+
+              <div className="flex items-center text-xs text-muted-foreground">
+                Found: <span className="ml-1 font-semibold text-foreground">{filteredTransactions.length}</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Email Export Modal */}
+        {showEmailExport && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-blue-50 border border-blue-200 p-4 rounded-lg mt-4 space-y-3"
+          >
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-sm">Export to Email</h3>
+              <button
+                onClick={() => setShowEmailExport(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <input
+                type="email"
+                placeholder="Enter email address"
+                value={exportEmail}
+                onChange={(e) => setExportEmail(e.target.value)}
+                className="w-full px-3 py-2 text-sm border rounded-md bg-white"
+              />
+              <p className="text-xs text-muted-foreground">
+                A detailed transaction report with {filteredTransactions.length} transactions will be sent to your email
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (!exportEmail) {
+                    toast({ title: "Error", description: "Please enter an email address", variant: "destructive" });
+                    return;
+                  }
+                  exportMutation.mutate(exportEmail);
+                }}
+                disabled={exportMutation.isPending || !exportEmail}
+                className="flex-1 px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
+              >
+                {exportMutation.isPending ? "Sending..." : "Send Report"}
+              </button>
+              <button
+                onClick={() => setShowEmailExport(false)}
+                className="px-4 py-2 text-sm border rounded-md hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        )}
       </motion.div>
 
       <div className="p-6">
