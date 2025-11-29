@@ -6240,29 +6240,95 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                 let content = '';
                 let mediaUrl = '';
 
-                // Handle different message types - use direct links from webhook when available
+                // Get access token for fetching media URLs
+                const [accessTokenSetting] = await Promise.all([
+                  storage.getSystemSetting("messaging", "whatsapp_access_token")
+                ]);
+                const accessToken = accessTokenSetting?.value;
+
+                // Handle different message types
                 if (type === 'text' && message.text?.body) {
                   content = message.text.body;
-                } else if (type === 'image' && message.image) {
+                } else if (type === 'image' && message.image?.id) {
+                  const mediaId = message.image.id;
                   const caption = message.image.caption || 'Sent an image';
-                  // Use link directly from webhook (already provided by Meta)
-                  mediaUrl = message.image.link || '';
+                  // Fetch media URL from Meta API using media ID
+                  if (accessToken) {
+                    try {
+                      const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                      });
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        mediaUrl = mediaData.url || '';
+                      } else {
+                        const error = await mediaResponse.json();
+                        console.warn('[WhatsApp] Media fetch auth issue:', { status: mediaResponse.status, error: error.error?.message });
+                      }
+                    } catch (err) {
+                      console.error('[WhatsApp] Failed to fetch image URL:', err);
+                    }
+                  }
                   content = `[Image] ${caption}`;
-                  console.log('[WhatsApp] Received image:', { hasLink: !!mediaUrl, caption });
-                } else if (type === 'video' && message.video) {
+                } else if (type === 'video' && message.video?.id) {
+                  const mediaId = message.video.id;
                   const caption = message.video.caption || 'Sent a video';
-                  mediaUrl = message.video.link || '';
+                  if (accessToken) {
+                    try {
+                      const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                      });
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        mediaUrl = mediaData.url || '';
+                      } else {
+                        const error = await mediaResponse.json();
+                        console.warn('[WhatsApp] Media fetch auth issue:', { status: mediaResponse.status, error: error.error?.message });
+                      }
+                    } catch (err) {
+                      console.error('[WhatsApp] Failed to fetch video URL:', err);
+                    }
+                  }
                   content = `[Video] ${caption}`;
-                  console.log('[WhatsApp] Received video:', { hasLink: !!mediaUrl, caption });
-                } else if (type === 'file' && message.document) {
+                } else if (type === 'file' && message.document?.id) {
+                  const mediaId = message.document.id;
                   const filename = message.document.filename || 'Sent a file';
-                  mediaUrl = message.document.link || '';
+                  if (accessToken) {
+                    try {
+                      const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                      });
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        mediaUrl = mediaData.url || '';
+                      } else {
+                        const error = await mediaResponse.json();
+                        console.warn('[WhatsApp] Media fetch auth issue:', { status: mediaResponse.status, error: error.error?.message });
+                      }
+                    } catch (err) {
+                      console.error('[WhatsApp] Failed to fetch file URL:', err);
+                    }
+                  }
                   content = `[File] ${filename}`;
-                  console.log('[WhatsApp] Received file:', { hasLink: !!mediaUrl, filename });
-                } else if (type === 'audio' && message.audio) {
-                  mediaUrl = message.audio.link || '';
+                } else if (type === 'audio' && message.audio?.id) {
+                  const mediaId = message.audio.id;
+                  if (accessToken) {
+                    try {
+                      const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                      });
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        mediaUrl = mediaData.url || '';
+                      } else {
+                        const error = await mediaResponse.json();
+                        console.warn('[WhatsApp] Media fetch auth issue:', { status: mediaResponse.status, error: error.error?.message });
+                      }
+                    } catch (err) {
+                      console.error('[WhatsApp] Failed to fetch audio URL:', err);
+                    }
+                  }
                   content = '[Audio message]';
-                  console.log('[WhatsApp] Received audio:', { hasLink: !!mediaUrl });
                 } else {
                   continue; // Skip unknown types
                 }

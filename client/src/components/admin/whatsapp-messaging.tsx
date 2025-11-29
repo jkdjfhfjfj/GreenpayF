@@ -120,7 +120,7 @@ export default function WhatsAppMessaging() {
           throw new Error(`Upload failed: ${uploadResponse.status}`);
         }
         const uploadData = await uploadResponse.json();
-        mediaUrl = uploadData.url;
+        mediaUrl = uploadData.fileUrl || uploadData.url;
         mediaType = mediaFile.type.startsWith('image/') ? 'image' : 
                    mediaFile.type.startsWith('video/') ? 'video' : 'file';
         console.log('[WhatsApp] Media uploaded:', { mediaUrl, mediaType });
