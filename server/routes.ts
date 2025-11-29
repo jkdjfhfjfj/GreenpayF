@@ -6402,10 +6402,14 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   await storage.createWhatsappMessage({
                     conversationId: conversation.id,
                     phoneNumber,
-                    content: mediaUrl ? `${content}\n${mediaUrl}` : content,
+                    content: content,
                     isFromAdmin: false,
                     status: 'received',
-                    messageId: message.id
+                    messageId: message.id,
+                    messageType: messageType,
+                    fileUrl: mediaUrl || undefined,
+                    fileName: fileName || undefined,
+                    fileSize: fileSize || undefined
                   });
 
                   console.log(`[WhatsApp] Received ${type} message from ${phoneNumber}: ${content}`, mediaUrl ? `URL: ${mediaUrl}` : '');
