@@ -9,6 +9,7 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
+import { fileTypeFromBuffer } from 'file-type';
 import { whatsappService } from "./services/whatsapp";
 import { createExchangeRateService } from "./services/exchange-rate";
 import { payHeroService } from "./services/payhero";
@@ -6284,14 +6285,21 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                           // Download from Meta and upload to Cloudinary
                           const imgResponse = await fetch(downloadUrl);
                           const buffer = await imgResponse.arrayBuffer();
+                          const bufferObj = Buffer.from(buffer);
+                          
+                          // Detect actual MIME type from file content
+                          const fileTypeInfo = await fileTypeFromBuffer(bufferObj);
+                          const actualMimeType = fileTypeInfo?.mime || 'image/jpeg';
+                          const ext = fileTypeInfo?.ext || 'jpg';
+                          
                           mediaUrl = await cloudinaryStorage.uploadChatFile(
-                            Buffer.from(buffer),
-                            `whatsapp-image-${mediaId}.jpg`,
-                            'image/jpeg'
+                            bufferObj,
+                            `whatsapp-image-${mediaId}.${ext}`,
+                            actualMimeType
                           );
-                          fileName = `whatsapp-image-${mediaId}.jpg`;
+                          fileName = `whatsapp-image-${mediaId}.${ext}`;
                           fileSize = buffer.byteLength;
-                          console.log('[WhatsApp] Image stored in Cloudinary:', { mediaUrl, size: fileSize });
+                          console.log('[WhatsApp] Image stored in Cloudinary:', { mediaUrl, size: fileSize, mimeType: actualMimeType });
                         }
                       }
                     } catch (err) {
@@ -6314,13 +6322,21 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                         if (downloadUrl) {
                           const vidResponse = await fetch(downloadUrl);
                           const buffer = await vidResponse.arrayBuffer();
+                          const bufferObj = Buffer.from(buffer);
+                          
+                          // Detect actual MIME type from file content
+                          const fileTypeInfo = await fileTypeFromBuffer(bufferObj);
+                          const actualMimeType = fileTypeInfo?.mime || 'video/mp4';
+                          const ext = fileTypeInfo?.ext || 'mp4';
+                          
                           mediaUrl = await cloudinaryStorage.uploadChatFile(
-                            Buffer.from(buffer),
-                            `whatsapp-video-${mediaId}.mp4`,
-                            'video/mp4'
+                            bufferObj,
+                            `whatsapp-video-${mediaId}.${ext}`,
+                            actualMimeType
                           );
-                          fileName = `whatsapp-video-${mediaId}.mp4`;
+                          fileName = `whatsapp-video-${mediaId}.${ext}`;
                           fileSize = buffer.byteLength;
+                          console.log('[WhatsApp] Video stored in Cloudinary:', { mediaUrl, size: fileSize, mimeType: actualMimeType });
                         }
                       }
                     } catch (err) {
