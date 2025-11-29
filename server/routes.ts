@@ -5047,17 +5047,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fee: '0'
       });
 
-      // Send notifications to both users
-      const { messagingService } = await import('./services/messaging');
+      // Calculate new balances
+      const senderNewBalance = senderBalance - transferAmount;
       
-      // Send SMS/WhatsApp to sender
-      messagingService.sendMessage(
-        fromUser.phone,
-        `You sent $${transferAmount} to ${toUser.fullName}. Your new balance: $${(senderBalance - transferAmount).toFixed(2)}`
-      ).catch(err => console.error('Notification error:', err));
-
-      // Send SMS/WhatsApp to recipient
-      const recipientNewBalance = (senderTransactions.reduce((balance, txn) => {
+      // Get recipient's transactions to calculate their new balance correctly
+      const recipientTransactions = await storage.getTransactionsByUserId(toUserId);
+      const recipientBalance = recipientTransactions.reduce((balance, txn) => {
         if (txn.status === 'completed') {
           if (txn.type === 'receive' || txn.type === 'deposit') {
             return balance + parseFloat(txn.amount);
@@ -5066,11 +5061,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         return balance;
-      }, parseFloat(toUser.balance || '0')) + transferAmount).toFixed(2);
+      }, parseFloat(toUser.balance || '0'));
+      
+      const recipientNewBalance = recipientBalance + transferAmount;
 
+      // UPDATE BALANCES IN DATABASE
+      console.log('[Transfer] Updating balances - Sender:', senderNewBalance, 'Recipient:', recipientNewBalance);
+      await storage.updateUser(fromUserId, { balance: senderNewBalance.toFixed(2) });
+      await storage.updateUser(toUserId, { balance: recipientNewBalance.toFixed(2) });
+
+      // Send notifications to both users
+      const { messagingService } = await import('./services/messaging');
+      
+      // Send SMS/WhatsApp to sender
+      messagingService.sendMessage(
+        fromUser.phone,
+        `You sent $${transferAmount} to ${toUser.fullName}. Your new balance: $${senderNewBalance.toFixed(2)}`
+      ).catch(err => console.error('Notification error:', err));
+
+      // Send SMS/WhatsApp to recipient
       messagingService.sendMessage(
         toUser.phone,
-        `You received $${transferAmount} from ${fromUser.fullName}. Your new balance: $${recipientNewBalance}`
+        `You received $${transferAmount} from ${fromUser.fullName}. Your new balance: $${recipientNewBalance.toFixed(2)}`
       ).catch(err => console.error('Notification error:', err));
 
       console.log(`[Transfer] Completed: $${transferAmount} from ${fromUser.fullName} (${fromUserId}) to ${toUser.fullName} (${toUserId})`);
@@ -5079,8 +5091,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         transferId,
         message: "Transfer completed successfully",
-        senderNewBalance: (senderBalance - transferAmount).toFixed(2),
-        recipientNewBalance: recipientNewBalance
+        senderNewBalance: senderNewBalance.toFixed(2),
+        recipientNewBalance: recipientNewBalance.toFixed(2)
       });
     } catch (error) {
       console.error('Transfer error:', error);
