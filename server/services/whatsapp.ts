@@ -536,6 +536,127 @@ export class WhatsAppService {
   generateOTP(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
+
+  /**
+   * Create WhatsApp template via Meta API
+   * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/message-templates
+   */
+  async createTemplate(templateName: string, category: string, content: any): Promise<boolean> {
+    try {
+      if (!this.accessToken) {
+        console.error('[WhatsApp] ✗ Cannot create template - access token not configured');
+        return false;
+      }
+
+      // Get WhatsApp Business Account ID from database
+      const wabaIdSetting = await storage.getSystemSetting("messaging", "whatsapp_business_account_id");
+      if (!wabaIdSetting?.value) {
+        console.error('[WhatsApp] ✗ WhatsApp Business Account ID not configured');
+        return false;
+      }
+
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaIdSetting.value}/message_templates`;
+
+      const payload = {
+        name: templateName,
+        language: 'en_US',
+        category: category,
+        components: content
+      };
+
+      console.log(`[WhatsApp] Creating template "${templateName}"...`);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.id) {
+        console.log(`[WhatsApp] ✓ Template "${templateName}" created successfully (ID: ${responseData.id})`);
+        return true;
+      } else {
+        console.error(`[WhatsApp] ✗ Template creation failed: ${responseData.error?.message || 'Unknown error'}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error creating template:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Create all required WhatsApp templates
+   */
+  async createAllTemplates(): Promise<{ success: string[]; failed: string[] }> {
+    const results = { success: [], failed: [] };
+
+    // OTP Verification template
+    const otpSuccess = await this.createTemplate('otp_verification', 'TRANSACTIONAL', [
+      {
+        type: 'BODY',
+        text: 'Your verification code is {{1}}. Valid for 10 minutes.'
+      }
+    ]);
+    if (otpSuccess) results.success.push('otp_verification');
+    else results.failed.push('otp_verification');
+
+    // Password Reset template
+    const pwdSuccess = await this.createTemplate('password_reset', 'TRANSACTIONAL', [
+      {
+        type: 'BODY',
+        text: 'Your password reset code is {{1}}. Valid for 10 minutes.'
+      }
+    ]);
+    if (pwdSuccess) results.success.push('password_reset');
+    else results.failed.push('password_reset');
+
+    // KYC Verified template
+    const kycSuccess = await this.createTemplate('kyc_verified', 'TRANSACTIONAL', [
+      {
+        type: 'BODY',
+        text: 'Congratulations! Your account has been verified. You can now enjoy all GreenPay features.'
+      }
+    ]);
+    if (kycSuccess) results.success.push('kyc_verified');
+    else results.failed.push('kyc_verified');
+
+    // Card Activation template
+    const cardSuccess = await this.createTemplate('card_activation', 'TRANSACTIONAL', [
+      {
+        type: 'BODY',
+        text: 'Your virtual card ending in {{1}} has been activated and is ready to use.'
+      }
+    ]);
+    if (cardSuccess) results.success.push('card_activation');
+    else results.failed.push('card_activation');
+
+    // Fund Receipt template
+    const fundSuccess = await this.createTemplate('fund_receipt', 'TRANSACTIONAL', [
+      {
+        type: 'BODY',
+        text: 'You have received {{1}}{{2}} from {{3}}. Your new balance is available in your wallet.'
+      }
+    ]);
+    if (fundSuccess) results.success.push('fund_receipt');
+    else results.failed.push('fund_receipt');
+
+    // Login Alert template
+    const loginSuccess = await this.createTemplate('login_alert', 'TRANSACTIONAL', [
+      {
+        type: 'BODY',
+        text: 'New login detected on your account from {{1}} ({{2}}). If this wasn\'t you, please secure your account immediately.'
+      }
+    ]);
+    if (loginSuccess) results.success.push('login_alert');
+    else results.failed.push('login_alert');
+
+    return results;
+  }
 }
 
 export const whatsappService = new WhatsAppService();
