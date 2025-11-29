@@ -6243,6 +6243,11 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                 ]);
                 const accessToken = accessTokenSetting?.value;
                 
+                if (!accessToken) {
+                  console.log('[WhatsApp] Skipping media fetch - no access token configured');
+                  continue;
+                }
+                
                 let content = '';
                 let mediaUrl = '';
 
@@ -6258,8 +6263,13 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                       headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
-                    mediaUrl = mediaData.url || '';
-                    content = `[Image] ${caption}`;
+                    if (mediaData.error) {
+                      console.error('[WhatsApp] Media API error:', { error: mediaData.error, mediaId });
+                      content = `[Image] ${caption}`;
+                    } else {
+                      mediaUrl = mediaData.url || '';
+                      content = `[Image] ${caption}`;
+                    }
                   } catch (err) {
                     console.error('[WhatsApp] Failed to fetch image URL:', err);
                     content = `[Image] ${caption}`;
@@ -6272,8 +6282,13 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                       headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
-                    mediaUrl = mediaData.url || '';
-                    content = `[Video] ${caption}`;
+                    if (mediaData.error) {
+                      console.error('[WhatsApp] Media API error:', { error: mediaData.error, mediaId });
+                      content = `[Video] ${caption}`;
+                    } else {
+                      mediaUrl = mediaData.url || '';
+                      content = `[Video] ${caption}`;
+                    }
                   } catch (err) {
                     console.error('[WhatsApp] Failed to fetch video URL:', err);
                     content = `[Video] ${caption}`;
@@ -6286,8 +6301,13 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                       headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
-                    mediaUrl = mediaData.url || '';
-                    content = `[File] ${filename}`;
+                    if (mediaData.error) {
+                      console.error('[WhatsApp] Media API error:', { error: mediaData.error, mediaId });
+                      content = `[File] ${filename}`;
+                    } else {
+                      mediaUrl = mediaData.url || '';
+                      content = `[File] ${filename}`;
+                    }
                   } catch (err) {
                     console.error('[WhatsApp] Failed to fetch file URL:', err);
                     content = `[File] ${filename}`;
@@ -6299,8 +6319,13 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                       headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
-                    mediaUrl = mediaData.url || '';
-                    content = '[Audio message]';
+                    if (mediaData.error) {
+                      console.error('[WhatsApp] Media API error:', { error: mediaData.error, mediaId });
+                      content = '[Audio message]';
+                    } else {
+                      mediaUrl = mediaData.url || '';
+                      content = '[Audio message]';
+                    }
                   } catch (err) {
                     console.error('[WhatsApp] Failed to fetch audio URL:', err);
                     content = '[Audio message]';
@@ -6389,11 +6414,11 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       ]);
 
       const accessToken = accessTokenSetting?.value;
-      const phoneNumberId = phoneIdSetting?.value;
+      const phoneNumberId = String(phoneIdSetting?.value || '').trim();
       
       console.log('[WhatsApp Send] Credentials retrieved:', { hasToken: !!accessToken, hasPhoneId: !!phoneNumberId });
       
-      if (!accessToken?.trim() || !phoneNumberId?.trim()) {
+      if (!accessToken?.trim() || !phoneNumberId) {
         console.error('[WhatsApp Send] Credentials incomplete');
         return res.status(400).json({ message: "WhatsApp not configured in Messaging Settings. Please configure credentials first." });
       }
