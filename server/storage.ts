@@ -37,6 +37,12 @@ import {
   type InsertQRPayment,
   type LoginHistory,
   type InsertLoginHistory,
+  type WhatsappConversation,
+  type InsertWhatsappConversation,
+  type WhatsappMessage,
+  type InsertWhatsappMessage,
+  type WhatsappConfig,
+  type InsertWhatsappConfig,
   users,
   kycDocuments,
   virtualCards,
@@ -59,6 +65,9 @@ import {
   budgets,
   userPreferences,
   loginHistory,
+  whatsappConversations,
+  whatsappMessages,
+  whatsappConfig,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";

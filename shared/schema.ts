@@ -468,6 +468,39 @@ export const loginHistory = pgTable("login_history", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const whatsappConversations = pgTable("whatsapp_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phoneNumber: text("phone_number").notNull().unique(),
+  displayName: text("display_name"),
+  lastMessageAt: timestamp("last_message_at"),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const whatsappMessages = pgTable("whatsapp_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").references(() => whatsappConversations.id, { onDelete: "cascade" }).notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  content: text("content").notNull(),
+  isFromAdmin: boolean("is_from_admin").default(false),
+  status: text("status").default("sent"),
+  messageId: text("message_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const whatsappConfig = pgTable("whatsapp_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phoneNumberId: text("phone_number_id").notNull(),
+  businessAccountId: text("business_account_id").notNull(),
+  accessToken: text("access_token").notNull(),
+  verifyToken: text("verify_token").notNull().default("greenpay_verify_token_2024"),
+  webhookUrl: text("webhook_url"),
+  isActive: boolean("is_active").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas for new tables
 export const insertSavingsGoalSchema = createInsertSchema(savingsGoals).omit({
   id: true,
@@ -508,6 +541,23 @@ export const insertLoginHistorySchema = createInsertSchema(loginHistory).omit({
   createdAt: true,
 });
 
+export const insertWhatsappConversationSchema = createInsertSchema(whatsappConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWhatsappMessageSchema = createInsertSchema(whatsappMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWhatsappConfigSchema = createInsertSchema(whatsappConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types for new tables
 export type SavingsGoal = typeof savingsGoals.$inferSelect;
 export type InsertSavingsGoal = z.infer<typeof insertSavingsGoalSchema>;
@@ -521,3 +571,9 @@ export type UserPreferences = typeof userPreferences.$inferSelect;
 export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
 export type LoginHistory = typeof loginHistory.$inferSelect;
 export type InsertLoginHistory = z.infer<typeof insertLoginHistorySchema>;
+export type WhatsappConversation = typeof whatsappConversations.$inferSelect;
+export type InsertWhatsappConversation = z.infer<typeof insertWhatsappConversationSchema>;
+export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
+export type InsertWhatsappMessage = z.infer<typeof insertWhatsappMessageSchema>;
+export type WhatsappConfig = typeof whatsappConfig.$inferSelect;
+export type InsertWhatsappConfig = z.infer<typeof insertWhatsappConfigSchema>;
