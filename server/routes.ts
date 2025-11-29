@@ -5055,6 +5055,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(fromUserId, { balance: senderNewBalance.toFixed(2) });
       await storage.updateUser(toUserId, { balance: recipientNewBalance.toFixed(2) });
 
+      // Send email to recipient with fund receipt
+      const { EmailService } = await import('./services/email');
+      const emailService = new EmailService();
+      const transactionDate = new Date().toISOString();
+      
+      emailService.sendFundReceipt(
+        toUser.email,
+        amount,
+        currency,
+        fromUser.fullName,
+        toUser.fullName
+      ).then(success => {
+        if (success) {
+          console.log(`✅ Fund receipt email sent to ${toUser.email} - Transaction ID: ${recipientTransaction.id}, Sender: ${fromUser.fullName}, Amount: ${amount} ${currency}, Date: ${transactionDate}`);
+        } else {
+          console.warn(`⚠️ Failed to send fund receipt email to ${toUser.email}`);
+        }
+      }).catch(err => {
+        console.error('Email sending error:', err);
+      });
+
       // Send notifications to both users
       const { messagingService } = await import('./services/messaging');
       
