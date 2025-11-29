@@ -652,10 +652,7 @@ export class WhatsAppService {
     const cardSuccess = await this.createTemplate('card_activation', 'UTILITY', [
       {
         type: 'BODY',
-        text: 'Your virtual card ending in {{1}} has been activated and is ready to use.',
-        example: {
-          body_text: [['4242']]
-        }
+        text: 'Your virtual card ending in {{1}} has been activated and is ready to use.'
       }
     ]);
     if (cardSuccess) results.success.push('card_activation');
@@ -665,10 +662,7 @@ export class WhatsAppService {
     const fundSuccess = await this.createTemplate('fund_receipt', 'UTILITY', [
       {
         type: 'BODY',
-        text: 'You have received {{1}}{{2}} from {{3}}. Your new balance is available in your wallet.',
-        example: {
-          body_text: [['USD', '100.00', 'John Doe']]
-        }
+        text: 'You have received {{1}} {{2}} from {{3}}. Your new balance is available in your wallet.'
       }
     ]);
     if (fundSuccess) results.success.push('fund_receipt');
@@ -678,10 +672,7 @@ export class WhatsAppService {
     const loginSuccess = await this.createTemplate('login_alert', 'UTILITY', [
       {
         type: 'BODY',
-        text: 'New login detected on your account from {{1}} ({{2}}). If this wasn\'t you, please secure your account immediately.',
-        example: {
-          body_text: [['Nairobi, Kenya', '197.89.23.45']]
-        }
+        text: 'New login detected on your account from {{1}} ({{2}}). If this wasn\'t you, please secure your account immediately.'
       }
     ]);
     if (loginSuccess) results.success.push('login_alert');
