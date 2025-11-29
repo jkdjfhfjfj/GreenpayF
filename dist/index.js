@@ -3257,6 +3257,7 @@ var init_whatsapp = __esm({
        * Create all required WhatsApp templates via Meta API
        */
       async createAllTemplates() {
+        await this.refreshCredentials();
         const results = { success: [], failed: [] };
         const otpSuccess = await this.createTemplate("otp", "TRANSACTIONAL", [
           {
