@@ -152,8 +152,9 @@ export default function MessagingSettings() {
     return 160 - total;
   };
 
-  const isSmsConfigured = !!(settings.apiKey && settings.accountEmail && settings.senderId);
-  const isWhatsAppConfigured = !!(settings.whatsappAccessToken && settings.whatsappPhoneNumberId);
+  const isSmsConfigured = !!(settings.apiKey?.trim() && settings.accountEmail?.trim() && settings.senderId?.trim());
+  const isWhatsAppConfigured = !!(settings.whatsappAccessToken?.trim() && settings.whatsappPhoneNumberId?.trim());
+  const isAnyChannelConfigured = isSmsConfigured || isWhatsAppConfigured;
 
   return (
     <div className="space-y-6">
@@ -165,12 +166,18 @@ export default function MessagingSettings() {
         <div className="flex gap-2">
           <Badge variant={isSmsConfigured ? "default" : "outline"} className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />
-            SMS: {isSmsConfigured ? 'Configured' : 'Not Set'}
+            SMS: {isSmsConfigured ? '✓ Configured' : 'Not Set'}
           </Badge>
           <Badge variant={isWhatsAppConfigured ? "default" : "outline"} className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />
-            WhatsApp: {isWhatsAppConfigured ? 'Configured' : 'Not Set'}
+            WhatsApp: {isWhatsAppConfigured ? '✓ Configured' : 'Not Set'}
           </Badge>
+          {isAnyChannelConfigured && (
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              Messaging Ready
+            </Badge>
+          )}
         </div>
       </div>
 

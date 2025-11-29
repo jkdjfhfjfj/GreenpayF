@@ -4272,8 +4272,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accountEmail: emailSetting?.value || "",
         senderId: senderIdSetting?.value || "",
         whatsappAccessToken: whatsappAccessTokenSetting?.value || "",
-        whatsappPhoneNumberId: whatsappPhoneNumberIdSetting?.value || "",
+        whatsappPhoneNumberId: String(whatsappPhoneNumberIdSetting?.value || ""),
       };
+      
+      console.log('[Messaging Settings] Retrieved:', {
+        sms: !!settings.apiKey && !!settings.accountEmail && !!settings.senderId,
+        whatsapp: !!settings.whatsappAccessToken && !!settings.whatsappPhoneNumberId
+      });
       
       res.json(settings);
     } catch (error) {
@@ -4328,6 +4333,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update WhatsApp service with new credentials
       process.env.WHATSAPP_ACCESS_TOKEN = (whatsappAccessToken || '').trim();
       process.env.WHATSAPP_PHONE_NUMBER_ID = String(whatsappPhoneNumberId || '').trim();
+      
+      console.log('[Messaging Settings] Updated:', {
+        sms: !!apiKey && !!accountEmail && !!senderId,
+        whatsapp: !!whatsappAccessToken && !!whatsappPhoneNumberId
+      });
       
       res.json({ 
         success: true, 
