@@ -8,6 +8,13 @@ import { Mail, Send, AlertCircle, Loader2, CheckCircle, Save, Plus, Trash2 } fro
 import { apiRequest } from "@/lib/queryClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+interface User {
+  id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
 export default function MailManagement() {
   const { toast } = useToast();
   const [mailtrapApiKey, setMailtrapApiKey] = useState("");
@@ -23,7 +30,9 @@ export default function MailManagement() {
   const [sendingTestTemplate, setSendingTestTemplate] = useState(false);
   
   // Send to user state
-  const [userId, setUserId] = useState("");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [templateUuid, setTemplateUuid] = useState("");
   const [userParams, setUserParams] = useState<Record<string, string>>({});
   const [sendingToUser, setSendingToUser] = useState(false);
@@ -34,6 +43,7 @@ export default function MailManagement() {
 
   useEffect(() => {
     loadMailtrapSettings();
+    loadUsers();
   }, []);
 
   const loadMailtrapSettings = async () => {
@@ -45,6 +55,21 @@ export default function MailManagement() {
       }
     } catch (error) {
       console.error('Error loading Mailtrap settings:', error);
+    }
+  };
+
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await apiRequest('GET', '/api/admin/users-list');
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -202,10 +227,10 @@ export default function MailManagement() {
   };
 
   const handleSendToUser = async () => {
-    if (!userId.trim() || !templateUuid.trim()) {
+    if (!selectedUser?.id || !templateUuid.trim()) {
       toast({
         title: "Validation Error",
-        description: "User ID and template UUID are required",
+        description: "Please select a user and provide a template UUID",
         variant: "destructive",
       });
       return;
@@ -214,7 +239,7 @@ export default function MailManagement() {
     setSendingToUser(true);
     try {
       const response = await apiRequest('POST', '/api/admin/send-template-to-user', {
-        userId: userId.trim(),
+        userId: selectedUser.id,
         templateUuid: templateUuid.trim(),
         parameters: userParams
       });
@@ -222,9 +247,9 @@ export default function MailManagement() {
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Template sent to user successfully across all channels",
+          description: "Template email sent to user successfully",
         });
-        setUserId("");
+        setSelectedUser(null);
         setTemplateUuid("");
         setUserParams({});
       } else {
@@ -426,38 +451,60 @@ export default function MailManagement() {
             </CardContent>
           </Card>
 
-          {/* Send to User Card */}
+          {/* Send to User Card - EMAIL ONLY */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="w-5 h-5" />
-                Send Template to User (Multi-Channel)
+                Send Email Template to User
               </CardTitle>
               <CardDescription>
-                Send a Mailtrap template to a specific user via Email, SMS, and WhatsApp
+                Send a Mailtrap template to a specific user via email
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="user-id">User ID *</Label>
-                  <Input
-                    id="user-id"
-                    placeholder="e.g., user_123abc"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="user-select">Select User *</Label>
+                {loadingUsers ? (
+                  <div className="p-3 bg-gray-50 rounded border text-sm text-gray-600">
+                    Loading users...
+                  </div>
+                ) : (
+                  <select
+                    id="user-select"
+                    value={selectedUser?.id || ""}
+                    onChange={(e) => {
+                      const user = users.find(u => u.id === e.target.value);
+                      setSelectedUser(user || null);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">-- Select a user --</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name || 'Unknown'} ({user.email || user.phone || 'No contact'})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="template-uuid">Template UUID *</Label>
-                  <Input
-                    id="template-uuid"
-                    placeholder="e.g., 64254a5b-a2ba-4b7d-aa41-5a0907c836db"
-                    value={templateUuid}
-                    onChange={(e) => setTemplateUuid(e.target.value)}
-                  />
+              {selectedUser && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                  <p className="text-sm text-blue-900">
+                    <span className="font-semibold">Selected:</span> {selectedUser.name || 'Unknown'} ({selectedUser.email})
+                  </p>
                 </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="template-uuid">Template UUID *</Label>
+                <Input
+                  id="template-uuid"
+                  placeholder="e.g., 64254a5b-a2ba-4b7d-aa41-5a0907c836db"
+                  value={templateUuid}
+                  onChange={(e) => setTemplateUuid(e.target.value)}
+                />
               </div>
 
               <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
@@ -504,16 +551,9 @@ export default function MailManagement() {
                 )}
               </div>
 
-              <Alert className="border-blue-200 bg-blue-50">
-                <AlertCircle className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800">
-                  Message will be sent via Email (Mailtrap), SMS, and WhatsApp simultaneously
-                </AlertDescription>
-              </Alert>
-
               <Button
                 onClick={handleSendToUser}
-                disabled={sendingToUser}
+                disabled={sendingToUser || !selectedUser}
                 className="w-full bg-green-600 hover:bg-green-700"
               >
                 {sendingToUser ? (
@@ -524,7 +564,7 @@ export default function MailManagement() {
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Send to User
+                    Send Email
                   </>
                 )}
               </Button>
