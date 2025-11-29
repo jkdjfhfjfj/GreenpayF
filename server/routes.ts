@@ -6254,7 +6254,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   const mediaId = message.image.id;
                   const caption = message.image.caption || 'Sent an image';
                   try {
-                    const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
+                    const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
                       headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
@@ -6268,7 +6268,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   const mediaId = message.video.id;
                   const caption = message.video.caption || 'Sent a video';
                   try {
-                    const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
+                    const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
                       headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
@@ -6282,7 +6282,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                   const mediaId = message.document.id;
                   const filename = message.document.filename || 'Sent a file';
                   try {
-                    const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
+                    const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
                       headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
@@ -6295,7 +6295,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                 } else if (type === 'audio' && message.audio?.id) {
                   const mediaId = message.audio.id;
                   try {
-                    const mediaResponse = await fetch(`https://graph.instagram.com/v18.0/${mediaId}?fields=url`, {
+                    const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
                       headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     const mediaData = await mediaResponse.json();
@@ -6402,7 +6402,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       const cleanPhone = phoneNumber.replace(/\D/g, '');
       const finalPhone = cleanPhone.startsWith('254') ? cleanPhone : '254' + cleanPhone.slice(-9);
       
-      const apiUrl = `https://graph.instagram.com/v18.0/${phoneNumberId}/messages`;
+      const apiUrl = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
       let payload: any = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
