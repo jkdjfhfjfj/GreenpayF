@@ -111,7 +111,6 @@ export default function MessagingSettings() {
     try {
       const response = await apiRequest('PUT', '/api/admin/message-toggles', toggles);
       if (response.ok) {
-        await loadSettings();
         toast({
           title: "Toggles Updated",
           description: "Message types have been updated successfully.",
@@ -125,6 +124,8 @@ export default function MessagingSettings() {
         description: "Failed to update message toggles. Please try again.",
         variant: "destructive",
       });
+      // Reload settings on error to restore previous state
+      await loadSettings();
     } finally {
       setLoading(false);
     }
