@@ -6237,99 +6237,32 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                 const phoneNumber = change.value?.contacts?.[0]?.wa_id;
                 const type = message.type; // text, image, video, file, audio
                 
-                // Get credentials from messaging settings
-                const [accessTokenSetting] = await Promise.all([
-                  storage.getSystemSetting("messaging", "whatsapp_access_token")
-                ]);
-                const accessToken = accessTokenSetting?.value;
-                
-                if (!accessToken) {
-                  console.log('[WhatsApp] Skipping media fetch - no access token configured');
-                  continue;
-                }
-                
                 let content = '';
                 let mediaUrl = '';
 
-                // Handle different message types
+                // Handle different message types - use direct links from webhook when available
                 if (type === 'text' && message.text?.body) {
                   content = message.text.body;
-                } else if (type === 'image' && message.image?.id) {
-                  // Fetch media URL from Meta API
-                  const mediaId = message.image.id;
+                } else if (type === 'image' && message.image) {
                   const caption = message.image.caption || 'Sent an image';
-                  try {
-                    const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
-                      headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                    const mediaData = await mediaResponse.json();
-                    if (mediaData.error) {
-                      console.error('[WhatsApp] Media API error:', { error: mediaData.error, mediaId });
-                      content = `[Image] ${caption}`;
-                    } else {
-                      mediaUrl = mediaData.url || '';
-                      content = `[Image] ${caption}`;
-                    }
-                  } catch (err) {
-                    console.error('[WhatsApp] Failed to fetch image URL:', err);
-                    content = `[Image] ${caption}`;
-                  }
-                } else if (type === 'video' && message.video?.id) {
-                  const mediaId = message.video.id;
+                  // Use link directly from webhook (already provided by Meta)
+                  mediaUrl = message.image.link || '';
+                  content = `[Image] ${caption}`;
+                  console.log('[WhatsApp] Received image:', { hasLink: !!mediaUrl, caption });
+                } else if (type === 'video' && message.video) {
                   const caption = message.video.caption || 'Sent a video';
-                  try {
-                    const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
-                      headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                    const mediaData = await mediaResponse.json();
-                    if (mediaData.error) {
-                      console.error('[WhatsApp] Media API error:', { error: mediaData.error, mediaId });
-                      content = `[Video] ${caption}`;
-                    } else {
-                      mediaUrl = mediaData.url || '';
-                      content = `[Video] ${caption}`;
-                    }
-                  } catch (err) {
-                    console.error('[WhatsApp] Failed to fetch video URL:', err);
-                    content = `[Video] ${caption}`;
-                  }
-                } else if (type === 'file' && message.document?.id) {
-                  const mediaId = message.document.id;
+                  mediaUrl = message.video.link || '';
+                  content = `[Video] ${caption}`;
+                  console.log('[WhatsApp] Received video:', { hasLink: !!mediaUrl, caption });
+                } else if (type === 'file' && message.document) {
                   const filename = message.document.filename || 'Sent a file';
-                  try {
-                    const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
-                      headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                    const mediaData = await mediaResponse.json();
-                    if (mediaData.error) {
-                      console.error('[WhatsApp] Media API error:', { error: mediaData.error, mediaId });
-                      content = `[File] ${filename}`;
-                    } else {
-                      mediaUrl = mediaData.url || '';
-                      content = `[File] ${filename}`;
-                    }
-                  } catch (err) {
-                    console.error('[WhatsApp] Failed to fetch file URL:', err);
-                    content = `[File] ${filename}`;
-                  }
-                } else if (type === 'audio' && message.audio?.id) {
-                  const mediaId = message.audio.id;
-                  try {
-                    const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
-                      headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                    const mediaData = await mediaResponse.json();
-                    if (mediaData.error) {
-                      console.error('[WhatsApp] Media API error:', { error: mediaData.error, mediaId });
-                      content = '[Audio message]';
-                    } else {
-                      mediaUrl = mediaData.url || '';
-                      content = '[Audio message]';
-                    }
-                  } catch (err) {
-                    console.error('[WhatsApp] Failed to fetch audio URL:', err);
-                    content = '[Audio message]';
-                  }
+                  mediaUrl = message.document.link || '';
+                  content = `[File] ${filename}`;
+                  console.log('[WhatsApp] Received file:', { hasLink: !!mediaUrl, filename });
+                } else if (type === 'audio' && message.audio) {
+                  mediaUrl = message.audio.link || '';
+                  content = '[Audio message]';
+                  console.log('[WhatsApp] Received audio:', { hasLink: !!mediaUrl });
                 } else {
                   continue; // Skip unknown types
                 }

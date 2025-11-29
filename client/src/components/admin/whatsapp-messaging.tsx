@@ -116,15 +116,19 @@ export default function WhatsAppMessaging() {
       
       try {
         const uploadResponse = await apiRequest("POST", "/api/upload", formData);
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.status}`);
+        }
         const uploadData = await uploadResponse.json();
         mediaUrl = uploadData.url;
         mediaType = mediaFile.type.startsWith('image/') ? 'image' : 
                    mediaFile.type.startsWith('video/') ? 'video' : 'file';
         console.log('[WhatsApp] Media uploaded:', { mediaUrl, mediaType });
-      } catch (err) {
+      } catch (err: any) {
+        console.error('[WhatsApp] Media upload error:', err);
         toast({
           title: "Error",
-          description: "Failed to upload media file",
+          description: err.message || "Failed to upload media file",
           variant: "destructive",
         });
         return;
@@ -238,7 +242,7 @@ export default function WhatsAppMessaging() {
                   {messages.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">No messages yet</div>
                   ) : (
-                    messages.map(msg => {
+                    [...messages].reverse().map(msg => {
                       // Parse media URLs from message content
                       const urlRegex = /(https?:\/\/[^\s\n]+)/g;
                       const urls = msg.content.match(urlRegex) || [];
