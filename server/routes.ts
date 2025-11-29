@@ -878,36 +878,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.session as any)?.userId;
       const adminId = (req.session as any)?.admin?.id;
       
+      console.log('[Upload] Request received:', { hasFile: !!req.file, userId, adminId });
+      
       if (!userId && !adminId) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
       if (!req.file) {
+        console.error('[Upload] No file in request');
         return res.status(400).json({ message: "No file uploaded" });
       }
 
+      console.log('[Upload] File details:', { 
+        filename: req.file.originalname, 
+        size: req.file.size, 
+        mimetype: req.file.mimetype,
+        hasBuffer: !!req.file.buffer
+      });
+
       // Upload to Cloudinary
       try {
-        const fileUrl = await cloudinaryStorage.uploadChatFile(
+        const url = await cloudinaryStorage.uploadChatFile(
           req.file.buffer,
           req.file.originalname,
           req.file.mimetype
         );
         
+        console.log('[Upload] Successfully uploaded to Cloudinary:', { url });
+        
         res.json({ 
-          fileUrl,
+          url,
+          fileUrl: url,
           fileName: req.file.originalname,
           fileSize: req.file.size,
           mimeType: req.file.mimetype,
           message: "File uploaded successfully"
         });
       } catch (uploadError) {
-        console.error('❌ Object storage upload error:', uploadError);
-        return res.status(500).json({ message: "Failed to upload file to storage" });
+        console.error('[Upload] Cloudinary upload error:', uploadError);
+        return res.status(500).json({ message: "Failed to upload file to storage", error: String(uploadError) });
       }
     } catch (error) {
-      console.error('File upload error:', error);
-      res.status(500).json({ message: "Failed to upload file" });
+      console.error('[Upload] Request error:', error);
+      res.status(500).json({ message: "Failed to upload file", error: String(error) });
     }
   });
 
@@ -6246,27 +6259,35 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                 ]);
                 const accessToken = accessTokenSetting?.value;
 
-                // Handle different message types
+                // Handle different message types - download to Cloudinary
                 if (type === 'text' && message.text?.body) {
                   content = message.text.body;
                 } else if (type === 'image' && message.image?.id) {
                   const mediaId = message.image.id;
                   const caption = message.image.caption || 'Sent an image';
-                  // Fetch media URL from Meta API using media ID
                   if (accessToken) {
                     try {
+                      // Fetch download URL from Meta
                       const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                       });
                       if (mediaResponse.ok) {
                         const mediaData = await mediaResponse.json();
-                        mediaUrl = mediaData.url || '';
-                      } else {
-                        const error = await mediaResponse.json();
-                        console.warn('[WhatsApp] Media fetch auth issue:', { status: mediaResponse.status, error: error.error?.message });
+                        const downloadUrl = mediaData.url;
+                        if (downloadUrl) {
+                          // Download from Meta and upload to Cloudinary
+                          const imgResponse = await fetch(downloadUrl);
+                          const buffer = await imgResponse.arrayBuffer();
+                          mediaUrl = await cloudinaryStorage.uploadChatFile(
+                            Buffer.from(buffer),
+                            `whatsapp-image-${mediaId}.jpg`,
+                            'image/jpeg'
+                          );
+                          console.log('[WhatsApp] Image stored in Cloudinary:', { mediaUrl });
+                        }
                       }
                     } catch (err) {
-                      console.error('[WhatsApp] Failed to fetch image URL:', err);
+                      console.error('[WhatsApp] Failed to process image:', err);
                     }
                   }
                   content = `[Image] ${caption}`;
@@ -6280,19 +6301,25 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                       });
                       if (mediaResponse.ok) {
                         const mediaData = await mediaResponse.json();
-                        mediaUrl = mediaData.url || '';
-                      } else {
-                        const error = await mediaResponse.json();
-                        console.warn('[WhatsApp] Media fetch auth issue:', { status: mediaResponse.status, error: error.error?.message });
+                        const downloadUrl = mediaData.url;
+                        if (downloadUrl) {
+                          const vidResponse = await fetch(downloadUrl);
+                          const buffer = await vidResponse.arrayBuffer();
+                          mediaUrl = await cloudinaryStorage.uploadChatFile(
+                            Buffer.from(buffer),
+                            `whatsapp-video-${mediaId}.mp4`,
+                            'video/mp4'
+                          );
+                        }
                       }
                     } catch (err) {
-                      console.error('[WhatsApp] Failed to fetch video URL:', err);
+                      console.error('[WhatsApp] Failed to process video:', err);
                     }
                   }
                   content = `[Video] ${caption}`;
                 } else if (type === 'file' && message.document?.id) {
                   const mediaId = message.document.id;
-                  const filename = message.document.filename || 'Sent a file';
+                  const filename = message.document.filename || 'document';
                   if (accessToken) {
                     try {
                       const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
@@ -6300,13 +6327,19 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                       });
                       if (mediaResponse.ok) {
                         const mediaData = await mediaResponse.json();
-                        mediaUrl = mediaData.url || '';
-                      } else {
-                        const error = await mediaResponse.json();
-                        console.warn('[WhatsApp] Media fetch auth issue:', { status: mediaResponse.status, error: error.error?.message });
+                        const downloadUrl = mediaData.url;
+                        if (downloadUrl) {
+                          const fileResponse = await fetch(downloadUrl);
+                          const buffer = await fileResponse.arrayBuffer();
+                          mediaUrl = await cloudinaryStorage.uploadChatFile(
+                            Buffer.from(buffer),
+                            filename,
+                            'application/octet-stream'
+                          );
+                        }
                       }
                     } catch (err) {
-                      console.error('[WhatsApp] Failed to fetch file URL:', err);
+                      console.error('[WhatsApp] Failed to process file:', err);
                     }
                   }
                   content = `[File] ${filename}`;
@@ -6319,13 +6352,19 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                       });
                       if (mediaResponse.ok) {
                         const mediaData = await mediaResponse.json();
-                        mediaUrl = mediaData.url || '';
-                      } else {
-                        const error = await mediaResponse.json();
-                        console.warn('[WhatsApp] Media fetch auth issue:', { status: mediaResponse.status, error: error.error?.message });
+                        const downloadUrl = mediaData.url;
+                        if (downloadUrl) {
+                          const audioResponse = await fetch(downloadUrl);
+                          const buffer = await audioResponse.arrayBuffer();
+                          mediaUrl = await cloudinaryStorage.uploadChatFile(
+                            Buffer.from(buffer),
+                            `whatsapp-audio-${mediaId}.ogg`,
+                            'audio/ogg'
+                          );
+                        }
                       }
                     } catch (err) {
-                      console.error('[WhatsApp] Failed to fetch audio URL:', err);
+                      console.error('[WhatsApp] Failed to process audio:', err);
                     }
                   }
                   content = '[Audio message]';
