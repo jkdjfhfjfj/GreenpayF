@@ -2853,6 +2853,15 @@ var init_whatsapp = __esm({
         try {
           const formattedPhone = this.formatPhoneNumber(phoneNumber);
           const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          console.log("[WhatsApp] Sending message with token:", {
+            tokenType: typeof this.accessToken,
+            tokenLength: this.accessToken?.length,
+            tokenFirstChars: this.accessToken?.substring(0, 20),
+            tokenLastChars: this.accessToken?.substring(this.accessToken.length - 20),
+            phoneNumberId: this.phoneNumberId,
+            url,
+            formattedPhone
+          });
           const payload = {
             messaging_product: "whatsapp",
             to: formattedPhone,
@@ -2861,10 +2870,13 @@ var init_whatsapp = __esm({
               body: message
             }
           };
+          const authHeader = `Bearer ${this.accessToken}`;
+          console.log("[WhatsApp] Auth header length:", authHeader.length);
+          console.log("[WhatsApp] Auth header first 50 chars:", authHeader.substring(0, 50));
           const response = await fetch6(url, {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${this.accessToken}`,
+              "Authorization": authHeader,
               "Content-Type": "application/json"
             },
             body: JSON.stringify(payload)
