@@ -5055,17 +5055,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(fromUserId, { balance: senderNewBalance.toFixed(2) });
       await storage.updateUser(toUserId, { balance: recipientNewBalance.toFixed(2) });
 
-      // Send email to recipient with fund receipt
-      const { EmailService } = await import('./services/email');
-      const emailService = new EmailService();
+      // Send email to recipient with fund receipt using Mailtrap
+      const { MailtrapService } = await import('./services/mailtrap');
+      const mailtrapService = new MailtrapService();
       const transactionDate = new Date().toISOString();
       
-      emailService.sendFundReceipt(
+      mailtrapService.sendTemplate(
         toUser.email,
-        amount,
-        currency,
-        fromUser.fullName,
-        toUser.fullName
+        '5e2a2ec4-37fb-4178-96c4-598977065f9c',
+        {
+          sender: fromUser.fullName,
+          amount: amount,
+          currency: currency,
+          date: transactionDate,
+          transaction_id: recipientTransaction.id
+        }
       ).then(success => {
         if (success) {
           console.log(`✅ Fund receipt email sent to ${toUser.email} - Transaction ID: ${recipientTransaction.id}, Sender: ${fromUser.fullName}, Amount: ${amount} ${currency}, Date: ${transactionDate}`);
