@@ -1829,75 +1829,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Inter-account transfer route (NEW)
-  app.post("/api/transfer", async (req, res) => {
-    try {
-      const { fromUserId, toUserId, amount, currency, description } = transferSchema.parse(req.body);
-      
-      const fromUser = await storage.getUser(fromUserId);
-      const toUser = await storage.getUser(toUserId);
-      
-      if (!fromUser || !toUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Check balance
-      const currentBalance = parseFloat(fromUser.balance || "0");
-      const transferAmount = parseFloat(amount);
-      
-      if (currentBalance < transferAmount) {
-        return res.status(400).json({ message: "Insufficient balance" });
-      }
-
-      // Create transactions for both users
-      const sendTransaction = await storage.createTransaction({
-        userId: fromUserId,
-        type: "send",
-        amount,
-        currency,
-        recipientId: toUserId,
-        recipientDetails: { name: toUser.fullName, id: toUserId },
-        status: "completed",
-        fee: "0.00",
-        description: description || `Transfer to ${toUser.fullName}`
-      });
-
-      const receiveTransaction = await storage.createTransaction({
-        userId: toUserId,
-        type: "receive",
-        amount,
-        currency,
-        recipientId: fromUserId,
-        recipientDetails: { name: fromUser.fullName, id: fromUserId },
-        status: "completed",
-        fee: "0.00",
-        description: description || `Transfer from ${fromUser.fullName}`
-      });
-
-      // Update balances
-      await storage.updateUser(fromUserId, { 
-        balance: (currentBalance - transferAmount).toFixed(2) 
-      });
-      
-      const toBalance = parseFloat(toUser.balance || "0");
-      await storage.updateUser(toUserId, { 
-        balance: (toBalance + transferAmount).toFixed(2) 
-      });
-
-      // Send notifications
-      await notificationService.sendTransactionNotification(fromUserId, sendTransaction);
-      await notificationService.sendTransactionNotification(toUserId, receiveTransaction);
-      
-      res.json({ 
-        sendTransaction, 
-        receiveTransaction, 
-        message: "Transfer completed successfully" 
-      });
-    } catch (error) {
-      console.error('Transfer error:', error);
-      res.status(400).json({ message: "Transfer failed" });
-    }
-  });
 
   // Real-time Transaction routes
   app.post("/api/transactions/send", async (req, res) => {
@@ -5007,8 +4938,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User-to-user transfer endpoint
-  app.post("/api/transfer", async (req, res) => {
+  // User-to-user transfer endpoint with real-time balance updates
+  app.post("/api/transfer", requireAuth, async (req, res) => {
     try {
       const { fromUserId, toUserId, amount, currency, description } = req.body;
       
@@ -5029,7 +4960,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check sender's balance
+      // Check sender's balance using real-time calculation
       const senderTransactions = await storage.getTransactionsByUserId(fromUserId);
       const senderBalance = senderTransactions.reduce((balance, txn) => {
         if (txn.status === 'completed') {
@@ -5052,45 +4983,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transferId = storage.generateTransactionReference();
 
       // Sender transaction (debit)
-      const senderTransaction = {
-        id: storage.generateTransactionReference(),
+      const senderTransaction = await storage.createTransaction({
         userId: fromUserId,
-        type: 'send' as const,
+        type: 'send',
         amount: amount,
         currency: currency,
-        status: 'completed' as const,
+        status: 'completed',
         description: description || `Transfer to ${toUser.fullName}`,
         recipient: toUser.fullName,
         recipientEmail: toUser.email,
         transferId: transferId,
-        createdAt: now,
-        fee: '0' // Free transfers between GreenPay users
-      };
+        fee: '0'
+      });
 
       // Recipient transaction (credit)
-      const recipientTransaction = {
-        id: storage.generateTransactionReference(),
+      const recipientTransaction = await storage.createTransaction({
         userId: toUserId,
-        type: 'receive' as const,
+        type: 'receive',
         amount: amount,
         currency: currency,
-        status: 'completed' as const,
+        status: 'completed',
         description: description || `Transfer from ${fromUser.fullName}`,
         sender: fromUser.fullName,
         senderEmail: fromUser.email,
         transferId: transferId,
-        createdAt: now,
         fee: '0'
-      };
+      });
 
-      // Save both transactions
-      await storage.createTransaction(senderTransaction);
-      await storage.createTransaction(recipientTransaction);
+      // Send notifications to both users
+      const { messagingService } = await import('./services/messaging');
+      
+      // Send SMS/WhatsApp to sender
+      messagingService.sendMessage(
+        fromUser.phone,
+        `You sent $${transferAmount} to ${toUser.fullName}. Your new balance: $${(senderBalance - transferAmount).toFixed(2)}`
+      ).catch(err => console.error('Notification error:', err));
+
+      // Send SMS/WhatsApp to recipient
+      const recipientNewBalance = (senderTransactions.reduce((balance, txn) => {
+        if (txn.status === 'completed') {
+          if (txn.type === 'receive' || txn.type === 'deposit') {
+            return balance + parseFloat(txn.amount);
+          } else if (txn.type === 'send' || txn.type === 'withdraw') {
+            return balance - parseFloat(txn.amount) - parseFloat(txn.fee || '0');
+          }
+        }
+        return balance;
+      }, parseFloat(toUser.balance || '0')) + transferAmount).toFixed(2);
+
+      messagingService.sendMessage(
+        toUser.phone,
+        `You received $${transferAmount} from ${fromUser.fullName}. Your new balance: $${recipientNewBalance}`
+      ).catch(err => console.error('Notification error:', err));
+
+      console.log(`[Transfer] Completed: $${transferAmount} from ${fromUser.fullName} (${fromUserId}) to ${toUser.fullName} (${toUserId})`);
 
       res.json({ 
         success: true, 
         transferId,
-        message: "Transfer completed successfully" 
+        message: "Transfer completed successfully",
+        senderNewBalance: (senderBalance - transferAmount).toFixed(2),
+        recipientNewBalance: recipientNewBalance
       });
     } catch (error) {
       console.error('Transfer error:', error);
