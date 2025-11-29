@@ -22,6 +22,15 @@ interface MessagingSettings {
   whatsappPhoneNumberId: string;
 }
 
+interface MessageToggles {
+  enableOtpMessages: boolean;
+  enablePasswordResetMessages: boolean;
+  enableFundReceiptMessages: boolean;
+  enableKycVerifiedMessages: boolean;
+  enableCardActivationMessages: boolean;
+  enableLoginAlertMessages: boolean;
+}
+
 interface User {
   id: string;
   fullName: string;
@@ -36,6 +45,14 @@ export default function MessagingSettings() {
     senderId: "",
     whatsappAccessToken: "",
     whatsappPhoneNumberId: ""
+  });
+  const [toggles, setToggles] = useState<MessageToggles>({
+    enableOtpMessages: true,
+    enablePasswordResetMessages: true,
+    enableFundReceiptMessages: true,
+    enableKycVerifiedMessages: true,
+    enableCardActivationMessages: true,
+    enableLoginAlertMessages: true
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -58,20 +75,53 @@ export default function MessagingSettings() {
   const loadSettings = async () => {
     setInitialLoading(true);
     try {
-      const response = await apiRequest('GET', '/api/admin/messaging-settings');
-      if (response.ok) {
-        const data = await response.json();
+      const [settingsResponse, togglesResponse] = await Promise.all([
+        apiRequest('GET', '/api/admin/messaging-settings'),
+        apiRequest('GET', '/api/admin/message-toggles')
+      ]);
+      
+      if (settingsResponse.ok) {
+        const data = await settingsResponse.json();
         setSettings(data);
       }
+      
+      if (togglesResponse.ok) {
+        const data = await togglesResponse.json();
+        setToggles(data);
+      }
     } catch (error) {
-      console.error('Error loading messaging settings:', error);
+      console.error('Error loading settings:', error);
       toast({
         title: "Loading Failed",
-        description: "Failed to load messaging settings. Using default values.",
+        description: "Failed to load settings. Using default values.",
         variant: "destructive",
       });
     } finally {
       setInitialLoading(false);
+    }
+  };
+
+  const handleSaveToggles = async () => {
+    setLoading(true);
+    try {
+      const response = await apiRequest('PUT', '/api/admin/message-toggles', toggles);
+      if (response.ok) {
+        await loadSettings();
+        toast({
+          title: "Toggles Updated",
+          description: "Message types have been updated successfully.",
+        });
+      } else {
+        throw new Error('Failed to update toggles');
+      }
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update message toggles. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -382,6 +432,54 @@ export default function MessagingSettings() {
         </CardContent>
       </Card>
 
+      {/* Message Type Toggles */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Message Type Controls
+          </CardTitle>
+          <CardDescription>
+            Enable or disable specific message types sent to users
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'enableOtpMessages', label: 'OTP Verification', desc: 'Login/signup verification codes' },
+                { key: 'enablePasswordResetMessages', label: 'Password Reset', desc: 'Password reset codes' },
+                { key: 'enableFundReceiptMessages', label: 'Fund Receipt', desc: 'Money received notifications' },
+                { key: 'enableKycVerifiedMessages', label: 'KYC Verified', desc: 'Account verification complete' },
+                { key: 'enableCardActivationMessages', label: 'Card Activation', desc: 'Virtual card activated' },
+                { key: 'enableLoginAlertMessages', label: 'Login Alert', desc: 'New login notifications with location/IP' }
+              ].map(item => (
+                <div key={item.key} className="flex items-start justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  <div>
+                    <p className="font-medium text-gray-900">{item.label}</p>
+                    <p className="text-sm text-gray-600">{item.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => setToggles(prev => ({ ...prev, [item.key]: !prev[item.key as keyof MessageToggles] }))}
+                    className={`ml-4 px-3 py-1 rounded-full text-sm font-medium transition ${
+                      toggles[item.key as keyof MessageToggles]
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {toggles[item.key as keyof MessageToggles] ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <Button onClick={handleSaveToggles} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? 'Saving...' : 'Save Message Toggles'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Automatic Notifications Info */}
       <Card>
         <CardHeader>
@@ -390,7 +488,7 @@ export default function MessagingSettings() {
             Automatic Notifications
           </CardTitle>
           <CardDescription>
-            Messages are automatically sent for the following events
+            Messages are automatically sent for the following events (when enabled above)
           </CardDescription>
         </CardHeader>
         <CardContent>
