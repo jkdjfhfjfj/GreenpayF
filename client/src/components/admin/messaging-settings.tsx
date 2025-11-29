@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
-import { MessageSquare, Save, Send, CheckCircle, Settings, AlertCircle } from "lucide-react";
+import { MessageSquare, Save, Send, CheckCircle, Settings, AlertCircle, Tabs, TabsContent, TabsList, TabsTrigger } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import WhatsAppTemplates from './whatsapp-templates';
 
 interface MessagingSettings {
   // SMS Settings (TalkNTalk)

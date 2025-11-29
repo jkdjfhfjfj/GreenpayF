@@ -3203,6 +3203,13 @@ var init_whatsapp = __esm({
         return Math.floor(1e5 + Math.random() * 9e5).toString();
       }
       /**
+       * Get WhatsApp Business Account ID from database or env
+       */
+      async getWabaId() {
+        const wabaIdSetting = await storage.getSystemSetting("messaging", "whatsapp_business_account_id");
+        return wabaIdSetting?.value ? String(wabaIdSetting.value).trim() : process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || "";
+      }
+      /**
        * Create WhatsApp template via Meta API
        * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/message-templates
        */
@@ -3212,12 +3219,12 @@ var init_whatsapp = __esm({
             console.error("[WhatsApp] \u2717 Cannot create template - access token not configured");
             return false;
           }
-          const wabaIdSetting = await storage.getSystemSetting("messaging", "whatsapp_business_account_id");
-          if (!wabaIdSetting?.value) {
+          const wabaId = await this.getWabaId();
+          if (!wabaId) {
             console.error("[WhatsApp] \u2717 WhatsApp Business Account ID not configured");
             return false;
           }
-          const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaIdSetting.value}/message_templates`;
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates`;
           const payload = {
             name: templateName,
             language: "en_US",
@@ -3325,6 +3332,42 @@ var init_whatsapp = __esm({
         if (loginSuccess) results.success.push("login_alert");
         else results.failed.push("login_alert");
         return results;
+      }
+      /**
+       * Fetch all templates from Meta Business Account
+       */
+      async fetchTemplatesFromMeta() {
+        try {
+          if (!this.accessToken) {
+            console.error("[WhatsApp] \u2717 Cannot fetch templates - access token not configured");
+            return [];
+          }
+          const wabaId = await this.getWabaId();
+          if (!wabaId) {
+            console.error("[WhatsApp] \u2717 WhatsApp Business Account ID not configured");
+            return [];
+          }
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates?fields=name,status,language,category`;
+          console.log(`[WhatsApp] Fetching templates from Meta...`);
+          const response = await fetch6(url, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            }
+          });
+          const responseData = await response.json();
+          if (response.ok && responseData.data) {
+            console.log(`[WhatsApp] \u2713 Found ${responseData.data.length} templates`);
+            return responseData.data;
+          } else {
+            console.error(`[WhatsApp] \u2717 Failed to fetch templates: ${responseData.error?.message || "Unknown error"}`);
+            return [];
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error fetching templates:", error);
+          return [];
+        }
       }
     };
     whatsappService = new WhatsAppService();
@@ -7877,16 +7920,19 @@ async function registerRoutes(app2) {
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
       const whatsappAccessTokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
       const whatsappPhoneNumberIdSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
+      const whatsappWabaIdSetting = await storage.getSystemSetting("messaging", "whatsapp_business_account_id");
       const settings = {
         apiKey: apiKeySetting?.value || "",
         accountEmail: emailSetting?.value || "",
         senderId: senderIdSetting?.value || "",
         whatsappAccessToken: whatsappAccessTokenSetting?.value || "",
-        whatsappPhoneNumberId: String(whatsappPhoneNumberIdSetting?.value || "")
+        whatsappPhoneNumberId: String(whatsappPhoneNumberIdSetting?.value || ""),
+        whatsappBusinessAccountId: String(whatsappWabaIdSetting?.value || "")
       };
       console.log("[Messaging Settings] Retrieved:", {
         sms: !!settings.apiKey && !!settings.accountEmail && !!settings.senderId,
-        whatsapp: !!settings.whatsappAccessToken && !!settings.whatsappPhoneNumberId
+        whatsapp: !!settings.whatsappAccessToken && !!settings.whatsappPhoneNumberId,
+        wabaId: !!settings.whatsappBusinessAccountId
       });
       res.json(settings);
     } catch (error) {
@@ -7896,7 +7942,7 @@ async function registerRoutes(app2) {
   });
   app2.put("/api/admin/messaging-settings", async (req, res) => {
     try {
-      const { apiKey, accountEmail, senderId, whatsappAccessToken, whatsappPhoneNumberId } = req.body;
+      const { apiKey, accountEmail, senderId, whatsappAccessToken, whatsappPhoneNumberId, whatsappBusinessAccountId } = req.body;
       console.log("Admin updated messaging settings (SMS via TalkNTalk, WhatsApp via Meta)");
       await storage.setSystemSetting({
         category: "messaging",
@@ -7928,11 +7974,19 @@ async function registerRoutes(app2) {
         value: String(whatsappPhoneNumberId || "").trim(),
         description: "Meta WhatsApp Business phone number ID"
       });
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "whatsapp_business_account_id",
+        value: String(whatsappBusinessAccountId || "").trim(),
+        description: "Meta WhatsApp Business Account ID (WABA ID)"
+      });
       process.env.WHATSAPP_ACCESS_TOKEN = (whatsappAccessToken || "").trim();
       process.env.WHATSAPP_PHONE_NUMBER_ID = String(whatsappPhoneNumberId || "").trim();
+      process.env.WHATSAPP_BUSINESS_ACCOUNT_ID = String(whatsappBusinessAccountId || "").trim();
       console.log("[Messaging Settings] Updated:", {
         sms: !!apiKey && !!accountEmail && !!senderId,
-        whatsapp: !!whatsappAccessToken && !!whatsappPhoneNumberId
+        whatsapp: !!whatsappAccessToken && !!whatsappPhoneNumberId,
+        wabaId: !!whatsappBusinessAccountId
       });
       res.json({
         success: true,
@@ -8032,6 +8086,24 @@ async function registerRoutes(app2) {
       console.error("[Admin] Create templates error:", error);
       res.status(500).json({
         message: "Failed to create templates",
+        error: String(error),
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+  });
+  app2.get("/api/admin/whatsapp/templates", requireAdminAuth, async (req, res) => {
+    try {
+      const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+      const templates = await whatsappService2.fetchTemplatesFromMeta();
+      res.json({
+        templates,
+        count: templates.length,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    } catch (error) {
+      console.error("[Admin] Fetch templates error:", error);
+      res.status(500).json({
+        message: "Failed to fetch templates from Meta",
         error: String(error),
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });

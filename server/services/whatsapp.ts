@@ -551,6 +551,14 @@ export class WhatsAppService {
   }
 
   /**
+   * Get WhatsApp Business Account ID from database or env
+   */
+  private async getWabaId(): Promise<string> {
+    const wabaIdSetting = await storage.getSystemSetting("messaging", "whatsapp_business_account_id");
+    return wabaIdSetting?.value ? String(wabaIdSetting.value).trim() : (process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '');
+  }
+
+  /**
    * Create WhatsApp template via Meta API
    * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/message-templates
    */
@@ -561,14 +569,13 @@ export class WhatsAppService {
         return false;
       }
 
-      // Get WhatsApp Business Account ID from database
-      const wabaIdSetting = await storage.getSystemSetting("messaging", "whatsapp_business_account_id");
-      if (!wabaIdSetting?.value) {
+      const wabaId = await this.getWabaId();
+      if (!wabaId) {
         console.error('[WhatsApp] ✗ WhatsApp Business Account ID not configured');
         return false;
       }
 
-      const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaIdSetting.value}/message_templates`;
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates`;
 
       const payload = {
         name: templateName,
@@ -694,6 +701,48 @@ export class WhatsAppService {
     else results.failed.push('login_alert');
 
     return results;
+  }
+
+  /**
+   * Fetch all templates from Meta Business Account
+   */
+  async fetchTemplatesFromMeta(): Promise<any[]> {
+    try {
+      if (!this.accessToken) {
+        console.error('[WhatsApp] ✗ Cannot fetch templates - access token not configured');
+        return [];
+      }
+
+      const wabaId = await this.getWabaId();
+      if (!wabaId) {
+        console.error('[WhatsApp] ✗ WhatsApp Business Account ID not configured');
+        return [];
+      }
+
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates?fields=name,status,language,category`;
+
+      console.log(`[WhatsApp] Fetching templates from Meta...`);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.data) {
+        console.log(`[WhatsApp] ✓ Found ${responseData.data.length} templates`);
+        return responseData.data;
+      } else {
+        console.error(`[WhatsApp] ✗ Failed to fetch templates: ${responseData.error?.message || 'Unknown error'}`);
+        return [];
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error fetching templates:', error);
+      return [];
+    }
   }
 }
 

@@ -4289,6 +4289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
       const whatsappAccessTokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
       const whatsappPhoneNumberIdSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
+      const whatsappWabaIdSetting = await storage.getSystemSetting("messaging", "whatsapp_business_account_id");
       
       const settings = {
         apiKey: apiKeySetting?.value || "",
@@ -4296,11 +4297,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         senderId: senderIdSetting?.value || "",
         whatsappAccessToken: whatsappAccessTokenSetting?.value || "",
         whatsappPhoneNumberId: String(whatsappPhoneNumberIdSetting?.value || ""),
+        whatsappBusinessAccountId: String(whatsappWabaIdSetting?.value || ""),
       };
       
       console.log('[Messaging Settings] Retrieved:', {
         sms: !!settings.apiKey && !!settings.accountEmail && !!settings.senderId,
-        whatsapp: !!settings.whatsappAccessToken && !!settings.whatsappPhoneNumberId
+        whatsapp: !!settings.whatsappAccessToken && !!settings.whatsappPhoneNumberId,
+        wabaId: !!settings.whatsappBusinessAccountId
       });
       
       res.json(settings);
@@ -4312,7 +4315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/messaging-settings", async (req, res) => {
     try {
-      const { apiKey, accountEmail, senderId, whatsappAccessToken, whatsappPhoneNumberId } = req.body;
+      const { apiKey, accountEmail, senderId, whatsappAccessToken, whatsappPhoneNumberId, whatsappBusinessAccountId } = req.body;
       
       console.log('Admin updated messaging settings (SMS via TalkNTalk, WhatsApp via Meta)');
       
@@ -4352,14 +4355,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         value: String(whatsappPhoneNumberId || '').trim(),
         description: "Meta WhatsApp Business phone number ID"
       });
+
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "whatsapp_business_account_id",
+        value: String(whatsappBusinessAccountId || '').trim(),
+        description: "Meta WhatsApp Business Account ID (WABA ID)"
+      });
       
       // Update WhatsApp service with new credentials
       process.env.WHATSAPP_ACCESS_TOKEN = (whatsappAccessToken || '').trim();
       process.env.WHATSAPP_PHONE_NUMBER_ID = String(whatsappPhoneNumberId || '').trim();
+      process.env.WHATSAPP_BUSINESS_ACCOUNT_ID = String(whatsappBusinessAccountId || '').trim();
       
       console.log('[Messaging Settings] Updated:', {
         sms: !!apiKey && !!accountEmail && !!senderId,
-        whatsapp: !!whatsappAccessToken && !!whatsappPhoneNumberId
+        whatsapp: !!whatsappAccessToken && !!whatsappPhoneNumberId,
+        wabaId: !!whatsappBusinessAccountId
       });
       
       res.json({ 
@@ -4477,6 +4489,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Admin] Create templates error:', error);
       res.status(500).json({ 
         message: "Failed to create templates",
+        error: String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Fetch templates from Meta
+  app.get("/api/admin/whatsapp/templates", requireAdminAuth, async (req, res) => {
+    try {
+      const { whatsappService } = await import('./services/whatsapp');
+      const templates = await whatsappService.fetchTemplatesFromMeta();
+      
+      res.json({
+        templates: templates,
+        count: templates.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('[Admin] Fetch templates error:', error);
+      res.status(500).json({ 
+        message: "Failed to fetch templates from Meta",
         error: String(error),
         timestamp: new Date().toISOString()
       });
