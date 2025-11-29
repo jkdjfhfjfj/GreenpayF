@@ -493,7 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Forgot password - Send reset code
+  // Forgot password - Send reset code (by phone)
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
       const { phone } = req.body;
@@ -544,6 +544,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Forgot password error:', error);
       res.status(500).json({ message: "Failed to send reset code" });
+    }
+  });
+
+  // Forgot password - Send reset code (by email)
+  app.post("/api/auth/forgot-password-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email.toLowerCase().trim());
+      
+      if (!user) {
+        return res.status(404).json({ message: "No account found with this email address" });
+      }
+
+      // Generate reset code (6-digit OTP)
+      const { messagingService } = await import('./services/messaging');
+      const resetCode = messagingService.generateOTP();
+      const resetExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      // Store reset code in user's OTP field
+      await storage.updateUserOtp(user.id, resetCode, resetExpiry);
+      
+      const { mailtrapService } = await import('./services/mailtrap');
+      
+      // Send reset code via SMS, WhatsApp, and Email concurrently
+      const [smsWhatsappResult, emailResult] = await Promise.all([
+        messagingService.sendPasswordReset(user.phone, resetCode),
+        user.email ? mailtrapService.sendPasswordReset(user.email, user.firstName || 'User', user.lastName || '', resetCode) : Promise.resolve(false)
+      ]);
+      
+      const result = { ...smsWhatsappResult, email: emailResult };
+      
+      if (!result.sms && !result.whatsapp && !result.email) {
+        return res.status(500).json({ message: "Failed to send reset code" });
+      }
+      
+      const sentMethods = [];
+      if (result.sms) sentMethods.push('SMS');
+      if (result.whatsapp) sentMethods.push('WhatsApp');
+      if (result.email) sentMethods.push('Email');
+      
+      res.json({ 
+        email: user.email,
+        sentVia: sentMethods.join(', ')
+      });
+    } catch (error) {
+      console.error('Forgot password by email error:', error);
+      res.status(500).json({ message: "Failed to send reset code" });
+    }
+  });
+
+  // Reset password - Verify code and update password (works with both phone and email)
+  app.post("/api/auth/reset-password-email", async (req, res) => {
+    try {
+      const { email, code, newPassword } = req.body;
+      
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ message: "Email, code, and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email.toLowerCase().trim());
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify reset code
+      const isValid = await storage.verifyUserOtp(user.id, code);
+      
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      
+      // Update password
+      await storage.updateUserPassword(user.id, hashedPassword);
+      
+      // Clear OTP
+      await storage.updateUserOtp(user.id, null, null);
+      
+      const { mailtrapService } = await import('./services/mailtrap');
+      
+      // Send confirmation email
+      Promise.all([
+        messagingService.sendMessage(
+          user.phone,
+          "Your password has been reset successfully. You can now log in with your new password."
+        ),
+        user.email ? mailtrapService.sendTemplate(user.email, '7711c72e-431b-4fb9-bea9-9738d4d8bfe7', {
+          first_name: user.firstName || 'User',
+          last_name: user.lastName || '',
+          message: 'Your password has been reset successfully. You can now log in.'
+        }) : Promise.resolve(false)
+      ]).catch(err => console.error('Password reset notification error:', err));
+      
+      res.json({ 
+        success: true,
+        message: "Password reset successful" 
+      });
+    } catch (error) {
+      console.error('Reset password by email error:', error);
+      res.status(500).json({ message: "Failed to reset password" });
     }
   });
 
@@ -6038,7 +6152,9 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       const users = await storage.getAllUsers();
       const formattedUsers = users.map((user: any) => ({
         id: user.id,
-        name: user.name,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
         email: user.email,
         phone: user.phone
       }));

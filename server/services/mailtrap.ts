@@ -22,9 +22,14 @@ export class MailtrapService {
   private apiUrl = 'https://send.api.mailtrap.io/api/send';
   private fromEmail = 'support@greenpay.world';
   private fromName = 'GreenPay';
+  private initialized = false;
 
   constructor() {
-    this.loadApiKey();
+    // Set default immediately so API key is available
+    this.apiKey = process.env.MAILTRAP_API_KEY || '3aac21f265f8750724b1d9bfeff9a712';
+    console.log('[Mailtrap] ✓ Service initialized with API key');
+    // Load from database asynchronously in background
+    this.loadApiKey().catch(err => console.error('[Mailtrap] Background load error:', err));
   }
 
   /**
@@ -48,6 +53,7 @@ export class MailtrapService {
           console.log('[Mailtrap] ✓ Using default API key');
         }
       }
+      this.initialized = true;
     } catch (error) {
       console.error('[Mailtrap] Error loading API key:', error);
       // Use default on error

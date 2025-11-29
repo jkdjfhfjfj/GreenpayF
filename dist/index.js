@@ -3379,8 +3379,11 @@ var init_mailtrap = __esm({
       apiUrl = "https://send.api.mailtrap.io/api/send";
       fromEmail = "support@greenpay.world";
       fromName = "GreenPay";
+      initialized = false;
       constructor() {
-        this.loadApiKey();
+        this.apiKey = process.env.MAILTRAP_API_KEY || "3aac21f265f8750724b1d9bfeff9a712";
+        console.log("[Mailtrap] \u2713 Service initialized with API key");
+        this.loadApiKey().catch((err) => console.error("[Mailtrap] Background load error:", err));
       }
       /**
        * Load Mailtrap API key from database or environment
@@ -3400,6 +3403,7 @@ var init_mailtrap = __esm({
               console.log("[Mailtrap] \u2713 Using default API key");
             }
           }
+          this.initialized = true;
         } catch (error) {
           console.error("[Mailtrap] Error loading API key:", error);
           this.apiKey = process.env.MAILTRAP_API_KEY || "3aac21f265f8750724b1d9bfeff9a712";
@@ -3528,10 +3532,10 @@ var init_mailtrap = __esm({
 var messaging_exports = {};
 __export(messaging_exports, {
   MessagingService: () => MessagingService,
-  messagingService: () => messagingService
+  messagingService: () => messagingService2
 });
 import fetch8 from "node-fetch";
-var MessagingService, messagingService;
+var MessagingService, messagingService2;
 var init_messaging = __esm({
   "server/services/messaging.ts"() {
     "use strict";
@@ -3870,7 +3874,7 @@ var init_messaging = __esm({
         return Math.floor(1e5 + Math.random() * 9e5).toString();
       }
     };
-    messagingService = new MessagingService();
+    messagingService2 = new MessagingService();
   }
 });
 
@@ -4902,8 +4906,8 @@ async function registerRoutes(app2) {
   app2.post("/api/auth/signup", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-      userData.phone = messagingService2.formatPhoneNumber(userData.phone);
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      userData.phone = messagingService3.formatPhoneNumber(userData.phone);
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
@@ -4914,10 +4918,10 @@ async function registerRoutes(app2) {
         isEmailVerified: true
       });
       if (user.phone) {
-        const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+        const { messagingService: messagingService4 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
         const domain = process.env.REPLIT_DOMAINS || "greenpay.app";
         const loginUrl = `https://${domain.split(",")[0]}/login`;
-        messagingService3.sendMessage(
+        messagingService4.sendMessage(
           user.phone,
           `Welcome to GreenPay! To send and receive money, you need to: 1) Purchase a virtual card 2) Verify your KYC. Login here: ${loginUrl}`
         ).catch((err) => console.error("Welcome message error:", err));
@@ -4989,13 +4993,13 @@ async function registerRoutes(app2) {
           message: "Verification service not configured. Please contact support."
         });
       }
-      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
       const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
-      const otpCode = messagingService2.generateOTP();
+      const otpCode = messagingService3.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
       const [smsWhatsappResult, emailResult] = await Promise.all([
-        messagingService2.sendOTP(user.phone, otpCode),
+        messagingService3.sendOTP(user.phone, otpCode),
         user.email ? mailtrapService2.sendOTP(user.email, user.firstName || "User", user.lastName || "", otpCode) : Promise.resolve(false)
       ]);
       const result = { ...smsWhatsappResult, email: emailResult };
@@ -5066,10 +5070,10 @@ async function registerRoutes(app2) {
         delete req.session.pendingLoginUserId;
         delete req.session.loginIp;
         delete req.session.loginLocation;
-        const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+        const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
         const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
         Promise.all([
-          messagingService2.sendLoginAlert(user.phone, loginLocation, loginIp || "Unknown IP"),
+          messagingService3.sendLoginAlert(user.phone, loginLocation, loginIp || "Unknown IP"),
           user.email ? mailtrapService2.sendLoginAlert(
             user.email,
             user.firstName || "User",
@@ -5106,13 +5110,13 @@ async function registerRoutes(app2) {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
       const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
-      const otpCode = messagingService2.generateOTP();
+      const otpCode = messagingService3.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
       const [smsWhatsappResult, emailResult] = await Promise.all([
-        messagingService2.sendOTP(user.phone, otpCode),
+        messagingService3.sendOTP(user.phone, otpCode),
         user.email ? mailtrapService2.sendOTP(user.email, user.firstName || "User", user.lastName || "", otpCode) : Promise.resolve(false)
       ]);
       const result = { ...smsWhatsappResult, email: emailResult };
@@ -5137,18 +5141,18 @@ async function registerRoutes(app2) {
       if (!phone) {
         return res.status(400).json({ message: "Phone number is required" });
       }
-      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-      const formattedPhone = messagingService2.formatPhoneNumber(phone);
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const formattedPhone = messagingService3.formatPhoneNumber(phone);
       const user = await storage.getUserByPhone(formattedPhone);
       if (!user) {
         return res.status(404).json({ message: "No account found with this phone number" });
       }
-      const resetCode = messagingService2.generateOTP();
+      const resetCode = messagingService3.generateOTP();
       const resetExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, resetCode, resetExpiry);
       const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
       const [smsWhatsappResult, emailResult] = await Promise.all([
-        messagingService2.sendPasswordReset(user.phone, resetCode),
+        messagingService3.sendPasswordReset(user.phone, resetCode),
         user.email ? mailtrapService2.sendPasswordReset(user.email, user.firstName || "User", user.lastName || "", resetCode) : Promise.resolve(false)
       ]);
       const result = { ...smsWhatsappResult, email: emailResult };
@@ -5168,6 +5172,83 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to send reset code" });
     }
   });
+  app2.post("/api/auth/forgot-password-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+      const user = await storage.getUserByEmail(email.toLowerCase().trim());
+      if (!user) {
+        return res.status(404).json({ message: "No account found with this email address" });
+      }
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const resetCode = messagingService3.generateOTP();
+      const resetExpiry = new Date(Date.now() + 10 * 60 * 1e3);
+      await storage.updateUserOtp(user.id, resetCode, resetExpiry);
+      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const [smsWhatsappResult, emailResult] = await Promise.all([
+        messagingService3.sendPasswordReset(user.phone, resetCode),
+        user.email ? mailtrapService2.sendPasswordReset(user.email, user.firstName || "User", user.lastName || "", resetCode) : Promise.resolve(false)
+      ]);
+      const result = { ...smsWhatsappResult, email: emailResult };
+      if (!result.sms && !result.whatsapp && !result.email) {
+        return res.status(500).json({ message: "Failed to send reset code" });
+      }
+      const sentMethods = [];
+      if (result.sms) sentMethods.push("SMS");
+      if (result.whatsapp) sentMethods.push("WhatsApp");
+      if (result.email) sentMethods.push("Email");
+      res.json({
+        email: user.email,
+        sentVia: sentMethods.join(", ")
+      });
+    } catch (error) {
+      console.error("Forgot password by email error:", error);
+      res.status(500).json({ message: "Failed to send reset code" });
+    }
+  });
+  app2.post("/api/auth/reset-password-email", async (req, res) => {
+    try {
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ message: "Email, code, and new password are required" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const user = await storage.getUserByEmail(email.toLowerCase().trim());
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const isValid = await storage.verifyUserOtp(user.id, code);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+      const hashedPassword = await bcrypt2.hash(newPassword, 10);
+      await storage.updateUserPassword(user.id, hashedPassword);
+      await storage.updateUserOtp(user.id, null, null);
+      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      Promise.all([
+        messagingService.sendMessage(
+          user.phone,
+          "Your password has been reset successfully. You can now log in with your new password."
+        ),
+        user.email ? mailtrapService2.sendTemplate(user.email, "7711c72e-431b-4fb9-bea9-9738d4d8bfe7", {
+          first_name: user.firstName || "User",
+          last_name: user.lastName || "",
+          message: "Your password has been reset successfully. You can now log in."
+        }) : Promise.resolve(false)
+      ]).catch((err) => console.error("Password reset notification error:", err));
+      res.json({
+        success: true,
+        message: "Password reset successful"
+      });
+    } catch (error) {
+      console.error("Reset password by email error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
   app2.post("/api/auth/reset-password", async (req, res) => {
     try {
       const { phone, code, newPassword } = req.body;
@@ -5177,8 +5258,8 @@ async function registerRoutes(app2) {
       if (newPassword.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
       }
-      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-      const formattedPhone = messagingService2.formatPhoneNumber(phone);
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const formattedPhone = messagingService3.formatPhoneNumber(phone);
       const user = await storage.getUserByPhone(formattedPhone);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -5190,7 +5271,7 @@ async function registerRoutes(app2) {
       const hashedPassword = await bcrypt2.hash(newPassword, 10);
       await storage.updateUserPassword(user.id, hashedPassword);
       await storage.updateUserOtp(user.id, null, null);
-      messagingService2.sendMessage(
+      messagingService3.sendMessage(
         user.phone,
         "Your password has been reset successfully. You can now log in with your new password."
       ).catch((err) => console.error("Password reset notification error:", err));
@@ -5417,8 +5498,8 @@ async function registerRoutes(app2) {
           });
           const user2 = await storage.getUser(userId);
           if (user2?.phone) {
-            const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-            messagingService2.sendMessage(
+            const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+            messagingService3.sendMessage(
               user2.phone,
               "Your KYC documents have been resubmitted. Our team will review them within 48 hours. You'll be notified once verified."
             ).catch((err) => console.error("KYC resubmission message error:", err));
@@ -5470,8 +5551,8 @@ async function registerRoutes(app2) {
       });
       const user = await storage.getUser(userId);
       if (user?.phone) {
-        const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-        messagingService2.sendMessage(
+        const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+        messagingService3.sendMessage(
           user.phone,
           "Your KYC documents have been submitted successfully. Our team will review them within 48 hours. You'll be notified once verified."
         ).catch((err) => console.error("KYC submission message error:", err));
@@ -6111,8 +6192,8 @@ async function registerRoutes(app2) {
             ...transaction,
             status: "completed"
           });
-          const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-          messagingService2.sendTransactionNotification(user.phone, "send", amount, currency, "completed").catch((err) => console.error("Transaction notification error:", err));
+          const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+          messagingService3.sendTransactionNotification(user.phone, "send", amount, currency, "completed").catch((err) => console.error("Transaction notification error:", err));
         } catch (error) {
           console.error("Transaction completion error:", error);
         }
@@ -6146,8 +6227,8 @@ async function registerRoutes(app2) {
       await storage.updateUser(userId, { balance: newBalance });
       await notificationService.sendTransactionNotification(userId, transaction);
       if (user) {
-        const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-        messagingService2.sendFundReceipt(user.phone, amount, currency, senderDetails.name).catch((err) => console.error("Fund receipt notification error:", err));
+        const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+        messagingService3.sendFundReceipt(user.phone, amount, currency, senderDetails.name).catch((err) => console.error("Fund receipt notification error:", err));
       }
       res.json({ transaction, message: "Payment received successfully" });
     } catch (error) {
@@ -6644,10 +6725,10 @@ async function registerRoutes(app2) {
         if (status === "verified") {
           const user = await storage.getUser(updatedKyc.userId);
           if (user) {
-            const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+            const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
             const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
             Promise.all([
-              messagingService2.sendKYCVerified(user.phone),
+              messagingService3.sendKYCVerified(user.phone),
               user.email ? mailtrapService2.sendKYCVerified(
                 user.email,
                 user.firstName || "User",
@@ -8335,8 +8416,8 @@ async function registerRoutes(app2) {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-      const result = await messagingService2.sendMessage(user.phone, message);
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const result = await messagingService3.sendMessage(user.phone, message);
       console.log(`Admin sent message to ${user.fullName} (${user.phone}):`, { sms: result.sms, whatsapp: result.whatsapp });
       res.json({
         success: true,
@@ -9349,16 +9430,16 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         return res.status(404).json({ message: "User not found" });
       }
       const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
-      const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
       let success = false;
       switch (templateName) {
         case "otp":
-          const otpCode = parameters?.code || messagingService2.generateOTP();
+          const otpCode = parameters?.code || messagingService3.generateOTP();
           const otpResult = await whatsappService2.sendOTP(user.phone, otpCode);
           success = otpResult;
           break;
         case "password_reset":
-          const pwdCode = parameters?.code || messagingService2.generateOTP();
+          const pwdCode = parameters?.code || messagingService3.generateOTP();
           success = await whatsappService2.sendPasswordReset(user.phone, pwdCode);
           break;
         case "kyc_verified":
@@ -9467,7 +9548,9 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       const users2 = await storage.getAllUsers();
       const formattedUsers = users2.map((user) => ({
         id: user.id,
-        name: user.name,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Unknown User",
         email: user.email,
         phone: user.phone
       }));
