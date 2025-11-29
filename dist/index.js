@@ -3607,6 +3607,10 @@ var init_messaging = __esm({
        * Send login alert with location and IP via SMS, WhatsApp (template), and Email
        */
       async sendLoginAlert(phone, location, ip, email, userName) {
+        const enableSetting = await storage.getSystemSetting("messaging", "enable_login_alert_messages");
+        if (enableSetting?.value === "false") {
+          return { sms: false, whatsapp: false, email: false };
+        }
         const timestamp2 = (/* @__PURE__ */ new Date()).toLocaleString("en-US", {
           dateStyle: "long",
           timeStyle: "short"

@@ -299,6 +299,11 @@ export class MessagingService {
    * Send login alert with location and IP via SMS, WhatsApp (template), and Email
    */
   async sendLoginAlert(phone: string, location: string, ip: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
+    const enableSetting = await storage.getSystemSetting("messaging", "enable_login_alert_messages");
+    if (enableSetting?.value === 'false') {
+      return { sms: false, whatsapp: false, email: false };
+    }
+
     const timestamp = new Date().toLocaleString('en-US', { 
       dateStyle: 'long', 
       timeStyle: 'short' 
