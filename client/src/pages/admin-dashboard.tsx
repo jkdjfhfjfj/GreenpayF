@@ -21,7 +21,8 @@ import {
   LayoutDashboard,
   BarChart3,
   Menu,
-  X
+  X,
+  MessageCircle
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -34,6 +35,7 @@ import VirtualCardManagement from "@/components/admin/virtual-card-management";
 import AdminSettings from "@/components/admin/admin-settings";
 import MessagingSettings from "@/components/admin/messaging-settings";
 import WhatsAppTemplates from "@/components/admin/whatsapp-templates";
+import WhatsAppMessaging from "@/components/admin/whatsapp-messaging";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -143,12 +145,16 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="kyc">KYC</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="cards">Virtual Cards</TabsTrigger>
+            <TabsTrigger value="whatsapp" className="flex items-center gap-1">
+              <MessageCircle className="w-4 h-4" />
+              WhatsApp
+            </TabsTrigger>
             <TabsTrigger value="messaging">Messaging</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="logs">Security Logs</TabsTrigger>
@@ -314,6 +320,10 @@ export default function AdminDashboard() {
             <AdminCardsTab />
           </TabsContent>
 
+          <TabsContent value="whatsapp">
+            <AdminWhatsAppTab />
+          </TabsContent>
+
           <TabsContent value="messaging">
             <MessagingSettings />
           </TabsContent>
@@ -350,6 +360,54 @@ function AdminTransactionsTab() {
 
 function AdminCardsTab() {
   return <VirtualCardManagement />;
+}
+
+function AdminWhatsAppTab() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="w-5 h-5" />
+            WhatsApp Messaging & Configuration
+          </CardTitle>
+          <CardDescription>
+            Manage WhatsApp conversations with customers and configure Meta Business Account
+          </CardDescription>
+        </CardHeader>
+      </Card>
+      
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Configuration & Webhook Setup</CardTitle>
+            <CardDescription>
+              Go to Settings tab → WhatsApp section to configure your Meta Business Account credentials
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="font-medium text-blue-900 mb-2">Webhook Information</p>
+              <div className="text-sm space-y-2 font-mono">
+                <p><span className="font-medium">URL:</span> <code className="bg-white p-1 rounded">/api/whatsapp/webhook</code></p>
+                <p><span className="font-medium">Verify Token:</span> <code className="bg-white p-1 rounded">greenpay_verify_token_2024</code></p>
+              </div>
+              <p className="text-xs text-blue-800 mt-3">Copy these values and enter them in Meta App Dashboard webhook settings</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Active Conversations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WhatsAppMessaging />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
 
 function AdminLogsTab() {
