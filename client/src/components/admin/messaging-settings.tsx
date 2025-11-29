@@ -59,6 +59,7 @@ export default function MessagingSettings() {
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [customMessage, setCustomMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [creatingTemplates, setCreatingTemplates] = useState(false);
   const { toast } = useToast();
 
   // Load users for messaging
@@ -122,6 +123,31 @@ export default function MessagingSettings() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateTemplates = async () => {
+    setCreatingTemplates(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/whatsapp/create-templates');
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Templates Created",
+          description: `Successfully created ${result.successCount} template(s). ${result.failedCount > 0 ? `Failed: ${result.failedCount}` : 'All templates ready!'}`,
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create templates');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Template Creation Failed",
+        description: error.message || "Failed to create WhatsApp templates. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingTemplates(false);
     }
   };
 
@@ -479,6 +505,44 @@ export default function MessagingSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* WhatsApp Templates */}
+      {isWhatsAppConfigured && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              WhatsApp Message Templates
+            </CardTitle>
+            <CardDescription>
+              Create pre-approved message templates in Meta Business Manager
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Click the button below to automatically create all required WhatsApp message templates in your Meta Business Account. Templates must be approved by Meta before they can be used.
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800 flex items-start gap-2">
+                  <span className="text-lg">⚠️</span>
+                  <span>
+                    Templates will be created in pending status. You must approve them in Meta Business Manager before users can receive messages.
+                  </span>
+                </p>
+              </div>
+              <Button 
+                onClick={handleCreateTemplates} 
+                disabled={creatingTemplates}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                {creatingTemplates ? 'Creating Templates...' : 'Create All WhatsApp Templates'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Automatic Notifications Info */}
       <Card>
