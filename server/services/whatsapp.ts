@@ -618,8 +618,8 @@ export class WhatsAppService {
     
     const results = { success: [], failed: [] };
 
-    // OTP template
-    const otpSuccess = await this.createTemplate('otp', 'TRANSACTIONAL', [
+    // OTP template (AUTHENTICATION category for verification codes)
+    const otpSuccess = await this.createTemplate('otp', 'AUTHENTICATION', [
       {
         type: 'BODY',
         text: 'Your verification code is {{1}}. Valid for 10 minutes.',
@@ -641,8 +641,8 @@ export class WhatsAppService {
     if (otpSuccess) results.success.push('otp');
     else results.failed.push('otp');
 
-    // Password Reset template
-    const pwdSuccess = await this.createTemplate('password_reset', 'TRANSACTIONAL', [
+    // Password Reset template (AUTHENTICATION category for verification codes)
+    const pwdSuccess = await this.createTemplate('password_reset', 'AUTHENTICATION', [
       {
         type: 'BODY',
         text: 'Your password reset code is {{1}}. Valid for 10 minutes.',
@@ -654,8 +654,8 @@ export class WhatsAppService {
     if (pwdSuccess) results.success.push('password_reset');
     else results.failed.push('password_reset');
 
-    // KYC Verified template
-    const kycSuccess = await this.createTemplate('kyc_verified', 'TRANSACTIONAL', [
+    // KYC Verified template (UTILITY category for notifications)
+    const kycSuccess = await this.createTemplate('kyc_verified', 'UTILITY', [
       {
         type: 'BODY',
         text: 'Congratulations! Your account has been verified. You can now enjoy all GreenPay features.'
@@ -664,8 +664,8 @@ export class WhatsAppService {
     if (kycSuccess) results.success.push('kyc_verified');
     else results.failed.push('kyc_verified');
 
-    // Card Activation template
-    const cardSuccess = await this.createTemplate('card_activation', 'TRANSACTIONAL', [
+    // Card Activation template (UTILITY category for notifications)
+    const cardSuccess = await this.createTemplate('card_activation', 'UTILITY', [
       {
         type: 'BODY',
         text: 'Your virtual card ending in {{1}} has been activated and is ready to use.',
@@ -677,8 +677,8 @@ export class WhatsAppService {
     if (cardSuccess) results.success.push('card_activation');
     else results.failed.push('card_activation');
 
-    // Fund Receipt template
-    const fundSuccess = await this.createTemplate('fund_receipt', 'TRANSACTIONAL', [
+    // Fund Receipt template (UTILITY category for notifications)
+    const fundSuccess = await this.createTemplate('fund_receipt', 'UTILITY', [
       {
         type: 'BODY',
         text: 'You have received {{1}}{{2}} from {{3}}. Your new balance is available in your wallet.',
@@ -690,8 +690,8 @@ export class WhatsAppService {
     if (fundSuccess) results.success.push('fund_receipt');
     else results.failed.push('fund_receipt');
 
-    // Login Alert template
-    const loginSuccess = await this.createTemplate('login_alert', 'TRANSACTIONAL', [
+    // Login Alert template (UTILITY category for notifications)
+    const loginSuccess = await this.createTemplate('login_alert', 'UTILITY', [
       {
         type: 'BODY',
         text: 'New login detected on your account from {{1}} ({{2}}). If this wasn\'t you, please secure your account immediately.',
