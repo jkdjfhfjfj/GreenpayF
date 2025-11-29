@@ -1957,6 +1957,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export transactions to email
+  app.post("/api/transactions/export-email", requireAuth, async (req, res) => {
+    try {
+      const { email, transactions } = req.body;
+      const userId = (req.session as any).userId;
+
+      if (!email || !transactions || !Array.isArray(transactions)) {
+        return res.status(400).json({ message: "Email and transactions array required" });
+      }
+
+      if (transactions.length === 0) {
+        return res.status(400).json({ message: "No transactions to export" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Build transaction summary
+      let totalSent = 0;
+      let totalReceived = 0;
+      let transactionCount = transactions.length;
+      let transactionsList = "";
+
+      transactions.forEach((txn: any, index: number) => {
+        const amount = parseFloat(txn.amount);
+        const icon = txn.type === 'send' ? '📤' : txn.type === 'receive' ? '📥' : '💳';
+        const prefix = txn.type === 'send' || txn.type === 'withdraw' ? '-' : '+';
+        const date = new Date(txn.createdAt).toLocaleDateString();
+        const status = txn.status === 'completed' ? '✓' : txn.status === 'pending' ? '⏳' : '✗';
+
+        if (txn.type === 'send' || txn.type === 'withdraw') {
+          totalSent += amount;
+        } else if (txn.type === 'receive' || txn.type === 'deposit') {
+          totalReceived += amount;
+        }
+
+        transactionsList += `${icon} ${txn.type.toUpperCase()} - ${prefix}${txn.currency}${amount} (${date}) ${status}\n`;
+      });
+
+      const templateVariables: any = {
+        user_name: user.fullName || user.email,
+        total_transactions: transactionCount.toString(),
+        total_sent: totalSent.toFixed(2),
+        total_received: totalReceived.toFixed(2),
+        export_date: new Date().toLocaleDateString(),
+        transactions_list: transactionsList,
+        account_email: user.email,
+      };
+
+      // Send via Mailtrap
+      const { MailtrapService } = await import('./services/mailtrap');
+      const mailtrapService = new MailtrapService();
+      
+      const success = await mailtrapService.sendTemplate(
+        email,
+        'transaction-export-uuid', // UPDATE THIS WITH ACTUAL TEMPLATE UUID
+        templateVariables
+      );
+
+      if (success) {
+        console.log(`✅ Transaction export email sent to ${email} - ${transactionCount} transactions`);
+        res.json({
+          success: true,
+          message: "Transaction report sent successfully to your email",
+          summary: {
+            transactionCount,
+            totalSent,
+            totalReceived
+          }
+        });
+      } else {
+        res.status(500).json({ message: "Failed to send export email" });
+      }
+    } catch (error) {
+      console.error('Transaction export error:', error);
+      res.status(500).json({ message: "Error exporting transactions to email" });
+    }
+  });
+
   // 2FA routes
   app.post("/api/auth/2fa/setup", async (req, res) => {
     try {

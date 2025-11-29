@@ -13,8 +13,9 @@ const TEMPLATE_UUIDs = {
   kyc_submitted: 'dd087e67-8a7b-4bb8-9645-acbd61666d76',
   kyc_verified: 'c6353bf3-8e12-4852-8607-82223f49a4aa',
   login_alert: '42ce5e3b-eed9-41aa-808c-cfecbd906e60',
-  fund_receipt: 'placeholder-fund-receipt', // To be added
-  card_activation: 'placeholder-card-activation' // To be added
+  fund_receipt: '5e2a2ec4-37fb-4178-96c4-598977065f9c',
+  card_activation: 'placeholder-card-activation', // To be added
+  transaction_export: 'transaction-export-uuid' // Update with actual UUID
 };
 
 export class MailtrapService {
