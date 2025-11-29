@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MessageSquare, RefreshCw, Plus, Eye } from "lucide-react";
+import { MessageSquare, RefreshCw, Plus, Eye, Send } from "lucide-react";
+import SendTemplateModal from "./send-template-modal";
 
 interface WhatsAppTemplate {
   id?: string;
@@ -20,6 +21,7 @@ export default function WhatsAppTemplates() {
   const [loading, setLoading] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
   const [retrying, setRetrying] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -156,6 +158,16 @@ export default function WhatsAppTemplates() {
           )}
         </CardContent>
       </Card>
+
+      {/* Send Template Button */}
+      <Button
+        onClick={() => setShowSendModal(true)}
+        className="w-full bg-green-600 hover:bg-green-700"
+        size="lg"
+      >
+        <Send className="w-4 h-4 mr-2" />
+        Send Template to User
+      </Button>
 
       {/* Template Preview Modal */}
       {showPreview && selectedTemplate && (

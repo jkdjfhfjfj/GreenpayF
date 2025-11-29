@@ -5857,6 +5857,59 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     });
   });
 
+  // Send template to individual user
+  app.post("/api/admin/whatsapp/send-template", requireAdminAuth, async (req, res) => {
+    try {
+      const { userId, templateName, parameters } = req.body;
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { whatsappService } = await import('./services/whatsapp');
+      const { messagingService } = await import('./services/messaging');
+      let success = false;
+
+      switch (templateName) {
+        case 'otp':
+          const otpCode = parameters?.code || messagingService.generateOTP();
+          const otpResult = await whatsappService.sendOTP(user.phone, otpCode);
+          success = otpResult;
+          break;
+        case 'password_reset':
+          const pwdCode = parameters?.code || messagingService.generateOTP();
+          success = await whatsappService.sendPasswordReset(user.phone, pwdCode);
+          break;
+        case 'kyc_verified':
+          success = await whatsappService.sendKYCVerified(user.phone);
+          break;
+        case 'card_activation':
+          success = await whatsappService.sendCardActivation(user.phone, parameters?.lastFour || '0000');
+          break;
+        case 'fund_receipt':
+          success = await whatsappService.sendFundReceipt(
+            user.phone,
+            parameters?.amount || '0',
+            parameters?.currency || 'USD',
+            parameters?.sender || 'Unknown'
+          );
+          break;
+        case 'login_alert':
+          success = await whatsappService.sendLoginAlert(
+            user.phone,
+            parameters?.location || 'Unknown',
+            parameters?.ip || 'Unknown IP'
+          );
+          break;
+      }
+
+      res.json({ success, templateName, userId, message: success ? 'Template sent successfully' : 'Template send failed' });
+    } catch (error) {
+      console.error('[Admin] Send template error:', error);
+      res.status(500).json({ message: "Failed to send template", error: String(error) });
+    }
+  });
+
   // Send initial system info
   setTimeout(() => {
     LogStreamService.broadcast(
