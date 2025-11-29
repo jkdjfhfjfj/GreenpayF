@@ -55,11 +55,13 @@ import {
   Key,
   Settings,
   Activity,
-  Download
+  Download,
+  Clock
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { UserActivityModal } from "./user-activity-modal";
 
 interface User {
   id: string;
@@ -96,6 +98,8 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [selectedUserForActivity, setSelectedUserForActivity] = useState<User | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -331,6 +335,7 @@ export default function UserManagement() {
                                 size="sm"
                                 onClick={() => setSelectedUser(user)}
                                 data-testid={`button-view-user-${user.id}`}
+                                title="View User Details"
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>
@@ -343,6 +348,36 @@ export default function UserManagement() {
                                 </DialogDescription>
                               </DialogHeader>
                               <UserDetailsDialog user={user} />
+                            </DialogContent>
+                          </Dialog>
+
+                          <Dialog open={activityModalOpen && selectedUserForActivity?.id === user.id} onOpenChange={(open) => {
+                            if (!open) {
+                              setActivityModalOpen(false);
+                              setSelectedUserForActivity(null);
+                            }
+                          }}>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedUserForActivity(user);
+                                  setActivityModalOpen(true);
+                                }}
+                                title="View User Activity"
+                              >
+                                <Clock className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>User Activity: {user.fullName}</DialogTitle>
+                                <DialogDescription>
+                                  Last 48 hours of activity including logins, transactions, actions, and attempts
+                                </DialogDescription>
+                              </DialogHeader>
+                              <UserActivityModal userId={user.id} />
                             </DialogContent>
                           </Dialog>
 
