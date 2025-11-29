@@ -502,6 +502,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Phone number or email address is required" });
       }
 
+      // Import services upfront
+      const { messagingService } = await import('./services/messaging');
+      const { mailtrapService } = await import('./services/mailtrap');
+
       // Detect if input is email or phone
       const isEmail = contact.includes('@');
       let user;
@@ -514,7 +518,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // Find user by phone number
-        const { messagingService } = await import('./services/messaging');
         const formattedPhone = messagingService.formatPhoneNumber(contact);
         user = await storage.getUserByPhone(formattedPhone);
         if (!user) {
@@ -528,8 +531,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Store reset code in user's OTP field
       await storage.updateUserOtp(user.id, resetCode, resetExpiry);
-      
-      const { mailtrapService } = await import('./services/mailtrap');
       
       // Send reset code via SMS, WhatsApp, and Email concurrently
       const [smsWhatsappResult, emailResult] = await Promise.all([
@@ -581,8 +582,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Store reset code in user's OTP field
       await storage.updateUserOtp(user.id, resetCode, resetExpiry);
-      
-      const { mailtrapService } = await import('./services/mailtrap');
       
       // Send reset code via SMS, WhatsApp, and Email concurrently
       const [smsWhatsappResult, emailResult] = await Promise.all([

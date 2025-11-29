@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-2">
           <CardTitle className="text-2xl">Reset Password</CardTitle>
@@ -85,8 +85,8 @@ export default function ForgotPasswordPage() {
           )}
 
           {success && (
-            <Alert className="border-green-200 bg-green-50">
-              <AlertDescription className="text-green-800">
+            <Alert>
+              <AlertDescription>
                 Reset code sent to {sentVia}. Redirecting...
               </AlertDescription>
             </Alert>
@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
           {!success && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="contact" className="text-sm font-medium text-gray-700">
+                <label htmlFor="contact" className="text-sm font-medium">
                   Phone Number or Email
                 </label>
                 <Input
@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
                   disabled={loading}
                   className="w-full"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Enter your registered phone number (with country code) or email address
                 </p>
               </div>
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
               <Button
                 type="submit"
                 disabled={loading || !contact.trim()}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full"
               >
                 {loading ? (
                   <>
