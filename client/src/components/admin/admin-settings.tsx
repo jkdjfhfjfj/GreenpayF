@@ -13,7 +13,8 @@ import {
   DollarSign,
   Shield,
   Mail,
-  Globe
+  Globe,
+  MessageCircle
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -127,12 +128,77 @@ export default function AdminSettings() {
       </Card>
 
       <Tabs defaultValue="fees" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="fees">Fees & Pricing</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           <TabsTrigger value="general">General</TabsTrigger>
         </TabsList>
+
+        {/* WhatsApp Tab */}
+        <TabsContent value="whatsapp">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                WhatsApp Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure Meta WhatsApp Business API credentials for admin messaging
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                <p className="text-sm font-medium text-blue-900">Webhook Information</p>
+                <div className="text-xs space-y-1">
+                  <p><span className="font-medium">URL:</span> <code className="bg-white p-1 rounded border">https://&lt;your-domain&gt;/api/whatsapp/webhook</code></p>
+                  <p><span className="font-medium">Verify Token:</span> <code className="bg-white p-1 rounded border">greenpay_verify_token_2024</code></p>
+                  <p className="text-blue-800 mt-2">Enter these in your Meta App Dashboard webhook settings</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone_number_id">Phone Number ID</Label>
+                  <Input
+                    id="phone_number_id"
+                    placeholder="Your WhatsApp phone number ID from Meta"
+                    defaultValue=""
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="business_account_id">Business Account ID</Label>
+                  <Input
+                    id="business_account_id"
+                    placeholder="Your WhatsApp Business Account ID"
+                    defaultValue=""
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="access_token">Access Token</Label>
+                <Input
+                  id="access_token"
+                  type="password"
+                  placeholder="Your Meta access token with whatsapp_business_messaging permission"
+                  defaultValue=""
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="whatsapp_active" defaultChecked={false} className="w-4 h-4" />
+                <Label htmlFor="whatsapp_active">Enable WhatsApp Messaging</Label>
+              </div>
+
+              <Button className="w-full">
+                <Save className="w-4 h-4 mr-2" />
+                Save WhatsApp Configuration
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Fees & Pricing Tab */}
         <TabsContent value="fees">

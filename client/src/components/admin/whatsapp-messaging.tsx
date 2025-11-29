@@ -1,0 +1,223 @@
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Send, MessageCircle, Phone, Clock, CheckCircle2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+
+interface WhatsAppConversation {
+  id: string;
+  phoneNumber: string;
+  displayName?: string;
+  lastMessageAt?: string;
+  status: string;
+}
+
+interface WhatsAppMessage {
+  id: string;
+  conversationId: string;
+  phoneNumber: string;
+  content: string;
+  isFromAdmin: boolean;
+  status: string;
+  createdAt: string;
+}
+
+export default function WhatsAppMessaging() {
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [messageText, setMessageText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: conversations = [] } = useQuery<WhatsAppConversation[]>({
+    queryKey: ['/api/admin/whatsapp/conversations'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/whatsapp/conversations");
+      return response.json();
+    },
+    refetchInterval: 3000,
+  });
+
+  const { data: messages = [] } = useQuery<WhatsAppMessage[]>({
+    queryKey: ['/api/admin/whatsapp/messages', selectedConversationId],
+    queryFn: async () => {
+      if (!selectedConversationId) return [];
+      const response = await apiRequest("GET", `/api/admin/whatsapp/messages/${selectedConversationId}`);
+      return response.json();
+    },
+    enabled: !!selectedConversationId,
+    refetchInterval: 2000,
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async (data: { conversationId: string; phoneNumber: string; message: string }) => {
+      const response = await apiRequest("POST", "/api/admin/whatsapp/send", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      setMessageText("");
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/whatsapp/messages', selectedConversationId] });
+      toast({
+        title: "Message sent",
+        description: "WhatsApp message sent successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendMessage = () => {
+    if (!selectedConversationId || !messageText.trim()) return;
+
+    const conversation = conversations.find(c => c.id === selectedConversationId);
+    if (!conversation) return;
+
+    sendMutation.mutate({
+      conversationId: selectedConversationId,
+      phoneNumber: conversation.phoneNumber,
+      message: messageText.trim(),
+    });
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+
+  return (
+    <div className="grid grid-cols-3 gap-4 h-[600px]">
+      {/* Conversations List */}
+      <Card className="col-span-1">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <MessageCircle className="w-4 h-4" />
+            Conversations
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[530px]">
+            {conversations.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">No conversations yet</div>
+            ) : (
+              <div className="space-y-1 p-2">
+                {conversations.map(conv => (
+                  <button
+                    key={conv.id}
+                    onClick={() => setSelectedConversationId(conv.id)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors ${
+                      selectedConversationId === conv.id
+                        ? 'bg-green-100 border-l-4 border-green-500'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{conv.displayName || conv.phoneNumber}</p>
+                        <p className="text-xs text-gray-500">{conv.phoneNumber}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">{conv.status}</Badge>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Messages Area */}
+      <Card className="col-span-2">
+        {selectedConversation ? (
+          <>
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    {selectedConversation.displayName || selectedConversation.phoneNumber}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">{selectedConversation.phoneNumber}</p>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="flex flex-col h-[540px] p-0">
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-3">
+                  {messages.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">No messages yet</div>
+                  ) : (
+                    messages.map(msg => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.isFromAdmin ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs px-4 py-2 rounded-lg ${
+                            msg.isFromAdmin
+                              ? 'bg-green-500 text-white'
+                              : 'bg-gray-200 text-gray-900'
+                          }`}
+                        >
+                          <p className="text-sm">{msg.content}</p>
+                          <div className="flex items-center gap-1 mt-1 text-xs opacity-70">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(msg.createdAt), 'HH:mm')}
+                            {msg.isFromAdmin && msg.status === 'sent' && (
+                              <CheckCircle2 className="w-3 h-3" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+
+              <div className="border-t p-4 space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Type a message..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    disabled={sendMutation.isPending}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={sendMutation.isPending || !messageText.trim()}
+                    size="sm"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </>
+        ) : (
+          <div className="h-[540px] flex items-center justify-center text-muted-foreground">
+            Select a conversation to start messaging
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}

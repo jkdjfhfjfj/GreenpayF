@@ -6205,6 +6205,176 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
+  // WhatsApp webhook - verification endpoint
+  app.get("/api/whatsapp/webhook", async (req, res) => {
+    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "greenpay_verify_token_2024";
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+
+    if (mode === "subscribe" && token === verifyToken) {
+      console.log("[WhatsApp] ✓ Webhook verified");
+      res.status(200).send(challenge);
+    } else {
+      console.error("[WhatsApp] ✗ Webhook verification failed");
+      res.status(403).send("Forbidden");
+    }
+  });
+
+  // WhatsApp webhook - receive messages
+  app.post("/api/whatsapp/webhook", async (req, res) => {
+    try {
+      const body = req.body;
+      
+      if (body.object === "whatsapp_business_account") {
+        const entries = body.entry || [];
+        for (const entry of entries) {
+          const changes = entry.changes || [];
+          for (const change of changes) {
+            if (change.field === "messages") {
+              const messages = change.value?.messages || [];
+              for (const message of messages) {
+                const phoneNumber = change.value?.contacts?.[0]?.wa_id;
+                const text = message.text?.body;
+
+                if (phoneNumber && text) {
+                  let conversation = await storage.getWhatsappConversation(phoneNumber);
+                  if (!conversation) {
+                    conversation = await storage.createWhatsappConversation({
+                      phoneNumber,
+                      displayName: change.value?.contacts?.[0]?.profile?.name || phoneNumber,
+                      lastMessageAt: new Date(),
+                      status: 'active'
+                    });
+                  } else {
+                    await storage.updateWhatsappConversation(conversation.id, { lastMessageAt: new Date() });
+                  }
+
+                  await storage.createWhatsappMessage({
+                    conversationId: conversation.id,
+                    phoneNumber,
+                    content: text,
+                    isFromAdmin: false,
+                    status: 'received',
+                    messageId: message.id
+                  });
+
+                  console.log(`[WhatsApp] Received message from ${phoneNumber}: ${text}`);
+                }
+              }
+            }
+          }
+        }
+        res.status(200).json({ status: "ok" });
+      } else {
+        res.status(400).send("Bad Request");
+      }
+    } catch (error) {
+      console.error("[WhatsApp] Webhook error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get WhatsApp conversations (admin)
+  app.get("/api/admin/whatsapp/conversations", requireAdminAuth, async (req, res) => {
+    try {
+      const conversations = await storage.getWhatsappConversations();
+      res.json(conversations);
+    } catch (error) {
+      console.error("[Admin] Get WhatsApp conversations error:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+
+  // Get WhatsApp messages for conversation (admin)
+  app.get("/api/admin/whatsapp/messages/:conversationId", requireAdminAuth, async (req, res) => {
+    try {
+      const messages = await storage.getWhatsappMessages(req.params.conversationId);
+      res.json(messages);
+    } catch (error) {
+      console.error("[Admin] Get WhatsApp messages error:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Send WhatsApp message (admin)
+  app.post("/api/admin/whatsapp/send", requireAdminAuth, async (req, res) => {
+    try {
+      const { conversationId, phoneNumber, message } = req.body;
+      if (!conversationId || !phoneNumber || !message) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const config = await storage.getWhatsappConfig();
+      if (!config?.accessToken || !config?.phoneNumberId) {
+        return res.status(400).json({ message: "WhatsApp not configured" });
+      }
+
+      const { whatsappService } = await import('./services/whatsapp');
+      const result = await whatsappService.sendMessage(phoneNumber, message, config.accessToken, config.phoneNumberId);
+
+      if (result.success) {
+        const msgRecord = await storage.createWhatsappMessage({
+          conversationId,
+          phoneNumber,
+          content: message,
+          isFromAdmin: true,
+          status: 'sent',
+          messageId: result.messageId
+        });
+
+        await storage.updateWhatsappConversation(conversationId, { lastMessageAt: new Date() });
+        res.json({ success: true, message: msgRecord });
+      } else {
+        res.status(500).json({ message: "Failed to send message" });
+      }
+    } catch (error) {
+      console.error("[Admin] Send WhatsApp message error:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Get/Update WhatsApp config (admin)
+  app.get("/api/admin/whatsapp/config", requireAdminAuth, async (req, res) => {
+    try {
+      let config = await storage.getWhatsappConfig();
+      if (!config) {
+        config = await storage.initWhatsappConfig();
+      }
+      res.json({
+        phoneNumberId: config.phoneNumberId || '',
+        businessAccountId: config.businessAccountId || '',
+        verifyToken: config.verifyToken,
+        webhookUrl: process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS}/api/whatsapp/webhook` : config.webhookUrl,
+        isActive: config.isActive
+      });
+    } catch (error) {
+      console.error("[Admin] Get WhatsApp config error:", error);
+      res.status(500).json({ message: "Failed to fetch config" });
+    }
+  });
+
+  app.post("/api/admin/whatsapp/config", requireAdminAuth, async (req, res) => {
+    try {
+      const { phoneNumberId, businessAccountId, accessToken, isActive } = req.body;
+      const updated = await storage.updateWhatsappConfig({
+        phoneNumberId,
+        businessAccountId,
+        accessToken,
+        isActive
+      });
+      
+      if (updated) {
+        res.json({ success: true, config: updated });
+      } else {
+        res.status(500).json({ message: "Failed to update config" });
+      }
+    } catch (error) {
+      console.error("[Admin] Update WhatsApp config error:", error);
+      res.status(500).json({ message: "Failed to update config" });
+    }
+  });
+
   // Send initial system info
   setTimeout(() => {
     LogStreamService.broadcast(
