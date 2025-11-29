@@ -68,6 +68,7 @@ import {
   whatsappConversations,
   whatsappMessages,
   whatsappConfig,
+  userActivityLog,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -216,6 +217,10 @@ export interface IStorage {
   // Login History operations
   createLoginHistory(history: InsertLoginHistory): Promise<LoginHistory>;
   getLoginHistoryByUserId(userId: string, limit?: number): Promise<LoginHistory[]>;
+
+  // User Activity Log operations
+  createUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog>;
+  getUserActivitiesByUserId(userId: string, limit?: number): Promise<UserActivityLog[]>;
 
   // WhatsApp operations
   getWhatsappConversations(): Promise<WhatsappConversation[]>;
@@ -1908,6 +1913,25 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(loginHistory.createdAt))
       .limit(limit);
     return history;
+  }
+
+  // User Activity Log operations
+  async createUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog> {
+    const [log] = await db
+      .insert(userActivityLog)
+      .values(activity)
+      .returning();
+    return log;
+  }
+
+  async getUserActivitiesByUserId(userId: string, limit: number = 100): Promise<UserActivityLog[]> {
+    const activities = await db
+      .select()
+      .from(userActivityLog)
+      .where(eq(userActivityLog.userId, userId))
+      .orderBy(desc(userActivityLog.createdAt))
+      .limit(limit);
+    return activities;
   }
 
   // WhatsApp operations

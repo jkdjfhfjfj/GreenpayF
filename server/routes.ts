@@ -5393,6 +5393,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // LOG USER ACTIVITY - Frontend calls this to track pages, actions, attempts
+  app.post("/api/log-activity", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { activityType, page, action, description, status, metadata } = req.body;
+
+      if (!userId || !activityType) {
+        return res.status(400).json({ message: "userId and activityType required" });
+      }
+
+      const activity = await storage.createUserActivity({
+        userId,
+        activityType,
+        page: page || null,
+        action: action || null,
+        description: description || null,
+        status: status || 'success',
+        metadata: metadata || null,
+        ipAddress: req.ip || null,
+        userAgent: req.headers['user-agent'] || null
+      });
+
+      res.json({ success: true, activity });
+    } catch (error) {
+      console.error('Error logging activity:', error);
+      res.status(500).json({ message: "Error logging activity" });
+    }
+  });
+
   // USER ACTIVITY TIMELINE - Get all user activities from last 48 hours
   app.get("/api/admin/users/:userId/activity", async (req, res) => {
     try {
@@ -5413,9 +5442,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const loginHistory = await storage.getLoginHistoryByUserId(userId, 100);
       const kyc = await storage.getKycByUserId(userId);
       const virtualCard = await storage.getVirtualCardByUserId(userId);
+      const userActivities = await storage.getUserActivitiesByUserId(userId, 200);
 
       // Build unified activity timeline
       const activities: any[] = [];
+
+      // Add page visits and user actions
+      userActivities.forEach(act => {
+        const actDate = new Date(act.createdAt);
+        if (actDate >= cutoffTime) {
+          const typeIcons: any = {
+            page_visit: '📄',
+            action: '⚡',
+            attempt: '🔄',
+            form_submission: '📝'
+          };
+          activities.push({
+            id: act.id,
+            type: act.activityType,
+            action: act.description || `${act.action} on ${act.page}`,
+            details: {
+              page: act.page,
+              action: act.action,
+              status: act.status,
+              metadata: act.metadata,
+              ipAddress: act.ipAddress,
+              userAgent: act.userAgent
+            },
+            timestamp: actDate,
+            icon: typeIcons[act.activityType as string] || '✓'
+          });
+        }
+      });
 
       // Add transactions
       transactions.forEach(txn => {
