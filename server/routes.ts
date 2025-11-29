@@ -225,6 +225,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      // Check if OTP is required (based on admin toggle)
+      const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
+      const otpRequired = enableOtpSetting?.value !== 'false'; // Default to true if not set
+      
       // Check if messaging credentials are configured
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
@@ -233,11 +237,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const credentialsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value && whatsappSessionSetting?.value);
       
-      // If messaging credentials are not configured, allow direct login
-      if (!credentialsConfigured) {
-        console.warn('Messaging credentials not configured - allowing direct login');
+      // If OTP is disabled by admin, allow direct login (regardless of messaging credentials)
+      if (!otpRequired) {
+        console.log('OTP disabled by admin - allowing direct login');
         
-        // Direct login without OTP (only when messaging is not configured)
+        // Direct login without OTP (admin has disabled OTP)
         req.session.regenerate((err) => {
           if (err) {
             console.error('Session regeneration error:', err);
@@ -280,7 +284,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Messaging is configured - OTP is REQUIRED
+      // OTP is required - check if messaging is configured
+      if (!credentialsConfigured) {
+        console.error('OTP is required but messaging credentials not configured');
+        return res.status(500).json({ 
+          message: "Verification service not configured. Please contact support." 
+        });
+      }
+
+      // OTP is required and messaging is configured - send OTP
       const { messagingService } = await import('./services/messaging');
       const otpCode = messagingService.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes

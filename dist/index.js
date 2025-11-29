@@ -4611,13 +4611,15 @@ async function registerRoutes(app2) {
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
+      const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
+      const otpRequired = enableOtpSetting?.value !== "false";
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
       const whatsappSessionSetting = await storage.getSystemSetting("messaging", "whatsapp_session_id");
       const credentialsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value && whatsappSessionSetting?.value);
-      if (!credentialsConfigured) {
-        console.warn("Messaging credentials not configured - allowing direct login");
+      if (!otpRequired) {
+        console.log("OTP disabled by admin - allowing direct login");
         req.session.regenerate((err) => {
           if (err) {
             console.error("Session regeneration error:", err);
@@ -4648,6 +4650,12 @@ async function registerRoutes(app2) {
           });
         });
         return;
+      }
+      if (!credentialsConfigured) {
+        console.error("OTP is required but messaging credentials not configured");
+        return res.status(500).json({
+          message: "Verification service not configured. Please contact support."
+        });
       }
       const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
       const otpCode = messagingService2.generateOTP();
