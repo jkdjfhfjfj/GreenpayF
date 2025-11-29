@@ -305,14 +305,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // OTP is required and messaging is configured - send OTP
       const { messagingService } = await import('./services/messaging');
+      const { mailtrapService } = await import('./services/mailtrap');
       const otpCode = messagingService.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
       // Store OTP in user record
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
 
-      // Send OTP via SMS and WhatsApp concurrently
-      const result = await messagingService.sendOTP(user.phone, otpCode);
+      // Send OTP via SMS, WhatsApp, and Email concurrently
+      const [smsWhatsappResult, emailResult] = await Promise.all([
+        messagingService.sendOTP(user.phone, otpCode),
+        user.email ? mailtrapService.sendOTP(user.email, user.firstName || 'User', user.lastName || '', otpCode) : Promise.resolve(false)
+      ]);
+      
+      const result = { ...smsWhatsappResult, email: emailResult };
 
       // When messaging is configured, OTP delivery failure is an error (don't bypass)
       if (!result.sms && !result.whatsapp) {
@@ -442,18 +448,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { messagingService } = await import('./services/messaging');
+      const { mailtrapService } = await import('./services/mailtrap');
       const otpCode = messagingService.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
       
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
       
-      // Send OTP via SMS, WhatsApp, and Email
-      const result = await messagingService.sendOTP(
-        user.phone, 
-        otpCode,
-        user.email || undefined,
-        user.fullName || undefined
-      );
+      // Send OTP via SMS, WhatsApp, and Email concurrently
+      const [smsWhatsappResult, emailResult] = await Promise.all([
+        messagingService.sendOTP(user.phone, otpCode),
+        user.email ? mailtrapService.sendOTP(user.email, user.firstName || 'User', user.lastName || '', otpCode) : Promise.resolve(false)
+      ]);
+      
+      const result = { ...smsWhatsappResult, email: emailResult };
       
       if (!result.sms && !result.whatsapp && !result.email) {
         return res.status(500).json({ message: "Failed to resend verification code" });
@@ -498,13 +505,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store reset code in user's OTP field
       await storage.updateUserOtp(user.id, resetCode, resetExpiry);
       
-      // Send reset code via SMS, WhatsApp, and Email
-      const result = await messagingService.sendPasswordReset(
-        user.phone, 
-        resetCode,
-        user.email || undefined,
-        user.fullName || undefined
-      );
+      const { mailtrapService } = await import('./services/mailtrap');
+      
+      // Send reset code via SMS, WhatsApp, and Email concurrently
+      const [smsWhatsappResult, emailResult] = await Promise.all([
+        messagingService.sendPasswordReset(user.phone, resetCode),
+        user.email ? mailtrapService.sendPasswordReset(user.email, user.firstName || 'User', user.lastName || '', resetCode) : Promise.resolve(false)
+      ]);
+      
+      const result = { ...smsWhatsappResult, email: emailResult };
       
       if (!result.sms && !result.whatsapp && !result.email) {
         return res.status(500).json({ message: "Failed to send reset code" });
