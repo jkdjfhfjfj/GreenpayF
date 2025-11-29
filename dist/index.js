@@ -2739,8 +2739,8 @@ var init_whatsapp = __esm({
     WhatsAppService = class {
       accessToken;
       phoneNumberId;
-      apiVersion = "v18.0";
-      graphApiUrl = "https://graph.instagram.com";
+      apiVersion = "v24.0";
+      graphApiUrl = "https://graph.facebook.com";
       constructor() {
         this.loadCredentials();
       }

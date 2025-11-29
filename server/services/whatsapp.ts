@@ -3,14 +3,14 @@ import { storage } from '../storage';
 
 /**
  * WhatsApp Business Meta API Service
- * Sends messages using Meta's WhatsApp Business API (Graph API v18.0)
+ * Sends messages using Meta's WhatsApp Business API (Graph API v24.0)
  * Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/
  */
 export class WhatsAppService {
   private accessToken?: string;
   private phoneNumberId?: string;
-  private apiVersion = 'v18.0';
-  private graphApiUrl = 'https://graph.instagram.com';
+  private apiVersion = 'v24.0';
+  private graphApiUrl = 'https://graph.facebook.com';
 
   constructor() {
     this.loadCredentials();
