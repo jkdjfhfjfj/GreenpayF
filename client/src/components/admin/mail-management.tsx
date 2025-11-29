@@ -1,16 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Send, ImagePlus, Link as LinkIcon, Bold, Italic, Underline, List, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, Send, ImagePlus, Link as LinkIcon, Bold, Italic, Underline, List, AlertCircle, Loader2, CheckCircle, Save } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function MailManagement() {
   const { toast } = useToast();
+  const [mailtrapApiKey, setMailtrapApiKey] = useState("");
+  const [mailtrapConfigured, setMailtrapConfigured] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [savingMailtrap, setSavingMailtrap] = useState(false);
+  const [testingMailtrap, setTestingMailtrap] = useState(false);
+  
   const [formData, setFormData] = useState({
     email: "",
     subject: "",
@@ -19,6 +26,96 @@ export default function MailManagement() {
     linkText: "",
     linkUrl: "",
   });
+
+  // Load Mailtrap settings on mount
+  useEffect(() => {
+    loadMailtrapSettings();
+  }, []);
+
+  const loadMailtrapSettings = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/admin/mailtrap-settings');
+      if (response.ok) {
+        const data = await response.json();
+        setMailtrapConfigured(data.isConfigured);
+      }
+    } catch (error) {
+      console.error('Error loading Mailtrap settings:', error);
+    }
+  };
+
+  const handleSaveMailtrap = async () => {
+    if (!mailtrapApiKey.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "API key is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingMailtrap(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/mailtrap-settings', {
+        apiKey: mailtrapApiKey.trim()
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Mailtrap API key saved successfully",
+        });
+        setMailtrapConfigured(true);
+        setMailtrapApiKey("");
+      } else {
+        throw new Error('Failed to save settings');
+      }
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save Mailtrap settings",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingMailtrap(false);
+    }
+  };
+
+  const handleTestMailtrap = async () => {
+    if (!testEmail.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Test email address is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTestingMailtrap(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/mailtrap-test', {
+        email: testEmail.trim()
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Test email sent successfully",
+        });
+        setTestEmail("");
+      } else {
+        throw new Error('Failed to send test email');
+      }
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "Failed to send test email",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingMailtrap(false);
+    }
+  };
 
   const sendEmailMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -117,6 +214,83 @@ export default function MailManagement() {
         <h2 className="text-3xl font-bold text-gray-900">Mail Management</h2>
         <p className="text-gray-600 mt-1">Send custom emails to specific users with formatting, images, and links</p>
       </div>
+
+      {/* Mailtrap Settings Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="w-5 h-5" />
+            Mailtrap Email Service
+          </CardTitle>
+          <CardDescription>
+            Configure Mailtrap for sending transactional emails
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {mailtrapConfigured ? (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Mailtrap is configured and ready to use
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                Mailtrap is not configured. Add your API key below.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="api-key">Mailtrap API Key</Label>
+            <Input
+              id="api-key"
+              type="password"
+              placeholder="Enter your Mailtrap API token"
+              value={mailtrapApiKey}
+              onChange={(e) => setMailtrapApiKey(e.target.value)}
+            />
+            <p className="text-sm text-gray-500">
+              Get your API key from your Mailtrap account settings
+            </p>
+          </div>
+
+          <Button
+            onClick={handleSaveMailtrap}
+            disabled={savingMailtrap}
+            className="w-full bg-green-600 hover:bg-green-700"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {savingMailtrap ? 'Saving...' : 'Save API Key'}
+          </Button>
+
+          {mailtrapConfigured && (
+            <div className="space-y-4 p-4 border-t">
+              <div className="space-y-2">
+                <Label htmlFor="test-email">Send Test Email</Label>
+                <Input
+                  id="test-email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                />
+              </div>
+
+              <Button
+                onClick={handleTestMailtrap}
+                disabled={testingMailtrap}
+                className="w-full"
+                variant="outline"
+              >
+                {testingMailtrap ? 'Sending...' : 'Send Test Email'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

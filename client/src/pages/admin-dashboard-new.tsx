@@ -28,8 +28,7 @@ import {
   Bell,
   FileText,
   Mail,
-  MessageSquare,
-  Zap
+  MessageSquare
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -51,7 +50,6 @@ import SupportTicketManagement from "@/components/admin/support-ticket-managemen
 import MessagingSettings from "@/components/admin/messaging-settings";
 import MailManagement from "@/components/admin/mail-management";
 import WhatsAppTemplates from "@/components/admin/whatsapp-templates";
-import MailtrapSettings from "@/components/admin/mailtrap-settings";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -119,7 +117,6 @@ export default function AdminDashboard() {
     { id: "manual-payment", label: "Manual Payment", icon: DollarSign },
     { id: "messaging", label: "Messaging Settings", icon: Bell },
     { id: "templates", label: "WhatsApp Templates", icon: MessageSquare },
-    { id: "mailtrap", label: "Mailtrap Email", icon: Zap },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "settings", label: "Settings", icon: Settings },
   ];
@@ -158,8 +155,6 @@ export default function AdminDashboard() {
         return <MessagingSettings />;
       case "templates":
         return <WhatsAppTemplates />;
-      case "mailtrap":
-        return <MailtrapSettings />;
       case "analytics":
         return <AdminAnalyticsTab dashboardData={dashboardData} />;
       case "settings":
