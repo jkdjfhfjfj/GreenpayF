@@ -260,7 +260,37 @@ export default function MessagingSettings() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Tabs for Settings and Templates */}
+      <div className="flex flex-col gap-6">
+        <div className="border-b border-gray-200">
+          <div className="flex gap-8">
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`pb-4 px-1 text-sm font-medium transition border-b-2 ${
+                activeTab === 'settings'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Configuration
+            </button>
+            <button 
+              onClick={() => setActiveTab('templates')}
+              className={`pb-4 px-1 text-sm font-medium transition border-b-2 ${
+                activeTab === 'templates'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Templates Manager
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* SMS Configuration Settings */}
         <Card>
           <CardHeader>

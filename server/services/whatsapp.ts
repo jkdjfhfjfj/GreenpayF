@@ -613,6 +613,9 @@ export class WhatsAppService {
    * Create all required WhatsApp templates via Meta API
    */
   async createAllTemplates(): Promise<{ success: string[]; failed: string[] }> {
+    // Refresh credentials first to ensure we have latest token
+    await this.refreshCredentials();
+    
     const results = { success: [], failed: [] };
 
     // OTP template
