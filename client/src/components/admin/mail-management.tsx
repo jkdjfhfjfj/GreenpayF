@@ -19,6 +19,7 @@ export default function MailManagement() {
   const { toast } = useToast();
   const [mailtrapApiKey, setMailtrapApiKey] = useState("");
   const [mailtrapConfigured, setMailtrapConfigured] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [savingMailtrap, setSavingMailtrap] = useState(false);
   const [testingMailtrap, setTestingMailtrap] = useState(false);
@@ -52,9 +53,15 @@ export default function MailManagement() {
       if (response.ok) {
         const data = await response.json();
         setMailtrapConfigured(data.isConfigured);
+        // Don't set the API key field - it stays empty for security
       }
     } catch (error) {
       console.error('Error loading Mailtrap settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load Mailtrap settings",
+        variant: "destructive",
+      });
     }
   };
 
@@ -96,6 +103,8 @@ export default function MailManagement() {
         });
         setMailtrapConfigured(true);
         setMailtrapApiKey("");
+        setIsEditing(false);
+        await loadMailtrapSettings();
       } else {
         throw new Error('Failed to save settings');
       }
@@ -108,6 +117,16 @@ export default function MailManagement() {
     } finally {
       setSavingMailtrap(false);
     }
+  };
+
+  const handleEditApiKey = () => {
+    setIsEditing(true);
+    setMailtrapApiKey("");
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setMailtrapApiKey("");
   };
 
   const handleTestMailtrap = async () => {
@@ -301,28 +320,57 @@ export default function MailManagement() {
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="api-key">Mailtrap API Key</Label>
-            <Input
-              id="api-key"
-              type="password"
-              placeholder="Enter your Mailtrap API token"
-              value={mailtrapApiKey}
-              onChange={(e) => setMailtrapApiKey(e.target.value)}
-            />
-            <p className="text-sm text-gray-500">
-              Get your API key from your Mailtrap account settings
-            </p>
-          </div>
+          {!isEditing && mailtrapConfigured ? (
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded border">
+              <div>
+                <p className="text-sm font-medium text-gray-900">API Key Configured</p>
+                <p className="text-sm text-gray-600">●●●●●●●●●●●●●●●●</p>
+              </div>
+              <Button
+                onClick={handleEditApiKey}
+                variant="outline"
+                className="ml-4"
+              >
+                Edit Key
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="api-key">Mailtrap API Key</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="Enter your Mailtrap API token"
+                  value={mailtrapApiKey}
+                  onChange={(e) => setMailtrapApiKey(e.target.value)}
+                />
+                <p className="text-sm text-gray-500">
+                  Get your API key from your Mailtrap account settings
+                </p>
+              </div>
 
-          <Button
-            onClick={handleSaveMailtrap}
-            disabled={savingMailtrap}
-            className="w-full bg-green-600 hover:bg-green-700"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {savingMailtrap ? 'Saving...' : 'Save API Key'}
-          </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSaveMailtrap}
+                  disabled={savingMailtrap}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {savingMailtrap ? 'Saving...' : 'Save API Key'}
+                </Button>
+                {isEditing && (
+                  <Button
+                    onClick={handleCancelEdit}
+                    variant="outline"
+                    disabled={savingMailtrap}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
 
           {mailtrapConfigured && (
             <div className="space-y-4 p-4 border-t">
