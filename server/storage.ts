@@ -1935,7 +1935,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWhatsappMessages(conversationId: string): Promise<WhatsappMessage[]> {
-    return await db.select().from(whatsappMessages).where(eq(whatsappMessages.conversationId, conversationId)).orderBy(desc(whatsappMessages.createdAt));
+    const messages = await db.select({
+      id: whatsappMessages.id,
+      conversationId: whatsappMessages.conversationId,
+      phoneNumber: whatsappMessages.phoneNumber,
+      content: whatsappMessages.content,
+      isFromAdmin: whatsappMessages.isFromAdmin,
+      status: whatsappMessages.status,
+      messageId: whatsappMessages.messageId,
+      messageType: whatsappMessages.messageType,
+      fileUrl: whatsappMessages.fileUrl,
+      fileName: whatsappMessages.fileName,
+      fileSize: whatsappMessages.fileSize,
+      createdAt: whatsappMessages.createdAt,
+    }).from(whatsappMessages).where(eq(whatsappMessages.conversationId, conversationId)).orderBy(desc(whatsappMessages.createdAt));
+    return messages;
   }
 
   async updateWhatsappMessageStatus(id: string, status: string): Promise<WhatsappMessage | undefined> {
