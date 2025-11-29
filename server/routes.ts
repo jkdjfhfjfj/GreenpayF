@@ -229,13 +229,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
       const otpRequired = enableOtpSetting?.value !== 'false'; // Default to true if not set
       
-      // Check if messaging credentials are configured
+      // Check if messaging credentials are configured (SMS or WhatsApp)
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
-      const whatsappSessionSetting = await storage.getSystemSetting("messaging", "whatsapp_session_id");
+      const whatsappTokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
+      const whatsappPhoneSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
       
-      const credentialsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value && whatsappSessionSetting?.value);
+      // SMS is configured if we have api_key, account_email, and sender_id
+      const smsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value);
+      
+      // WhatsApp is configured if we have access_token and phone_number_id (from db or env)
+      const whatsappConfigured = !!(
+        (whatsappTokenSetting?.value || process.env.WHATSAPP_ACCESS_TOKEN) && 
+        (whatsappPhoneSetting?.value || process.env.WHATSAPP_PHONE_NUMBER_ID)
+      );
+      
+      // At least one messaging channel must be configured for OTP
+      const messagesConfigured = smsConfigured || whatsappConfigured;
       
       // If OTP is disabled by admin, allow direct login (regardless of messaging credentials)
       if (!otpRequired) {
@@ -284,9 +295,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // OTP is required - check if messaging is configured
-      if (!credentialsConfigured) {
-        console.error('OTP is required but messaging credentials not configured');
+      // OTP is required - check if at least one messaging channel is configured
+      if (!messagesConfigured) {
+        console.error('OTP is required but no messaging channels configured (SMS or WhatsApp)');
         return res.status(500).json({ 
           message: "Verification service not configured. Please contact support." 
         });

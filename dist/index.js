@@ -4616,8 +4616,11 @@ async function registerRoutes(app2) {
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
-      const whatsappSessionSetting = await storage.getSystemSetting("messaging", "whatsapp_session_id");
-      const credentialsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value && whatsappSessionSetting?.value);
+      const whatsappTokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
+      const whatsappPhoneSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
+      const smsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value);
+      const whatsappConfigured = !!((whatsappTokenSetting?.value || process.env.WHATSAPP_ACCESS_TOKEN) && (whatsappPhoneSetting?.value || process.env.WHATSAPP_PHONE_NUMBER_ID));
+      const messagesConfigured = smsConfigured || whatsappConfigured;
       if (!otpRequired) {
         console.log("OTP disabled by admin - allowing direct login");
         req.session.regenerate((err) => {
@@ -4651,8 +4654,8 @@ async function registerRoutes(app2) {
         });
         return;
       }
-      if (!credentialsConfigured) {
-        console.error("OTP is required but messaging credentials not configured");
+      if (!messagesConfigured) {
+        console.error("OTP is required but no messaging channels configured (SMS or WhatsApp)");
         return res.status(500).json({
           message: "Verification service not configured. Please contact support."
         });
