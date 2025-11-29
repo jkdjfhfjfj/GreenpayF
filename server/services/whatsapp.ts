@@ -373,6 +373,157 @@ export class WhatsAppService {
   }
 
   /**
+   * Send password reset code via template
+   */
+  async sendPasswordReset(phoneNumber: string, resetCode: string): Promise<boolean> {
+    await this.refreshCredentials();
+    if (!this.checkCredentials()) return false;
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: 'password_reset',
+          language: { code: 'en_US' },
+          components: [{ type: 'body', parameters: [{ type: 'text', text: resetCode }] }]
+        }
+      };
+
+      const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.messages) {
+        console.log(`[WhatsApp] ✓ Password reset sent to ${phoneNumber}`);
+        return true;
+      } else {
+        console.error(`[WhatsApp] ✗ Password reset failed: ${responseData.error?.message || 'Unknown error'}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error sending password reset:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send KYC verified notification via template
+   */
+  async sendKYCVerified(phoneNumber: string): Promise<boolean> {
+    await this.refreshCredentials();
+    if (!this.checkCredentials()) return false;
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: 'kyc_verified',
+          language: { code: 'en_US' }
+        }
+      };
+
+      const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.messages) {
+        console.log(`[WhatsApp] ✓ KYC verified sent to ${phoneNumber}`);
+        return true;
+      } else {
+        console.error(`[WhatsApp] ✗ KYC verified failed: ${responseData.error?.message || 'Unknown error'}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error sending KYC verified:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send card activation notification via template
+   */
+  async sendCardActivation(phoneNumber: string, cardLastFour: string): Promise<boolean> {
+    await this.refreshCredentials();
+    if (!this.checkCredentials()) return false;
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: 'card_activation',
+          language: { code: 'en_US' },
+          components: [{ type: 'body', parameters: [{ type: 'text', text: cardLastFour }] }]
+        }
+      };
+
+      const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.messages) {
+        console.log(`[WhatsApp] ✓ Card activation sent to ${phoneNumber}`);
+        return true;
+      } else {
+        console.error(`[WhatsApp] ✗ Card activation failed: ${responseData.error?.message || 'Unknown error'}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error sending card activation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send fund receipt notification via template
+   */
+  async sendFundReceipt(phoneNumber: string, amount: string, currency: string, sender: string): Promise<boolean> {
+    await this.refreshCredentials();
+    if (!this.checkCredentials()) return false;
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: 'fund_receipt',
+          language: { code: 'en_US' },
+          components: [{ type: 'body', parameters: [{ type: 'text', text: currency }, { type: 'text', text: amount }, { type: 'text', text: sender }] }]
+        }
+      };
+
+      const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.messages) {
+        console.log(`[WhatsApp] ✓ Fund receipt sent to ${phoneNumber}`);
+        return true;
+      } else {
+        console.error(`[WhatsApp] ✗ Fund receipt failed: ${responseData.error?.message || 'Unknown error'}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error sending fund receipt:', error);
+      return false;
+    }
+  }
+
+  /**
    * Check if WhatsApp is properly configured
    */
   isConfigured(): boolean {

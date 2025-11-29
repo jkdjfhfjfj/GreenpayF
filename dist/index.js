@@ -3042,6 +3042,137 @@ var init_whatsapp = __esm({
         }
       }
       /**
+       * Send password reset code via template
+       */
+      async sendPasswordReset(phoneNumber, resetCode) {
+        await this.refreshCredentials();
+        if (!this.checkCredentials()) return false;
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: "password_reset",
+              language: { code: "en_US" },
+              components: [{ type: "body", parameters: [{ type: "text", text: resetCode }] }]
+            }
+          };
+          const response = await fetch6(url, { method: "POST", headers: { "Authorization": `Bearer ${this.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`[WhatsApp] \u2713 Password reset sent to ${phoneNumber}`);
+            return true;
+          } else {
+            console.error(`[WhatsApp] \u2717 Password reset failed: ${responseData.error?.message || "Unknown error"}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error sending password reset:", error);
+          return false;
+        }
+      }
+      /**
+       * Send KYC verified notification via template
+       */
+      async sendKYCVerified(phoneNumber) {
+        await this.refreshCredentials();
+        if (!this.checkCredentials()) return false;
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: "kyc_verified",
+              language: { code: "en_US" }
+            }
+          };
+          const response = await fetch6(url, { method: "POST", headers: { "Authorization": `Bearer ${this.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`[WhatsApp] \u2713 KYC verified sent to ${phoneNumber}`);
+            return true;
+          } else {
+            console.error(`[WhatsApp] \u2717 KYC verified failed: ${responseData.error?.message || "Unknown error"}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error sending KYC verified:", error);
+          return false;
+        }
+      }
+      /**
+       * Send card activation notification via template
+       */
+      async sendCardActivation(phoneNumber, cardLastFour) {
+        await this.refreshCredentials();
+        if (!this.checkCredentials()) return false;
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: "card_activation",
+              language: { code: "en_US" },
+              components: [{ type: "body", parameters: [{ type: "text", text: cardLastFour }] }]
+            }
+          };
+          const response = await fetch6(url, { method: "POST", headers: { "Authorization": `Bearer ${this.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`[WhatsApp] \u2713 Card activation sent to ${phoneNumber}`);
+            return true;
+          } else {
+            console.error(`[WhatsApp] \u2717 Card activation failed: ${responseData.error?.message || "Unknown error"}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error sending card activation:", error);
+          return false;
+        }
+      }
+      /**
+       * Send fund receipt notification via template
+       */
+      async sendFundReceipt(phoneNumber, amount, currency, sender) {
+        await this.refreshCredentials();
+        if (!this.checkCredentials()) return false;
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: "fund_receipt",
+              language: { code: "en_US" },
+              components: [{ type: "body", parameters: [{ type: "text", text: currency }, { type: "text", text: amount }, { type: "text", text: sender }] }]
+            }
+          };
+          const response = await fetch6(url, { method: "POST", headers: { "Authorization": `Bearer ${this.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`[WhatsApp] \u2713 Fund receipt sent to ${phoneNumber}`);
+            return true;
+          } else {
+            console.error(`[WhatsApp] \u2717 Fund receipt failed: ${responseData.error?.message || "Unknown error"}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error sending fund receipt:", error);
+          return false;
+        }
+      }
+      /**
        * Check if WhatsApp is properly configured
        */
       isConfigured() {
@@ -3215,52 +3346,76 @@ var init_messaging = __esm({
         return results;
       }
       /**
-       * Send OTP verification code via SMS, WhatsApp, and Email
+       * Send OTP verification code via SMS, WhatsApp (template), and Email
        */
       async sendOTP(phone, otpCode, email, userName) {
-        const message = `Your verification code is ${otpCode}. Valid for 10 minutes.`;
-        const mobileResult = await this.sendMessage(phone, message);
+        const enableSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
+        if (enableSetting?.value === "false") {
+          return { sms: false, whatsapp: false, email: false };
+        }
+        const credentials = await this.getCredentials();
+        let smsResult = false;
+        let whatsappResult = false;
+        if (credentials) {
+          const message = `Your verification code is ${otpCode}. Valid for 10 minutes.`;
+          smsResult = await this.sendSMS(phone, message, credentials);
+        }
+        if (whatsappService.isConfigured()) {
+          whatsappResult = await whatsappService.sendOTP(phone, otpCode);
+        }
         let emailResult = false;
         if (email) {
           emailResult = await emailService.sendOTP(email, otpCode, userName);
         }
-        return {
-          sms: mobileResult.sms,
-          whatsapp: mobileResult.whatsapp,
-          email: emailResult
-        };
+        return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
       }
       /**
-       * Send password reset code via SMS, WhatsApp, and Email
+       * Send password reset code via SMS, WhatsApp (template), and Email
        */
       async sendPasswordReset(phone, resetCode, email, userName) {
-        const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
-        const mobileResult = await this.sendMessage(phone, message);
+        const enableSetting = await storage.getSystemSetting("messaging", "enable_password_reset_messages");
+        if (enableSetting?.value === "false") {
+          return { sms: false, whatsapp: false, email: false };
+        }
+        const credentials = await this.getCredentials();
+        let smsResult = false;
+        let whatsappResult = false;
+        if (credentials) {
+          const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
+          smsResult = await this.sendSMS(phone, message, credentials);
+        }
+        if (whatsappService.isConfigured()) {
+          whatsappResult = await whatsappService.sendPasswordReset(phone, resetCode);
+        }
         let emailResult = false;
         if (email) {
           emailResult = await emailService.sendPasswordReset(email, resetCode, userName);
         }
-        return {
-          sms: mobileResult.sms,
-          whatsapp: mobileResult.whatsapp,
-          email: emailResult
-        };
+        return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
       }
       /**
-       * Send fund receipt notification via SMS, WhatsApp, and Email
+       * Send fund receipt notification via SMS, WhatsApp (template), and Email
        */
       async sendFundReceipt(phone, amount, currency, sender, email, userName) {
-        const message = `You received ${currency} ${amount} from ${sender}. Check your account.`;
-        const mobileResult = await this.sendMessage(phone, message);
+        const enableSetting = await storage.getSystemSetting("messaging", "enable_fund_receipt_messages");
+        if (enableSetting?.value === "false") {
+          return { sms: false, whatsapp: false, email: false };
+        }
+        const credentials = await this.getCredentials();
+        let smsResult = false;
+        let whatsappResult = false;
+        if (credentials) {
+          const message = `You received ${currency} ${amount} from ${sender}. Check your account.`;
+          smsResult = await this.sendSMS(phone, message, credentials);
+        }
+        if (whatsappService.isConfigured()) {
+          whatsappResult = await whatsappService.sendFundReceipt(phone, amount, currency, sender);
+        }
         let emailResult = false;
         if (email) {
           emailResult = await emailService.sendFundReceipt(email, amount, currency, sender, userName);
         }
-        return {
-          sms: mobileResult.sms,
-          whatsapp: mobileResult.whatsapp,
-          email: emailResult
-        };
+        return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
       }
       /**
        * Send login alert with location and IP via SMS, WhatsApp (template), and Email
@@ -3291,9 +3446,33 @@ var init_messaging = __esm({
         };
       }
       /**
-       * Send KYC verified notification via SMS, WhatsApp, and Email
+       * Send KYC verified notification via SMS, WhatsApp (template), and Email
        */
       async sendKYCVerified(phone, email, userName) {
+        const enableSetting = await storage.getSystemSetting("messaging", "enable_kyc_verified_messages");
+        if (enableSetting?.value === "false") {
+          return { sms: false, whatsapp: false, email: false };
+        }
+        const credentials = await this.getCredentials();
+        let smsResult = false;
+        let whatsappResult = false;
+        if (credentials) {
+          const message = `Your account is now verified! You can now access all features.`;
+          smsResult = await this.sendSMS(phone, message, credentials);
+        }
+        if (whatsappService.isConfigured()) {
+          whatsappResult = await whatsappService.sendKYCVerified(phone);
+        }
+        let emailResult = false;
+        if (email && userName) {
+          emailResult = await emailService.sendKYCVerified(email, userName);
+        }
+        return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
+      }
+      /**
+       * Old sendKYCVerified method - kept for now, replaced above
+       */
+      async sendKYCVerifiedOld(phone, email, userName) {
         const message = `Your account is now verified! You can now access all features.`;
         const mobileResult = await this.sendMessage(phone, message);
         let emailResult = false;
@@ -3307,20 +3486,28 @@ var init_messaging = __esm({
         };
       }
       /**
-       * Send card activation notification via SMS, WhatsApp, and Email
+       * Send card activation notification via SMS, WhatsApp (template), and Email
        */
       async sendCardActivation(phone, cardLastFour, email, userName) {
-        const message = `Your virtual card ending in ${cardLastFour} is now active!`;
-        const mobileResult = await this.sendMessage(phone, message);
+        const enableSetting = await storage.getSystemSetting("messaging", "enable_card_activation_messages");
+        if (enableSetting?.value === "false") {
+          return { sms: false, whatsapp: false, email: false };
+        }
+        const credentials = await this.getCredentials();
+        let smsResult = false;
+        let whatsappResult = false;
+        if (credentials) {
+          const message = `Your virtual card ending in ${cardLastFour} is now active!`;
+          smsResult = await this.sendSMS(phone, message, credentials);
+        }
+        if (whatsappService.isConfigured()) {
+          whatsappResult = await whatsappService.sendCardActivation(phone, cardLastFour);
+        }
         let emailResult = false;
         if (email) {
           emailResult = await emailService.sendCardActivation(email, cardLastFour, userName);
         }
-        return {
-          sms: mobileResult.sms,
-          whatsapp: mobileResult.whatsapp,
-          email: emailResult
-        };
+        return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
       }
       /**
        * Send transaction notification via SMS, WhatsApp, and Email
@@ -7601,6 +7788,76 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Error updating messaging settings:", error);
       res.status(500).json({ message: "Error updating messaging settings" });
+    }
+  });
+  app2.get("/api/admin/message-toggles", requireAdminAuth, async (req, res) => {
+    try {
+      const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
+      const enablePasswordSetting = await storage.getSystemSetting("messaging", "enable_password_reset_messages");
+      const enableFundSetting = await storage.getSystemSetting("messaging", "enable_fund_receipt_messages");
+      const enableKycSetting = await storage.getSystemSetting("messaging", "enable_kyc_verified_messages");
+      const enableCardSetting = await storage.getSystemSetting("messaging", "enable_card_activation_messages");
+      const enableLoginAlertSetting = await storage.getSystemSetting("messaging", "enable_login_alert_messages");
+      res.json({
+        enableOtpMessages: enableOtpSetting?.value !== "false",
+        enablePasswordResetMessages: enablePasswordSetting?.value !== "false",
+        enableFundReceiptMessages: enableFundSetting?.value !== "false",
+        enableKycVerifiedMessages: enableKycSetting?.value !== "false",
+        enableCardActivationMessages: enableCardSetting?.value !== "false",
+        enableLoginAlertMessages: enableLoginAlertSetting?.value !== "false"
+      });
+    } catch (error) {
+      console.error("Error fetching message toggles:", error);
+      res.status(500).json({ message: "Error fetching message toggles" });
+    }
+  });
+  app2.put("/api/admin/message-toggles", requireAdminAuth, async (req, res) => {
+    try {
+      const { enableOtpMessages, enablePasswordResetMessages, enableFundReceiptMessages, enableKycVerifiedMessages, enableCardActivationMessages, enableLoginAlertMessages } = req.body;
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_otp_messages",
+        value: enableOtpMessages ? "true" : "false",
+        description: "Send OTP verification messages"
+      });
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_password_reset_messages",
+        value: enablePasswordResetMessages ? "true" : "false",
+        description: "Send password reset messages"
+      });
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_fund_receipt_messages",
+        value: enableFundReceiptMessages ? "true" : "false",
+        description: "Send fund receipt notifications"
+      });
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_kyc_verified_messages",
+        value: enableKycVerifiedMessages ? "true" : "false",
+        description: "Send KYC verified notifications"
+      });
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_card_activation_messages",
+        value: enableCardActivationMessages ? "true" : "false",
+        description: "Send card activation messages"
+      });
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_login_alert_messages",
+        value: enableLoginAlertMessages ? "true" : "false",
+        description: "Send login alert notifications"
+      });
+      console.log("Message toggles updated:", { enableOtpMessages, enablePasswordResetMessages, enableFundReceiptMessages, enableKycVerifiedMessages, enableCardActivationMessages, enableLoginAlertMessages });
+      res.json({
+        success: true,
+        message: "Message toggles updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating message toggles:", error);
+      res.status(500).json({ message: "Error updating message toggles" });
     }
   });
   app2.get("/api/admin/verification-settings", requireAdminAuth, async (req, res) => {

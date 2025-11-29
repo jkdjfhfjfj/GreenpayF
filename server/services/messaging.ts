@@ -206,69 +206,93 @@ export class MessagingService {
   }
 
   /**
-   * Send OTP verification code via SMS, WhatsApp, and Email
+   * Send OTP verification code via SMS, WhatsApp (template), and Email
    */
   async sendOTP(phone: string, otpCode: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
-    const message = `Your verification code is ${otpCode}. Valid for 10 minutes.`;
+    const enableSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
+    if (enableSetting?.value === 'false') {
+      return { sms: false, whatsapp: false, email: false };
+    }
+
+    const credentials = await this.getCredentials();
+    let smsResult = false;
+    let whatsappResult = false;
     
-    // Send via SMS and WhatsApp
-    const mobileResult = await this.sendMessage(phone, message);
+    if (credentials) {
+      const message = `Your verification code is ${otpCode}. Valid for 10 minutes.`;
+      smsResult = await this.sendSMS(phone, message, credentials);
+    }
     
-    // Send via Email if provided
+    if (whatsappService.isConfigured()) {
+      whatsappResult = await whatsappService.sendOTP(phone, otpCode);
+    }
+    
     let emailResult = false;
     if (email) {
       emailResult = await emailService.sendOTP(email, otpCode, userName);
     }
     
-    return { 
-      sms: mobileResult.sms, 
-      whatsapp: mobileResult.whatsapp,
-      email: emailResult
-    };
+    return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
   }
 
   /**
-   * Send password reset code via SMS, WhatsApp, and Email
+   * Send password reset code via SMS, WhatsApp (template), and Email
    */
   async sendPasswordReset(phone: string, resetCode: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
-    const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
+    const enableSetting = await storage.getSystemSetting("messaging", "enable_password_reset_messages");
+    if (enableSetting?.value === 'false') {
+      return { sms: false, whatsapp: false, email: false };
+    }
+
+    const credentials = await this.getCredentials();
+    let smsResult = false;
+    let whatsappResult = false;
     
-    // Send via SMS and WhatsApp
-    const mobileResult = await this.sendMessage(phone, message);
+    if (credentials) {
+      const message = `Your password reset code is ${resetCode}. Valid for 10 minutes.`;
+      smsResult = await this.sendSMS(phone, message, credentials);
+    }
     
-    // Send via Email if provided
+    if (whatsappService.isConfigured()) {
+      whatsappResult = await whatsappService.sendPasswordReset(phone, resetCode);
+    }
+    
     let emailResult = false;
     if (email) {
       emailResult = await emailService.sendPasswordReset(email, resetCode, userName);
     }
     
-    return { 
-      sms: mobileResult.sms, 
-      whatsapp: mobileResult.whatsapp,
-      email: emailResult
-    };
+    return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
   }
 
   /**
-   * Send fund receipt notification via SMS, WhatsApp, and Email
+   * Send fund receipt notification via SMS, WhatsApp (template), and Email
    */
   async sendFundReceipt(phone: string, amount: string, currency: string, sender: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
-    const message = `You received ${currency} ${amount} from ${sender}. Check your account.`;
+    const enableSetting = await storage.getSystemSetting("messaging", "enable_fund_receipt_messages");
+    if (enableSetting?.value === 'false') {
+      return { sms: false, whatsapp: false, email: false };
+    }
+
+    const credentials = await this.getCredentials();
+    let smsResult = false;
+    let whatsappResult = false;
     
-    // Send via SMS and WhatsApp
-    const mobileResult = await this.sendMessage(phone, message);
+    if (credentials) {
+      const message = `You received ${currency} ${amount} from ${sender}. Check your account.`;
+      smsResult = await this.sendSMS(phone, message, credentials);
+    }
     
-    // Send via Email if provided
+    if (whatsappService.isConfigured()) {
+      whatsappResult = await whatsappService.sendFundReceipt(phone, amount, currency, sender);
+    }
+    
     let emailResult = false;
     if (email) {
       emailResult = await emailService.sendFundReceipt(email, amount, currency, sender, userName);
     }
     
-    return { 
-      sms: mobileResult.sms, 
-      whatsapp: mobileResult.whatsapp,
-      email: emailResult
-    };
+    return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
   }
 
   /**
@@ -309,9 +333,40 @@ export class MessagingService {
   }
 
   /**
-   * Send KYC verified notification via SMS, WhatsApp, and Email
+   * Send KYC verified notification via SMS, WhatsApp (template), and Email
    */
   async sendKYCVerified(phone: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
+    const enableSetting = await storage.getSystemSetting("messaging", "enable_kyc_verified_messages");
+    if (enableSetting?.value === 'false') {
+      return { sms: false, whatsapp: false, email: false };
+    }
+
+    const credentials = await this.getCredentials();
+    let smsResult = false;
+    let whatsappResult = false;
+    
+    if (credentials) {
+      const message = `Your account is now verified! You can now access all features.`;
+      smsResult = await this.sendSMS(phone, message, credentials);
+    }
+    
+    if (whatsappService.isConfigured()) {
+      whatsappResult = await whatsappService.sendKYCVerified(phone);
+    }
+    
+    // Send via Email if provided
+    let emailResult = false;
+    if (email && userName) {
+      emailResult = await emailService.sendKYCVerified(email, userName);
+    }
+    
+    return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
+  }
+
+  /**
+   * Old sendKYCVerified method - kept for now, replaced above
+   */
+  private async sendKYCVerifiedOld(phone: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
     const message = `Your account is now verified! You can now access all features.`;
     
     // Send via SMS and WhatsApp
@@ -331,25 +386,33 @@ export class MessagingService {
   }
 
   /**
-   * Send card activation notification via SMS, WhatsApp, and Email
+   * Send card activation notification via SMS, WhatsApp (template), and Email
    */
   async sendCardActivation(phone: string, cardLastFour: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
-    const message = `Your virtual card ending in ${cardLastFour} is now active!`;
+    const enableSetting = await storage.getSystemSetting("messaging", "enable_card_activation_messages");
+    if (enableSetting?.value === 'false') {
+      return { sms: false, whatsapp: false, email: false };
+    }
+
+    const credentials = await this.getCredentials();
+    let smsResult = false;
+    let whatsappResult = false;
     
-    // Send via SMS and WhatsApp
-    const mobileResult = await this.sendMessage(phone, message);
+    if (credentials) {
+      const message = `Your virtual card ending in ${cardLastFour} is now active!`;
+      smsResult = await this.sendSMS(phone, message, credentials);
+    }
     
-    // Send via Email if provided
+    if (whatsappService.isConfigured()) {
+      whatsappResult = await whatsappService.sendCardActivation(phone, cardLastFour);
+    }
+    
     let emailResult = false;
     if (email) {
       emailResult = await emailService.sendCardActivation(email, cardLastFour, userName);
     }
     
-    return { 
-      sms: mobileResult.sms, 
-      whatsapp: mobileResult.whatsapp,
-      email: emailResult
-    };
+    return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
   }
 
   /**

@@ -4349,6 +4349,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Message type toggles endpoints
+  app.get("/api/admin/message-toggles", requireAdminAuth, async (req, res) => {
+    try {
+      const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
+      const enablePasswordSetting = await storage.getSystemSetting("messaging", "enable_password_reset_messages");
+      const enableFundSetting = await storage.getSystemSetting("messaging", "enable_fund_receipt_messages");
+      const enableKycSetting = await storage.getSystemSetting("messaging", "enable_kyc_verified_messages");
+      const enableCardSetting = await storage.getSystemSetting("messaging", "enable_card_activation_messages");
+      const enableLoginAlertSetting = await storage.getSystemSetting("messaging", "enable_login_alert_messages");
+
+      res.json({
+        enableOtpMessages: enableOtpSetting?.value !== 'false',
+        enablePasswordResetMessages: enablePasswordSetting?.value !== 'false',
+        enableFundReceiptMessages: enableFundSetting?.value !== 'false',
+        enableKycVerifiedMessages: enableKycSetting?.value !== 'false',
+        enableCardActivationMessages: enableCardSetting?.value !== 'false',
+        enableLoginAlertMessages: enableLoginAlertSetting?.value !== 'false'
+      });
+    } catch (error) {
+      console.error('Error fetching message toggles:', error);
+      res.status(500).json({ message: "Error fetching message toggles" });
+    }
+  });
+
+  app.put("/api/admin/message-toggles", requireAdminAuth, async (req, res) => {
+    try {
+      const { enableOtpMessages, enablePasswordResetMessages, enableFundReceiptMessages, enableKycVerifiedMessages, enableCardActivationMessages, enableLoginAlertMessages } = req.body;
+
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_otp_messages",
+        value: enableOtpMessages ? 'true' : 'false',
+        description: "Send OTP verification messages"
+      });
+
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_password_reset_messages",
+        value: enablePasswordResetMessages ? 'true' : 'false',
+        description: "Send password reset messages"
+      });
+
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_fund_receipt_messages",
+        value: enableFundReceiptMessages ? 'true' : 'false',
+        description: "Send fund receipt notifications"
+      });
+
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_kyc_verified_messages",
+        value: enableKycVerifiedMessages ? 'true' : 'false',
+        description: "Send KYC verified notifications"
+      });
+
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_card_activation_messages",
+        value: enableCardActivationMessages ? 'true' : 'false',
+        description: "Send card activation messages"
+      });
+
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "enable_login_alert_messages",
+        value: enableLoginAlertMessages ? 'true' : 'false',
+        description: "Send login alert notifications"
+      });
+
+      console.log('Message toggles updated:', { enableOtpMessages, enablePasswordResetMessages, enableFundReceiptMessages, enableKycVerifiedMessages, enableCardActivationMessages, enableLoginAlertMessages });
+
+      res.json({
+        success: true,
+        message: "Message toggles updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating message toggles:', error);
+      res.status(500).json({ message: "Error updating message toggles" });
+    }
+  });
+
   // Verification settings endpoints
   app.get("/api/admin/verification-settings", requireAdminAuth, async (req, res) => {
     try {
