@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
-import { Smartphone, Zap } from "lucide-react";
+import { Smartphone, Zap, Wifi, TrendingUp, Clock } from "lucide-react";
 
 const airtimeSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits").regex(/^[0-9+]+$/, "Invalid phone number format"),
@@ -106,30 +106,102 @@ export default function AirtimePage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-primary to-secondary p-6 text-white"
+        className="bg-gradient-to-br from-green-600 via-green-500 to-emerald-500 p-8 text-white relative overflow-hidden"
       >
-        <div className="flex items-center mb-4">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation("/dashboard")}
-            className="mr-3"
-          >
-            <span className="material-icons">arrow_back</span>
-          </motion.button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold flex items-center">
-              <Smartphone className="w-6 h-6 mr-2" />
-              Buy Airtime
-            </h1>
-            <p className="text-sm text-white/80">Top up your phone instantly</p>
-          </div>
-        </div>
+        {/* Decorative background elements */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 blur-3xl"></div>
 
-        {/* KES Wallet Balance Display */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-          <p className="text-xs text-white/70">KES Wallet</p>
-          <p className="text-2xl font-bold">KSh {parseFloat(user?.kesBalance || '0').toFixed(2)}</p>
-          <p className="text-xs text-white/80 mt-1">Used for airtime purchases</p>
+        <div className="relative z-10">
+          {/* Back Button and Title */}
+          <div className="flex items-center mb-6">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/dashboard")}
+              className="mr-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <span className="material-icons">arrow_back</span>
+            </motion.button>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="p-3 bg-white/20 backdrop-blur-sm rounded-full"
+                >
+                  <Smartphone className="w-6 h-6" />
+                </motion.div>
+                <h1 className="text-3xl font-bold">Buy Airtime</h1>
+              </div>
+              <p className="text-sm text-white/90">Instant mobile top-up for all networks</p>
+            </div>
+          </div>
+
+          {/* Balance and Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            {/* Main Balance Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-br from-white/15 to-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl hover:bg-white/20 transition-all"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-white/80 font-medium mb-2 flex items-center gap-1">
+                    <Wifi className="w-3.5 h-3.5" />
+                    Available KES Balance
+                  </p>
+                  <motion.p
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-4xl font-bold"
+                  >
+                    KSh {parseFloat(user?.kesBalance || '0').toFixed(2)}
+                  </motion.p>
+                  <p className="text-xs text-white/70 mt-2">Ready to purchase airtime</p>
+                </div>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  className="p-3 bg-white/10 rounded-full"
+                >
+                  <TrendingUp className="w-6 h-6 text-white/80" />
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Quick Info Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="bg-gradient-to-br from-white/15 to-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70">Delivery</p>
+                    <p className="text-sm font-bold">Instant</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70">All Networks</p>
+                    <p className="text-sm font-bold">3+ Providers</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </motion.div>
 
