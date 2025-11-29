@@ -28,7 +28,8 @@ import {
   Bell,
   FileText,
   Mail,
-  MessageSquare
+  MessageSquare,
+  MessageCircle
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -50,6 +51,7 @@ import SupportTicketManagement from "@/components/admin/support-ticket-managemen
 import MessagingSettings from "@/components/admin/messaging-settings";
 import MailManagement from "@/components/admin/mail-management";
 import WhatsAppTemplates from "@/components/admin/whatsapp-templates";
+import WhatsAppMessaging from "@/components/admin/whatsapp-messaging";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -110,6 +112,7 @@ export default function AdminDashboard() {
     { id: "pricing", label: "Card Pricing", icon: DollarSign },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "mail", label: "Mail Management", icon: Mail },
+    { id: "whatsapp", label: "WhatsApp Messaging", icon: MessageCircle },
     { id: "support", label: "Live Support", icon: Users },
     { id: "tickets", label: "Support Tickets", icon: FileText },
     { id: "logs", label: "System Logs", icon: Activity },
@@ -141,6 +144,8 @@ export default function AdminDashboard() {
         return <NotificationManagement />;
       case "mail":
         return <MailManagement />;
+      case "whatsapp":
+        return <WhatsAppMessaging />;
       case "support":
         return <AdminSupportTab />;
       case "tickets":
