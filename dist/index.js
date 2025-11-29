@@ -7390,11 +7390,11 @@ async function registerRoutes(app2) {
       await storage.setSystemSetting({
         category: "messaging",
         key: "whatsapp_phone_number_id",
-        value: (whatsappPhoneNumberId || "").trim(),
+        value: String(whatsappPhoneNumberId || "").trim(),
         description: "Meta WhatsApp Business phone number ID"
       });
       process.env.WHATSAPP_ACCESS_TOKEN = (whatsappAccessToken || "").trim();
-      process.env.WHATSAPP_PHONE_NUMBER_ID = (whatsappPhoneNumberId || "").trim();
+      process.env.WHATSAPP_PHONE_NUMBER_ID = String(whatsappPhoneNumberId || "").trim();
       res.json({
         success: true,
         message: "Messaging settings updated successfully"
