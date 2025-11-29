@@ -224,6 +224,7 @@ export interface IStorage {
   updateWhatsappConversation(id: string, updates: Partial<WhatsappConversation>): Promise<WhatsappConversation | undefined>;
   createWhatsappMessage(message: InsertWhatsappMessage): Promise<WhatsappMessage>;
   getWhatsappMessages(conversationId: string): Promise<WhatsappMessage[]>;
+  getWhatsappMessageByMessageId(messageId: string): Promise<WhatsappMessage[]>;
   updateWhatsappMessageStatus(id: string, status: string): Promise<WhatsappMessage | undefined>;
   getWhatsappConfig(): Promise<WhatsappConfig | undefined>;
   updateWhatsappConfig(updates: Partial<WhatsappConfig>): Promise<WhatsappConfig | undefined>;
@@ -1949,6 +1950,11 @@ export class DatabaseStorage implements IStorage {
       fileSize: whatsappMessages.fileSize,
       createdAt: whatsappMessages.createdAt,
     }).from(whatsappMessages).where(eq(whatsappMessages.conversationId, conversationId)).orderBy(desc(whatsappMessages.createdAt));
+    return messages;
+  }
+
+  async getWhatsappMessageByMessageId(messageId: string): Promise<WhatsappMessage[]> {
+    const messages = await db.select().from(whatsappMessages).where(eq(whatsappMessages.messageId, messageId));
     return messages;
   }
 

@@ -6263,6 +6263,25 @@ Sitemap: https://greenpay.world/sitemap.xml`;
               }
             }
             
+            // Handle typing indicator notifications
+            if (change.field === "message_template_status_update") {
+              const statuses = change.value?.statuses || [];
+              for (const status of statuses) {
+                console.log('[WhatsApp] Template status:', { status: status.status });
+              }
+            }
+            
+            // Handle read receipts and online status
+            if (change.field === "messages") {
+              const messages = change.value?.messages || [];
+              for (const message of messages) {
+                // Track when messages are read
+                if (message.type === 'message_read') {
+                  console.log('[WhatsApp] Message read:', { messageId: message.id });
+                }
+              }
+            }
+            
             // Handle messages
             if (change.field === "messages") {
               const messages = change.value?.messages || [];
