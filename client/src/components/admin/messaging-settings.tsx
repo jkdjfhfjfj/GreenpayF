@@ -20,6 +20,7 @@ interface MessagingSettings {
   // WhatsApp Settings (Meta)
   whatsappAccessToken: string;
   whatsappPhoneNumberId: string;
+  whatsappBusinessAccountId: string;
 }
 
 interface MessageToggles {
@@ -44,7 +45,8 @@ export default function MessagingSettings() {
     accountEmail: "",
     senderId: "",
     whatsappAccessToken: "",
-    whatsappPhoneNumberId: ""
+    whatsappPhoneNumberId: "",
+    whatsappBusinessAccountId: ""
   });
   const [toggles, setToggles] = useState<MessageToggles>({
     enableOtpMessages: true,
@@ -365,6 +367,19 @@ export default function MessagingSettings() {
                   />
                   <p className="text-sm text-gray-500">
                     Your WhatsApp Business phone number ID from Meta
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappBusinessAccountId">Business Account ID (WABA ID)</Label>
+                  <Input
+                    id="whatsappBusinessAccountId"
+                    value={settings.whatsappBusinessAccountId}
+                    onChange={(e) => setSettings({ ...settings, whatsappBusinessAccountId: e.target.value })}
+                    placeholder="526034077251940"
+                  />
+                  <p className="text-sm text-gray-500">
+                    Your WhatsApp Business Account ID from Meta (required for creating templates)
                   </p>
                 </div>
 
