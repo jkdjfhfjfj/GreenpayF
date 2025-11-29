@@ -1,147 +1,144 @@
-import { motion } from "framer-motion";
-import { useLocation } from "wouter";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { useNavigate } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-
-const forgotPasswordSchema = z.object({
-  phone: z.string().min(9, "Please enter a valid phone number"),
-});
-
-type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
+import { useToast } from "@/hooks/use-toast";
 
 export default function ForgotPasswordPage() {
-  const [, setLocation] = useLocation();
+  const [, setLocation] = useNavigate();
   const { toast } = useToast();
+  const [contact, setContact] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [sentVia, setSentVia] = useState("");
 
-  const form = useForm<ForgotPasswordForm>({
-    resolver: zodResolver(forgotPasswordSchema),
-    defaultValues: {
-      phone: "",
-    },
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
 
-  const forgotPasswordMutation = useMutation({
-    mutationFn: async (data: ForgotPasswordForm) => {
-      const response = await apiRequest("POST", "/api/auth/forgot-password", data);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Reset code sent",
-        description: `A 6-digit code was sent to your phone via ${data.sentVia}`,
+    if (!contact.trim()) {
+      setError("Please enter your phone number or email address");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiRequest("POST", "/api/auth/forgot-password", {
+        contact: contact.trim(),
       });
-      localStorage.setItem("resetPhone", data.phone);
-      setLocation("/auth/reset-password");
-    },
-    onError: (error: any) => {
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuccess(true);
+        setSentVia(data.sentVia || data.contact);
+        toast({
+          title: "Success",
+          description: "Reset code sent! Check your phone or email.",
+        });
+        
+        // Redirect to reset password page after 2 seconds
+        setTimeout(() => {
+          setLocation("/auth/reset-password");
+        }, 2000);
+      } else {
+        const data = await response.json();
+        setError(data.message || "Failed to send reset code");
+        toast({
+          title: "Error",
+          description: data.message || "Failed to send reset code",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      const message = error.message || "Failed to send reset code. Please try again.";
+      setError(message);
       toast({
-        title: "Failed to send code",
-        description: error.message || "Could not find an account with that phone number.",
+        title: "Error",
+        description: message,
         variant: "destructive",
       });
-    },
-  });
-
-  const onSubmit = (data: ForgotPasswordForm) => {
-    forgotPasswordMutation.mutate(data);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center elevation-1"
-      >
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setLocation("/login")}
-          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          data-testid="button-back"
-        >
-          arrow_back
-        </motion.button>
-        <h1 className="text-lg font-semibold">Forgot Password</h1>
-      </motion.div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-2xl">Reset Password</CardTitle>
+          <CardDescription>
+            Enter your phone number or email address to receive a reset code
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-      <div className="flex-1 p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="max-w-sm mx-auto"
-        >
-          <div className="text-center mb-8">
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2 }}
-              className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4"
-            >
-              <span className="material-icons text-white text-2xl">lock_reset</span>
-            </motion.div>
-            <h2 className="text-2xl font-bold mb-2">Reset Your Password</h2>
-            <p className="text-muted-foreground">Enter your phone number to receive a reset code</p>
-          </div>
+          {success && (
+            <Alert className="border-green-200 bg-green-50">
+              <AlertDescription className="text-green-800">
+                Reset code sent to {sentVia}. Redirecting...
+              </AlertDescription>
+            </Alert>
+          )}
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="tel"
-                        placeholder="712345678 or 0712345678"
-                        className="h-12"
-                        autoComplete="tel"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {!success && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="contact" className="text-sm font-medium text-gray-700">
+                  Phone Number or Email
+                </label>
+                <Input
+                  id="contact"
+                  type="text"
+                  placeholder="Enter phone (e.g., +254712345678) or email"
+                  value={contact}
+                  onChange={(e) => setContact(e.target.value)}
+                  disabled={loading}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500">
+                  Enter your registered phone number (with country code) or email address
+                </p>
+              </div>
 
               <Button
                 type="submit"
-                className="w-full h-12 text-base font-semibold"
-                disabled={forgotPasswordMutation.isPending}
+                disabled={loading || !contact.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                {forgotPasswordMutation.isPending ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Sending Code...
-                  </div>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
                 ) : (
                   "Send Reset Code"
                 )}
               </Button>
-
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="link"
-                  onClick={() => setLocation("/login")}
-                  className="text-primary"
-                >
-                  Back to Sign In
-                </Button>
-              </div>
             </form>
-          </Form>
-        </motion.div>
-      </div>
+          )}
+
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => setLocation("/auth/login")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Login
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

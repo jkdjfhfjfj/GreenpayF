@@ -493,22 +493,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Forgot password - Send reset code (by phone)
+  // Forgot password - Send reset code (by phone or email)
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
-      const { phone } = req.body;
+      const { contact } = req.body;
       
-      if (!phone) {
-        return res.status(400).json({ message: "Phone number is required" });
+      if (!contact) {
+        return res.status(400).json({ message: "Phone number or email address is required" });
       }
 
-      // Find user by phone number
-      const { messagingService } = await import('./services/messaging');
-      const formattedPhone = messagingService.formatPhoneNumber(phone);
-      const user = await storage.getUserByPhone(formattedPhone);
-      
-      if (!user) {
-        return res.status(404).json({ message: "No account found with this phone number" });
+      // Detect if input is email or phone
+      const isEmail = contact.includes('@');
+      let user;
+
+      if (isEmail) {
+        // Find user by email
+        user = await storage.getUserByEmail(contact.toLowerCase().trim());
+        if (!user) {
+          return res.status(404).json({ message: "No account found with this email address" });
+        }
+      } else {
+        // Find user by phone number
+        const { messagingService } = await import('./services/messaging');
+        const formattedPhone = messagingService.formatPhoneNumber(contact);
+        user = await storage.getUserByPhone(formattedPhone);
+        if (!user) {
+          return res.status(404).json({ message: "No account found with this phone number" });
+        }
       }
 
       // Generate reset code (6-digit OTP)
