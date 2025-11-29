@@ -321,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = { ...smsWhatsappResult, email: emailResult };
 
       // When messaging is configured, OTP delivery failure is an error (don't bypass)
-      if (!result.sms && !result.whatsapp) {
+      if (!result.sms && !result.whatsapp && !result.email) {
         console.error('OTP delivery failed - messaging configured but delivery failed');
         return res.status(500).json({ 
           message: "Failed to send verification code. Please try again or contact support." 
@@ -349,12 +349,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const sentMethods = [];
           if (result.sms) sentMethods.push('SMS');
           if (result.whatsapp) sentMethods.push('WhatsApp');
+          if (result.email) sentMethods.push('Email');
 
           res.json({ 
             requiresOtp: true,
             userId: user.id,
             phone: user.phone,
-            sentVia: sentMethods.join(' and ')
+            sentVia: sentMethods.length > 0 ? sentMethods.join(' and ') : 'SMS, WhatsApp or Email',
+            message: `Verification code sent to ${sentMethods.length > 0 ? sentMethods.join(', ') : 'SMS, WhatsApp or Email'}`
           });
         });
       });
