@@ -6261,9 +6261,14 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                 const accessToken = accessTokenSetting?.value;
 
                 // Handle different message types - download to Cloudinary
+                let messageType = 'text';
+                let fileName = '';
+                let fileSize = 0;
+
                 if (type === 'text' && message.text?.body) {
                   content = message.text.body;
                 } else if (type === 'image' && message.image?.id) {
+                  messageType = 'image';
                   const mediaId = message.image.id;
                   const caption = message.image.caption || 'Sent an image';
                   if (accessToken) {
@@ -6284,15 +6289,18 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                             `whatsapp-image-${mediaId}.jpg`,
                             'image/jpeg'
                           );
-                          console.log('[WhatsApp] Image stored in Cloudinary:', { mediaUrl });
+                          fileName = `whatsapp-image-${mediaId}.jpg`;
+                          fileSize = buffer.byteLength;
+                          console.log('[WhatsApp] Image stored in Cloudinary:', { mediaUrl, size: fileSize });
                         }
                       }
                     } catch (err) {
                       console.error('[WhatsApp] Failed to process image:', err);
                     }
                   }
-                  content = `[Image] ${caption}`;
+                  content = caption;
                 } else if (type === 'video' && message.video?.id) {
+                  messageType = 'video';
                   const mediaId = message.video.id;
                   const caption = message.video.caption || 'Sent a video';
                   if (accessToken) {
@@ -6311,16 +6319,20 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                             `whatsapp-video-${mediaId}.mp4`,
                             'video/mp4'
                           );
+                          fileName = `whatsapp-video-${mediaId}.mp4`;
+                          fileSize = buffer.byteLength;
                         }
                       }
                     } catch (err) {
                       console.error('[WhatsApp] Failed to process video:', err);
                     }
                   }
-                  content = `[Video] ${caption}`;
+                  content = caption;
                 } else if (type === 'file' && message.document?.id) {
+                  messageType = 'file';
                   const mediaId = message.document.id;
                   const filename = message.document.filename || 'document';
+                  fileName = filename;
                   if (accessToken) {
                     try {
                       const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
@@ -6337,13 +6349,14 @@ Sitemap: https://greenpay.world/sitemap.xml`;
                             filename,
                             'application/octet-stream'
                           );
+                          fileSize = buffer.byteLength;
                         }
                       }
                     } catch (err) {
                       console.error('[WhatsApp] Failed to process file:', err);
                     }
                   }
-                  content = `[File] ${filename}`;
+                  content = filename;
                 } else if (type === 'audio' && message.audio?.id) {
                   const mediaId = message.audio.id;
                   if (accessToken) {
