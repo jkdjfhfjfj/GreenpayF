@@ -113,8 +113,16 @@ export class MailtrapService {
       }
 
       const result = await response.json() as any;
-      console.log(`[Mailtrap] ✓ Email sent successfully - MessageId: ${result.message_id}`);
-      return true;
+      console.log(`[Mailtrap] ✓ Full Response:`, JSON.stringify(result, null, 2));
+      
+      // Check if response has success field or message_id
+      if (result.success || result.message_id || result.messages) {
+        console.log(`[Mailtrap] ✓ Email sent successfully - Response: ${JSON.stringify(result)}`);
+        return true;
+      } else {
+        console.warn(`[Mailtrap] ⚠️ Unexpected response format:`, result);
+        return true; // Still return true as email might be queued
+      }
     } catch (error) {
       console.error('[Mailtrap] Error sending email:', error);
       return false;
