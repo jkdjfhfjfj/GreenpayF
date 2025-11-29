@@ -136,7 +136,8 @@ export class WhatsAppService {
   }
 
   /**
-   * Send text message via WhatsApp Business API
+   * Send template message via WhatsApp Business API (hello_world template)
+   * Template messages have higher delivery rates and are pre-approved by Meta
    */
   async sendTextMessage(phoneNumber: string, message: string): Promise<boolean> {
     // Refresh credentials before sending (in case they were just updated)
@@ -144,12 +145,6 @@ export class WhatsAppService {
     
     if (!this.checkCredentials()) {
       console.error('[WhatsApp] ✗ Credentials not configured or empty. Cannot send message.');
-      console.error('[WhatsApp] Debug info:', {
-        tokenExists: !!this.accessToken,
-        tokenEmpty: this.accessToken === '',
-        phoneIdExists: !!this.phoneNumberId,
-        phoneIdEmpty: this.phoneNumberId === ''
-      });
       return false;
     }
 
@@ -157,34 +152,23 @@ export class WhatsAppService {
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
 
-      // Debug: Log token format and content
-      console.log('[WhatsApp] Sending message with token:', {
-        tokenType: typeof this.accessToken,
-        tokenLength: this.accessToken?.length,
-        tokenFirstChars: this.accessToken?.substring(0, 20),
-        tokenLastChars: this.accessToken?.substring(this.accessToken.length - 20),
-        phoneNumberId: this.phoneNumberId,
-        url: url,
-        formattedPhone: formattedPhone
-      });
-
+      // Use template message (hello_world) instead of text for better delivery
       const payload = {
         messaging_product: 'whatsapp',
         to: formattedPhone,
-        type: 'text',
-        text: {
-          body: message,
-        },
+        type: 'template',
+        template: {
+          name: 'hello_world',
+          language: {
+            code: 'en_US'
+          }
+        }
       };
-
-      const authHeader = `Bearer ${this.accessToken}`;
-      console.log('[WhatsApp] Auth header length:', authHeader.length);
-      console.log('[WhatsApp] Auth header first 50 chars:', authHeader.substring(0, 50));
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': authHeader,
+          'Authorization': `Bearer ${this.accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -193,7 +177,7 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`[WhatsApp] ✓ Text message sent to ${phoneNumber}`);
+        console.log(`[WhatsApp] ✓ Template message sent to ${phoneNumber}`);
         return true;
       } else {
         const errorMsg = responseData.error?.message || 'Unknown error';
@@ -201,7 +185,7 @@ export class WhatsAppService {
         return false;
       }
     } catch (error) {
-      console.error('[WhatsApp] Error sending text message:', error);
+      console.error('[WhatsApp] Error sending template message:', error);
       return false;
     }
   }
