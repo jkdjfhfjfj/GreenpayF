@@ -622,20 +622,7 @@ export class WhatsAppService {
     const otpSuccess = await this.createTemplate('otp', 'AUTHENTICATION', [
       {
         type: 'BODY',
-        text: 'Your verification code is {{1}}. Valid for 10 minutes.',
-        example: {
-          body_text: [['366777']]
-        }
-      },
-      {
-        type: 'BUTTONS',
-        buttons: [
-          {
-            type: 'URL',
-            text: 'Verify',
-            url: 'https://example.com/verify?code={{1}}'
-          }
-        ]
+        text: 'Your verification code is {{1}}. Valid for 10 minutes.'
       }
     ]);
     if (otpSuccess) results.success.push('otp');
@@ -645,10 +632,7 @@ export class WhatsAppService {
     const pwdSuccess = await this.createTemplate('password_reset', 'AUTHENTICATION', [
       {
         type: 'BODY',
-        text: 'Your password reset code is {{1}}. Valid for 10 minutes.',
-        example: {
-          body_text: [['123456']]
-        }
+        text: 'Your password reset code is {{1}}. Valid for 10 minutes.'
       }
     ]);
     if (pwdSuccess) results.success.push('password_reset');

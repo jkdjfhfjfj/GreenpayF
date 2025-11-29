@@ -3259,39 +3259,23 @@ var init_whatsapp = __esm({
       async createAllTemplates() {
         await this.refreshCredentials();
         const results = { success: [], failed: [] };
-        const otpSuccess = await this.createTemplate("otp", "TRANSACTIONAL", [
+        const otpSuccess = await this.createTemplate("otp", "AUTHENTICATION", [
           {
             type: "BODY",
-            text: "Your verification code is {{1}}. Valid for 10 minutes.",
-            example: {
-              body_text: [["366777"]]
-            }
-          },
-          {
-            type: "BUTTONS",
-            buttons: [
-              {
-                type: "URL",
-                text: "Verify",
-                url: "https://example.com/verify?code={{1}}"
-              }
-            ]
+            text: "Your verification code is {{1}}. Valid for 10 minutes."
           }
         ]);
         if (otpSuccess) results.success.push("otp");
         else results.failed.push("otp");
-        const pwdSuccess = await this.createTemplate("password_reset", "TRANSACTIONAL", [
+        const pwdSuccess = await this.createTemplate("password_reset", "AUTHENTICATION", [
           {
             type: "BODY",
-            text: "Your password reset code is {{1}}. Valid for 10 minutes.",
-            example: {
-              body_text: [["123456"]]
-            }
+            text: "Your password reset code is {{1}}. Valid for 10 minutes."
           }
         ]);
         if (pwdSuccess) results.success.push("password_reset");
         else results.failed.push("password_reset");
-        const kycSuccess = await this.createTemplate("kyc_verified", "TRANSACTIONAL", [
+        const kycSuccess = await this.createTemplate("kyc_verified", "UTILITY", [
           {
             type: "BODY",
             text: "Congratulations! Your account has been verified. You can now enjoy all GreenPay features."
@@ -3299,7 +3283,7 @@ var init_whatsapp = __esm({
         ]);
         if (kycSuccess) results.success.push("kyc_verified");
         else results.failed.push("kyc_verified");
-        const cardSuccess = await this.createTemplate("card_activation", "TRANSACTIONAL", [
+        const cardSuccess = await this.createTemplate("card_activation", "UTILITY", [
           {
             type: "BODY",
             text: "Your virtual card ending in {{1}} has been activated and is ready to use.",
@@ -3310,7 +3294,7 @@ var init_whatsapp = __esm({
         ]);
         if (cardSuccess) results.success.push("card_activation");
         else results.failed.push("card_activation");
-        const fundSuccess = await this.createTemplate("fund_receipt", "TRANSACTIONAL", [
+        const fundSuccess = await this.createTemplate("fund_receipt", "UTILITY", [
           {
             type: "BODY",
             text: "You have received {{1}}{{2}} from {{3}}. Your new balance is available in your wallet.",
@@ -3321,7 +3305,7 @@ var init_whatsapp = __esm({
         ]);
         if (fundSuccess) results.success.push("fund_receipt");
         else results.failed.push("fund_receipt");
-        const loginSuccess = await this.createTemplate("login_alert", "TRANSACTIONAL", [
+        const loginSuccess = await this.createTemplate("login_alert", "UTILITY", [
           {
             type: "BODY",
             text: "New login detected on your account from {{1}} ({{2}}). If this wasn't you, please secure your account immediately.",
@@ -4683,7 +4667,7 @@ var transferSchema = z.object({
   currency: z.string(),
   description: z.string().optional()
 });
-async function registerRoutes(app2) {
+async function registerRoutes(app3) {
   const requireAuth = (req, res, next) => {
     const userId = req.session?.userId;
     if (!userId) {
@@ -4693,7 +4677,7 @@ async function registerRoutes(app2) {
     }
     next();
   };
-  const requireAdminAuth = (req, res, next) => {
+  const requireAdminAuth2 = (req, res, next) => {
     const adminId = req.session?.admin?.id;
     console.log(`[ADMIN AUTH] Session check - hasSession: ${!!req.session}, hasAdminId: ${!!adminId}`);
     if (!adminId) {
@@ -4711,7 +4695,7 @@ async function registerRoutes(app2) {
     console.log(`[ADMIN AUTH] SUCCESS - Admin ${req.session.admin.email} authenticated`);
     next();
   };
-  app2.get("/health", (_req, res) => {
+  app3.get("/health", (_req, res) => {
     res.status(200).json({
       status: "healthy",
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -4719,7 +4703,7 @@ async function registerRoutes(app2) {
       uptime: process.uptime()
     });
   });
-  app2.get("/objects/:objectPath(*)", async (req, res) => {
+  app3.get("/objects/:objectPath(*)", async (req, res) => {
     try {
       console.log(`\u{1F4E5} File request received: /objects/${req.params.objectPath}`);
       const userId = req.session?.userId;
@@ -4760,7 +4744,7 @@ async function registerRoutes(app2) {
   } catch (error) {
     console.error("Failed to create default admin:", error);
   }
-  app2.post("/api/auth/signup", async (req, res) => {
+  app3.post("/api/auth/signup", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
       const { messagingService: messagingService2 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
@@ -4790,7 +4774,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid user data" });
     }
   });
-  app2.post("/api/auth/login", async (req, res) => {
+  app3.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
       const user = await storage.getUserByEmail(email);
@@ -4890,7 +4874,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid login data" });
     }
   });
-  app2.post("/api/auth/verify-otp", async (req, res) => {
+  app3.post("/api/auth/verify-otp", async (req, res) => {
     try {
       const { code } = otpSchema.parse(req.body);
       const { userId } = req.body;
@@ -4942,7 +4926,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid OTP data" });
     }
   });
-  app2.post("/api/auth/resend-otp", async (req, res) => {
+  app3.post("/api/auth/resend-otp", async (req, res) => {
     try {
       const { userId } = req.body;
       const user = await storage.getUser(userId);
@@ -4974,7 +4958,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to resend OTP" });
     }
   });
-  app2.post("/api/auth/forgot-password", async (req, res) => {
+  app3.post("/api/auth/forgot-password", async (req, res) => {
     try {
       const { phone } = req.body;
       if (!phone) {
@@ -5011,7 +4995,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to send reset code" });
     }
   });
-  app2.post("/api/auth/reset-password", async (req, res) => {
+  app3.post("/api/auth/reset-password", async (req, res) => {
     try {
       const { phone, code, newPassword } = req.body;
       if (!phone || !code || !newPassword) {
@@ -5046,7 +5030,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to reset password" });
     }
   });
-  app2.get("/api/conversations/user-conversation", async (req, res) => {
+  app3.get("/api/conversations/user-conversation", async (req, res) => {
     try {
       const userId = req.session?.userId;
       if (!userId) {
@@ -5073,7 +5057,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to get or create conversation" });
     }
   });
-  app2.get("/api/messages/:conversationId", async (req, res) => {
+  app3.get("/api/messages/:conversationId", async (req, res) => {
     try {
       const { conversationId } = req.params;
       const userId = req.session?.userId;
@@ -5101,7 +5085,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to get messages" });
     }
   });
-  app2.post("/api/messages", async (req, res) => {
+  app3.post("/api/messages", async (req, res) => {
     try {
       const userId = req.session?.userId;
       const adminId = req.session?.admin?.id;
@@ -5136,7 +5120,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid message data" });
     }
   });
-  app2.put("/api/messages/:id/read", async (req, res) => {
+  app3.put("/api/messages/:id/read", async (req, res) => {
     try {
       const { id } = req.params;
       const userId = req.session?.userId;
@@ -5154,7 +5138,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to mark message as read" });
     }
   });
-  app2.post("/api/upload", upload.single("file"), async (req, res) => {
+  app3.post("/api/upload", upload.single("file"), async (req, res) => {
     try {
       const userId = req.session?.userId;
       const adminId = req.session?.admin?.id;
@@ -5186,7 +5170,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to upload file" });
     }
   });
-  app2.post("/api/kyc/submit", upload.fields([
+  app3.post("/api/kyc/submit", upload.fields([
     { name: "frontImage", maxCount: 1 },
     { name: "backImage", maxCount: 1 },
     { name: "selfie", maxCount: 1 }
@@ -5325,7 +5309,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to submit KYC documents" });
     }
   });
-  app2.get("/api/kyc/:userId", async (req, res) => {
+  app3.get("/api/kyc/:userId", async (req, res) => {
     try {
       const kyc = await storage.getKycByUserId(req.params.userId);
       res.json({ kyc });
@@ -5333,7 +5317,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching KYC data" });
     }
   });
-  app2.post("/api/virtual-card/initialize-payment", async (req, res) => {
+  app3.post("/api/virtual-card/initialize-payment", async (req, res) => {
     try {
       const { userId } = req.body;
       console.log("Card payment request - userId:", userId, "type:", typeof userId);
@@ -5397,7 +5381,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error initializing card payment" });
     }
   });
-  app2.put("/api/users/:id/profile", async (req, res) => {
+  app3.put("/api/users/:id/profile", async (req, res) => {
     try {
       const { id } = req.params;
       const userId = req.session?.userId;
@@ -5447,7 +5431,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Failed to update profile" });
     }
   });
-  app2.put("/api/users/:id/settings", async (req, res) => {
+  app3.put("/api/users/:id/settings", async (req, res) => {
     try {
       const { id } = req.params;
       const settings = req.body;
@@ -5462,7 +5446,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Failed to update settings" });
     }
   });
-  app2.post("/api/users/:id/profile-photo", upload.single("photo"), async (req, res) => {
+  app3.post("/api/users/:id/profile-photo", upload.single("photo"), async (req, res) => {
     try {
       const { id } = req.params;
       const file = req.file;
@@ -5493,7 +5477,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to upload profile photo" });
     }
   });
-  app2.post("/api/users/:id/change-password", async (req, res) => {
+  app3.post("/api/users/:id/change-password", async (req, res) => {
     try {
       const { id } = req.params;
       const { currentPassword, newPassword } = req.body;
@@ -5519,7 +5503,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to change password" });
     }
   });
-  app2.get("/api/kyc/:userId", async (req, res) => {
+  app3.get("/api/kyc/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
       const kyc = await storage.getKycByUserId(userId);
@@ -5529,7 +5513,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch KYC data" });
     }
   });
-  app2.post("/api/auth/setup-2fa", async (req, res) => {
+  app3.post("/api/auth/setup-2fa", async (req, res) => {
     try {
       const { userId } = req.body;
       const user = await storage.getUser(userId);
@@ -5553,7 +5537,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to setup 2FA" });
     }
   });
-  app2.post("/api/auth/setup-biometric", async (req, res) => {
+  app3.post("/api/auth/setup-biometric", async (req, res) => {
     try {
       const { userId } = req.body;
       await storage.updateUser(userId, { biometricEnabled: true });
@@ -5563,7 +5547,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to setup biometric authentication" });
     }
   });
-  app2.post("/api/notifications/register", async (req, res) => {
+  app3.post("/api/notifications/register", async (req, res) => {
     try {
       const { userId, endpoint } = req.body;
       await storage.updateUser(userId, { pushNotificationsEnabled: true });
@@ -5573,7 +5557,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to register for notifications" });
     }
   });
-  app2.post("/api/virtual-card/verify-payment", async (req, res) => {
+  app3.post("/api/virtual-card/verify-payment", async (req, res) => {
     try {
       const { reference, userId } = req.body;
       if (!reference || !userId) {
@@ -5592,7 +5576,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/payment-callback", async (req, res) => {
+  app3.get("/api/payment-callback", async (req, res) => {
     try {
       const { reference, trxref, type } = req.query;
       const actualReference = reference || trxref;
@@ -5620,7 +5604,7 @@ async function registerRoutes(app2) {
       return res.redirect(`/payment-failed?error=${encodeURIComponent("Payment verification failed")}`);
     }
   });
-  app2.post("/api/webhook/paystack", async (req, res) => {
+  app3.post("/api/webhook/paystack", async (req, res) => {
     try {
       const event = req.body;
       console.log("Paystack webhook received:", event.event, event.data?.reference);
@@ -5637,7 +5621,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Webhook processing failed" });
     }
   });
-  app2.post("/api/deposit/initialize-payment", async (req, res) => {
+  app3.post("/api/deposit/initialize-payment", async (req, res) => {
     try {
       const { userId, amount, currency } = req.body;
       console.log("Deposit payment request - userId:", userId, "amount:", amount, "currency:", currency);
@@ -5684,7 +5668,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error initializing deposit payment" });
     }
   });
-  app2.post("/api/deposit/verify-payment", async (req, res) => {
+  app3.post("/api/deposit/verify-payment", async (req, res) => {
     try {
       const { reference, userId, amount, currency } = req.body;
       const verification = await paystackService.verifyPayment(reference);
@@ -5717,7 +5701,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error verifying deposit" });
     }
   });
-  app2.post("/api/airtime/purchase", async (req, res) => {
+  app3.post("/api/airtime/purchase", async (req, res) => {
     try {
       const { userId, phoneNumber, amount, currency, provider } = req.body;
       console.log(`\u{1F4F1} Airtime purchase request - User: ${userId}, Phone: ${phoneNumber}, Amount: ${amount} ${currency}, Provider: ${provider}`);
@@ -5776,7 +5760,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: errorMessage });
     }
   });
-  app2.post("/api/airtime/claim-bonus", async (req, res) => {
+  app3.post("/api/airtime/claim-bonus", async (req, res) => {
     try {
       const { userId } = req.body;
       console.log(`\u{1F381} Airtime bonus claim request - User: ${userId}`);
@@ -5825,7 +5809,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error claiming airtime bonus" });
     }
   });
-  app2.get("/api/virtual-card/:userId", async (req, res) => {
+  app3.get("/api/virtual-card/:userId", async (req, res) => {
     try {
       const card = await storage.getVirtualCardByUserId(req.params.userId);
       res.json({ card });
@@ -5834,7 +5818,7 @@ async function registerRoutes(app2) {
     }
   });
   const exchangeRateService2 = createExchangeRateService(storage);
-  app2.get("/api/exchange-rates/:from/:to", async (req, res) => {
+  app3.get("/api/exchange-rates/:from/:to", async (req, res) => {
     try {
       const { from, to } = req.params;
       const rate = await exchangeRateService2.getExchangeRate(from.toUpperCase(), to.toUpperCase());
@@ -5849,7 +5833,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching exchange rate" });
     }
   });
-  app2.get("/api/exchange-rates/:base", async (req, res) => {
+  app3.get("/api/exchange-rates/:base", async (req, res) => {
     try {
       const { base } = req.params;
       const targets = base.toUpperCase() === "USD" ? ["KES"] : ["USD"];
@@ -5864,7 +5848,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching exchange rates" });
     }
   });
-  app2.post("/api/transfer", async (req, res) => {
+  app3.post("/api/transfer", async (req, res) => {
     try {
       const { fromUserId, toUserId, amount, currency, description } = transferSchema.parse(req.body);
       const fromUser = await storage.getUser(fromUserId);
@@ -5918,7 +5902,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Transfer failed" });
     }
   });
-  app2.post("/api/transactions/send", async (req, res) => {
+  app3.post("/api/transactions/send", async (req, res) => {
     try {
       const { userId, amount, currency, recipientDetails, targetCurrency } = req.body;
       const user = await storage.getUser(userId);
@@ -5971,7 +5955,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Transaction failed" });
     }
   });
-  app2.post("/api/transactions/receive", async (req, res) => {
+  app3.post("/api/transactions/receive", async (req, res) => {
     try {
       const { userId, amount, currency, senderDetails } = req.body;
       const transaction = await storage.createTransaction({
@@ -5998,7 +5982,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Transaction failed" });
     }
   });
-  app2.get("/api/transactions/:userId", async (req, res) => {
+  app3.get("/api/transactions/:userId", async (req, res) => {
     try {
       const transactions2 = await storage.getTransactionsByUserId(req.params.userId);
       res.json({ transactions: transactions2 });
@@ -6006,7 +5990,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching transactions" });
     }
   });
-  app2.get("/api/transactions/status/:transactionId", async (req, res) => {
+  app3.get("/api/transactions/status/:transactionId", async (req, res) => {
     try {
       const transaction = await storage.getTransaction(req.params.transactionId);
       if (!transaction) {
@@ -6017,7 +6001,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching transaction status" });
     }
   });
-  app2.post("/api/auth/2fa/setup", async (req, res) => {
+  app3.post("/api/auth/2fa/setup", async (req, res) => {
     try {
       const { userId } = req.body;
       const user = await storage.getUser(userId);
@@ -6033,7 +6017,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error setting up 2FA" });
     }
   });
-  app2.post("/api/auth/2fa/verify", async (req, res) => {
+  app3.post("/api/auth/2fa/verify", async (req, res) => {
     try {
       const { userId, token } = req.body;
       const user = await storage.getUser(userId);
@@ -6052,7 +6036,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error verifying 2FA" });
     }
   });
-  app2.post("/api/auth/biometric/setup", async (req, res) => {
+  app3.post("/api/auth/biometric/setup", async (req, res) => {
     try {
       const { userId } = req.body;
       const challenge = await biometricService.generateChallenge(userId);
@@ -6062,7 +6046,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error setting up biometric authentication" });
     }
   });
-  app2.post("/api/auth/biometric/register", async (req, res) => {
+  app3.post("/api/auth/biometric/register", async (req, res) => {
     try {
       const { userId, credential, challenge } = req.body;
       const success = await biometricService.registerBiometric(userId, credential);
@@ -6077,7 +6061,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error registering biometric" });
     }
   });
-  app2.post("/api/auth/biometric/verify", async (req, res) => {
+  app3.post("/api/auth/biometric/verify", async (req, res) => {
     try {
       const { userId, challenge, response } = req.body;
       const isValid = await biometricService.verifyBiometric(userId, challenge, response);
@@ -6091,7 +6075,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error verifying biometric" });
     }
   });
-  app2.post("/api/notifications/register", async (req, res) => {
+  app3.post("/api/notifications/register", async (req, res) => {
     try {
       const { userId, token } = req.body;
       const success = await notificationService.registerPushToken(userId, token);
@@ -6105,7 +6089,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error registering push notifications" });
     }
   });
-  app2.post("/api/recipients", async (req, res) => {
+  app3.post("/api/recipients", async (req, res) => {
     try {
       const recipientData = insertRecipientSchema.parse(req.body);
       const recipient = await storage.createRecipient(recipientData);
@@ -6115,7 +6099,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid recipient data" });
     }
   });
-  app2.get("/api/recipients/:userId", async (req, res) => {
+  app3.get("/api/recipients/:userId", async (req, res) => {
     try {
       const recipients2 = await storage.getRecipientsByUserId(req.params.userId);
       res.json({ recipients: recipients2 });
@@ -6123,7 +6107,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching recipients" });
     }
   });
-  app2.put("/api/recipients/:id", async (req, res) => {
+  app3.put("/api/recipients/:id", async (req, res) => {
     try {
       const recipient = await storage.updateRecipient(req.params.id, req.body);
       if (recipient) {
@@ -6136,7 +6120,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating recipient" });
     }
   });
-  app2.delete("/api/recipients/:id", async (req, res) => {
+  app3.delete("/api/recipients/:id", async (req, res) => {
     try {
       await storage.deleteRecipient(req.params.id);
       res.json({ message: "Recipient deleted successfully" });
@@ -6145,7 +6129,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error deleting recipient" });
     }
   });
-  app2.put("/api/users/:userId/settings", async (req, res) => {
+  app3.put("/api/users/:userId/settings", async (req, res) => {
     try {
       const { userId } = req.params;
       const { defaultCurrency, pushNotificationsEnabled, twoFactorEnabled, biometricEnabled, ...settings } = req.body;
@@ -6166,7 +6150,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating settings" });
     }
   });
-  app2.post("/api/exchange/convert", async (req, res) => {
+  app3.post("/api/exchange/convert", async (req, res) => {
     try {
       const { amount, fromCurrency, toCurrency, userId } = req.body;
       const user = await storage.getUser(userId);
@@ -6234,7 +6218,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Exchange failed" });
     }
   });
-  app2.post("/api/payment-requests", async (req, res) => {
+  app3.post("/api/payment-requests", async (req, res) => {
     try {
       const requestData = insertPaymentRequestSchema.parse(req.body);
       const paymentId = Math.random().toString(36).substring(2, 15);
@@ -6258,7 +6242,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid payment request data" });
     }
   });
-  app2.get("/api/payment-requests/:userId", async (req, res) => {
+  app3.get("/api/payment-requests/:userId", async (req, res) => {
     try {
       const requests = await storage.getPaymentRequestsByUserId(req.params.userId);
       res.json({ requests });
@@ -6266,7 +6250,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching payment requests" });
     }
   });
-  app2.post("/api/payment-requests/:id/pay", async (req, res) => {
+  app3.post("/api/payment-requests/:id/pay", async (req, res) => {
     try {
       const { id } = req.params;
       const { payerUserId } = req.body;
@@ -6300,7 +6284,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error processing payment" });
     }
   });
-  app2.post("/api/admin/login", async (req, res) => {
+  app3.post("/api/admin/login", async (req, res) => {
     try {
       const { email, password, twoFactorCode } = req.body;
       const admin = await storage.getAdminByEmail(email);
@@ -6368,7 +6352,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Login failed" });
     }
   });
-  app2.get("/api/admin/dashboard", async (req, res) => {
+  app3.get("/api/admin/dashboard", async (req, res) => {
     try {
       const [
         usersCount,
@@ -6425,7 +6409,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to load dashboard data" });
     }
   });
-  app2.get("/api/admin/users", async (req, res) => {
+  app3.get("/api/admin/users", async (req, res) => {
     try {
       const { page = 1, limit = 20, status, search } = req.query;
       let users2 = await storage.getAllUsers();
@@ -6464,7 +6448,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
-  app2.get("/api/admin/kyc", async (req, res) => {
+  app3.get("/api/admin/kyc", async (req, res) => {
     try {
       const kycDocuments2 = await storage.getAllKycDocuments();
       res.json({ kycDocuments: kycDocuments2 });
@@ -6473,7 +6457,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch KYC documents" });
     }
   });
-  app2.put("/api/admin/kyc/:id", async (req, res) => {
+  app3.put("/api/admin/kyc/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const { status, verificationNotes } = req.body;
@@ -6498,7 +6482,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update KYC" });
     }
   });
-  app2.get("/api/admin/transactions", async (req, res) => {
+  app3.get("/api/admin/transactions", async (req, res) => {
     try {
       const { page = 1, limit = 20, status, type } = req.query;
       let transactions2 = await storage.getAllTransactions();
@@ -6521,7 +6505,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch transactions" });
     }
   });
-  app2.get("/api/admin/virtual-cards", async (req, res) => {
+  app3.get("/api/admin/virtual-cards", async (req, res) => {
     try {
       const cards = await storage.getAllVirtualCards();
       res.json({ cards });
@@ -6530,7 +6514,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch virtual cards" });
     }
   });
-  app2.get("/api/admin/logs", async (req, res) => {
+  app3.get("/api/admin/logs", async (req, res) => {
     try {
       const logs = await storage.getAdminLogs();
       res.json({ logs });
@@ -6539,7 +6523,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch admin logs" });
     }
   });
-  app2.put("/api/admin/users/:id/block", async (req, res) => {
+  app3.put("/api/admin/users/:id/block", async (req, res) => {
     try {
       const { id } = req.params;
       await storage.updateUser(id, {
@@ -6552,7 +6536,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to block user" });
     }
   });
-  app2.put("/api/admin/users/:id/unblock", async (req, res) => {
+  app3.put("/api/admin/users/:id/unblock", async (req, res) => {
     try {
       const { id } = req.params;
       await storage.updateUser(id, {
@@ -6565,7 +6549,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to unblock user" });
     }
   });
-  app2.put("/api/admin/users/:id/account", async (req, res) => {
+  app3.put("/api/admin/users/:id/account", async (req, res) => {
     try {
       const { id } = req.params;
       const { action } = req.body;
@@ -6608,7 +6592,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to perform account action" });
     }
   });
-  app2.put("/api/admin/users/:id/security", async (req, res) => {
+  app3.put("/api/admin/users/:id/security", async (req, res) => {
     try {
       const { id } = req.params;
       const { action } = req.body;
@@ -6647,7 +6631,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to perform security action" });
     }
   });
-  app2.put("/api/admin/users/:id/notifications", async (req, res) => {
+  app3.put("/api/admin/users/:id/notifications", async (req, res) => {
     try {
       const { id } = req.params;
       const { action } = req.body;
@@ -6682,7 +6666,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update notification settings" });
     }
   });
-  app2.get("/api/admin/users/:id/export", async (req, res) => {
+  app3.get("/api/admin/users/:id/export", async (req, res) => {
     try {
       const { id } = req.params;
       const user = await storage.getUser(id);
@@ -6761,7 +6745,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to export user data" });
     }
   });
-  app2.post("/api/admin/users/:id/notification", async (req, res) => {
+  app3.post("/api/admin/users/:id/notification", async (req, res) => {
     try {
       const { id } = req.params;
       const { title, message, type = "info" } = req.body;
@@ -6799,7 +6783,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to send notification" });
     }
   });
-  app2.post("/api/support/tickets", async (req, res) => {
+  app3.post("/api/support/tickets", async (req, res) => {
     try {
       const ticketData = insertSupportTicketSchema.parse(req.body);
       const userId = req.session?.user?.id;
@@ -6824,7 +6808,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to submit support ticket" });
     }
   });
-  app2.get("/api/support/tickets", async (req, res) => {
+  app3.get("/api/support/tickets", async (req, res) => {
     try {
       const userId = req.session?.user?.id;
       if (!userId) {
@@ -6837,7 +6821,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch support tickets" });
     }
   });
-  app2.get("/api/admin/support/tickets", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/support/tickets", requireAdminAuth2, async (req, res) => {
     try {
       const { status, priority, page, limit } = req.query;
       const result = await storage.getAllSupportTickets({
@@ -6852,7 +6836,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch support tickets" });
     }
   });
-  app2.get("/api/admin/support/tickets/:id", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/support/tickets/:id", requireAdminAuth2, async (req, res) => {
     try {
       const ticket = await storage.getSupportTicket(req.params.id);
       if (!ticket) {
@@ -6864,7 +6848,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch support ticket" });
     }
   });
-  app2.put("/api/admin/support/tickets/:id", requireAdminAuth, async (req, res) => {
+  app3.put("/api/admin/support/tickets/:id", requireAdminAuth2, async (req, res) => {
     try {
       const { status, priority, adminNotes } = req.body;
       const updates = {};
@@ -6891,7 +6875,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update support ticket" });
     }
   });
-  app2.delete("/api/admin/support/tickets/:id", requireAdminAuth, async (req, res) => {
+  app3.delete("/api/admin/support/tickets/:id", requireAdminAuth2, async (req, res) => {
     try {
       const ticket = await storage.getSupportTicket(req.params.id);
       if (!ticket) {
@@ -6912,7 +6896,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete support ticket" });
     }
   });
-  app2.post("/api/admin/cleanup-ticket-notifications", requireAdminAuth, async (req, res) => {
+  app3.post("/api/admin/cleanup-ticket-notifications", requireAdminAuth2, async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       let deletedCount = 0;
@@ -6949,7 +6933,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to cleanup ticket notifications" });
     }
   });
-  app2.put("/api/admin/support/tickets/:id/assign", requireAdminAuth, async (req, res) => {
+  app3.put("/api/admin/support/tickets/:id/assign", requireAdminAuth2, async (req, res) => {
     try {
       const { adminId } = req.body;
       const ticket = await storage.assignSupportTicket(req.params.id, adminId);
@@ -6971,7 +6955,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to assign support ticket" });
     }
   });
-  app2.delete("/api/admin/users/:id", requireAdminAuth, async (req, res) => {
+  app3.delete("/api/admin/users/:id", requireAdminAuth2, async (req, res) => {
     try {
       const { id } = req.params;
       const adminId = req.session?.admin?.id;
@@ -7000,7 +6984,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
-  app2.delete("/api/admin/messages/:id", requireAdminAuth, async (req, res) => {
+  app3.delete("/api/admin/messages/:id", requireAdminAuth2, async (req, res) => {
     try {
       const { id } = req.params;
       const adminId = req.session?.admin?.id;
@@ -7021,7 +7005,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete message" });
     }
   });
-  app2.delete("/api/admin/conversations/:id", requireAdminAuth, async (req, res) => {
+  app3.delete("/api/admin/conversations/:id", requireAdminAuth2, async (req, res) => {
     try {
       const { id } = req.params;
       const adminId = req.session?.admin?.id;
@@ -7046,7 +7030,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete conversation" });
     }
   });
-  app2.get("/api/admin/conversations", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/conversations", requireAdminAuth2, async (req, res) => {
     try {
       const conversations2 = await storage.getAllActiveConversations();
       const conversationsWithDetails = await Promise.all(
@@ -7066,7 +7050,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch conversations" });
     }
   });
-  app2.put("/api/admin/conversations/:id/assign", requireAdminAuth, async (req, res) => {
+  app3.put("/api/admin/conversations/:id/assign", requireAdminAuth2, async (req, res) => {
     try {
       const { adminId } = req.body;
       const conversationId = req.params.id;
@@ -7092,7 +7076,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to assign conversation" });
     }
   });
-  app2.put("/api/admin/users/:id/balance", async (req, res) => {
+  app3.put("/api/admin/users/:id/balance", async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -7145,7 +7129,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to update user balance" });
     }
   });
-  app2.put("/api/admin/users/:id/card/:action", async (req, res) => {
+  app3.put("/api/admin/users/:id/card/:action", async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -7199,7 +7183,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to update card status" });
     }
   });
-  app2.put("/api/admin/users/:id/virtual-card", async (req, res) => {
+  app3.put("/api/admin/users/:id/virtual-card", async (req, res) => {
     try {
       const { id } = req.params;
       const { action } = req.body;
@@ -7268,7 +7252,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to update virtual card" });
     }
   });
-  app2.get("/api/admin/kyc", async (req, res) => {
+  app3.get("/api/admin/kyc", async (req, res) => {
     try {
       const kycDocuments2 = await storage.getAllKycDocuments();
       res.json({ kycDocuments: kycDocuments2 });
@@ -7277,7 +7261,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch KYC documents" });
     }
   });
-  app2.put("/api/admin/kyc/:id", async (req, res) => {
+  app3.put("/api/admin/kyc/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const { status, verificationNotes } = req.body;
@@ -7295,7 +7279,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update KYC document" });
     }
   });
-  app2.get("/api/admin/transactions", async (req, res) => {
+  app3.get("/api/admin/transactions", async (req, res) => {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
@@ -7307,7 +7291,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch transactions" });
     }
   });
-  app2.put("/api/admin/transactions/:id", async (req, res) => {
+  app3.put("/api/admin/transactions/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -7321,7 +7305,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update transaction" });
     }
   });
-  app2.put("/api/admin/transactions/:id/date", async (req, res) => {
+  app3.put("/api/admin/transactions/:id/date", async (req, res) => {
     try {
       const { id } = req.params;
       const { createdAt } = req.body;
@@ -7341,7 +7325,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update transaction date" });
     }
   });
-  app2.get("/api/admin/virtual-cards", async (req, res) => {
+  app3.get("/api/admin/virtual-cards", async (req, res) => {
     try {
       const virtualCards2 = await storage.getAllVirtualCards();
       res.json({ virtualCards: virtualCards2 });
@@ -7350,7 +7334,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch virtual cards" });
     }
   });
-  app2.put("/api/admin/virtual-cards/:id", async (req, res) => {
+  app3.put("/api/admin/virtual-cards/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -7364,7 +7348,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update virtual card" });
     }
   });
-  app2.get("/api/admin/settings", async (req, res) => {
+  app3.get("/api/admin/settings", async (req, res) => {
     try {
       const settings = await storage.getSystemSettings();
       res.json({ settings });
@@ -7373,7 +7357,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch system settings" });
     }
   });
-  app2.put("/api/admin/settings/:key", async (req, res) => {
+  app3.put("/api/admin/settings/:key", async (req, res) => {
     try {
       const { key } = req.params;
       const { value } = req.body;
@@ -7387,7 +7371,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update setting" });
     }
   });
-  app2.post("/api/admin/settings", async (req, res) => {
+  app3.post("/api/admin/settings", async (req, res) => {
     try {
       const settingData = req.body;
       const newSetting = await storage.createSystemSetting(settingData);
@@ -7397,7 +7381,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create setting" });
     }
   });
-  app2.get("/api/admin/api-configurations", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/api-configurations", requireAdminAuth2, async (req, res) => {
     try {
       const configurations = await storage.getAllApiConfigurations();
       res.json({ configurations });
@@ -7406,7 +7390,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch API configurations" });
     }
   });
-  app2.get("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/api-configurations/:provider", requireAdminAuth2, async (req, res) => {
     try {
       const { provider } = req.params;
       const configuration = await storage.getApiConfiguration(provider);
@@ -7419,7 +7403,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch API configuration" });
     }
   });
-  app2.post("/api/admin/api-configurations", requireAdminAuth, async (req, res) => {
+  app3.post("/api/admin/api-configurations", requireAdminAuth2, async (req, res) => {
     try {
       const configData = req.body;
       const configuration = await storage.createApiConfiguration(configData);
@@ -7429,7 +7413,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create API configuration" });
     }
   });
-  app2.put("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+  app3.put("/api/admin/api-configurations/:provider", requireAdminAuth2, async (req, res) => {
     try {
       const { provider } = req.params;
       const updates = req.body;
@@ -7443,7 +7427,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update API configuration" });
     }
   });
-  app2.delete("/api/admin/api-configurations/:provider", requireAdminAuth, async (req, res) => {
+  app3.delete("/api/admin/api-configurations/:provider", requireAdminAuth2, async (req, res) => {
     try {
       const { provider } = req.params;
       await storage.deleteApiConfiguration(provider);
@@ -7453,7 +7437,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete API configuration" });
     }
   });
-  app2.get("/api/users/:id", async (req, res) => {
+  app3.get("/api/users/:id", async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -7465,7 +7449,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to retrieve user data" });
     }
   });
-  app2.get("/api/users/:id/login-history", async (req, res) => {
+  app3.get("/api/users/:id/login-history", async (req, res) => {
     try {
       const { id } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit) : 10;
@@ -7476,7 +7460,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to retrieve login history" });
     }
   });
-  app2.get("/api/analytics/:userId/spending", async (req, res) => {
+  app3.get("/api/analytics/:userId/spending", async (req, res) => {
     try {
       const { userId } = req.params;
       const { period = "month" } = req.query;
@@ -7526,7 +7510,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch analytics" });
     }
   });
-  app2.post("/api/payment-requests", async (req, res) => {
+  app3.post("/api/payment-requests", async (req, res) => {
     try {
       const { fromUserId, toUserId, amount, currency, description, dueDate } = req.body;
       const paymentRequest = await storage.createPaymentRequest({
@@ -7545,7 +7529,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create payment request" });
     }
   });
-  app2.get("/api/payment-requests/:userId", async (req, res) => {
+  app3.get("/api/payment-requests/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
       const { type = "all" } = req.query;
@@ -7562,7 +7546,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch payment requests" });
     }
   });
-  app2.put("/api/payment-requests/:id/:action", async (req, res) => {
+  app3.put("/api/payment-requests/:id/:action", async (req, res) => {
     try {
       const { id, action } = req.params;
       const { userId } = req.body;
@@ -7633,7 +7617,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to process payment request" });
     }
   });
-  app2.post("/api/savings-goals", async (req, res) => {
+  app3.post("/api/savings-goals", async (req, res) => {
     try {
       const { userId, title, targetAmount, targetDate, description } = req.body;
       const savingsGoal = await storage.createSavingsGoal({
@@ -7651,7 +7635,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create savings goal" });
     }
   });
-  app2.get("/api/savings-goals/:userId", async (req, res) => {
+  app3.get("/api/savings-goals/:userId", async (req, res) => {
     try {
       const savingsGoals2 = await storage.getSavingsGoalsByUserId(req.params.userId);
       res.json({ savingsGoals: savingsGoals2 });
@@ -7660,7 +7644,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch savings goals" });
     }
   });
-  app2.put("/api/savings-goals/:id/contribute", async (req, res) => {
+  app3.put("/api/savings-goals/:id/contribute", async (req, res) => {
     try {
       const { id } = req.params;
       const { amount, userId } = req.body;
@@ -7704,7 +7688,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to add contribution" });
     }
   });
-  app2.post("/api/qr-payments/generate", async (req, res) => {
+  app3.post("/api/qr-payments/generate", async (req, res) => {
     try {
       const { userId, amount, currency, description } = req.body;
       const paymentCode = `GP${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -7724,7 +7708,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to generate QR payment" });
     }
   });
-  app2.post("/api/qr-payments/process", async (req, res) => {
+  app3.post("/api/qr-payments/process", async (req, res) => {
     try {
       const { paymentCode, payerUserId } = req.body;
       const qrPayment = await storage.getQRPaymentByCode(paymentCode);
@@ -7782,7 +7766,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to process QR payment" });
     }
   });
-  app2.get("/api/admin/payhero-settings", async (req, res) => {
+  app3.get("/api/admin/payhero-settings", async (req, res) => {
     try {
       const channelIdSetting = await storage.getSystemSetting("payhero", "channel_id");
       const providerSetting = await storage.getSystemSetting("payhero", "provider");
@@ -7801,7 +7785,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching PayHero settings" });
     }
   });
-  app2.put("/api/admin/payhero-settings", async (req, res) => {
+  app3.put("/api/admin/payhero-settings", async (req, res) => {
     try {
       const { channelId, provider, cardPrice } = req.body;
       console.log("Admin updated PayHero settings:", { channelId, provider, cardPrice });
@@ -7838,7 +7822,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating PayHero settings" });
     }
   });
-  app2.post("/api/admin/test-payhero", async (req, res) => {
+  app3.post("/api/admin/test-payhero", async (req, res) => {
     try {
       const { amount, phone, reference } = req.body;
       console.log("Admin testing PayHero connection:", { amount, phone, reference });
@@ -7864,7 +7848,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/admin/manual-payment-settings", async (req, res) => {
+  app3.get("/api/admin/manual-payment-settings", async (req, res) => {
     try {
       const paybillSetting = await storage.getSystemSetting("manual_mpesa", "paybill");
       const accountSetting = await storage.getSystemSetting("manual_mpesa", "account");
@@ -7878,7 +7862,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching manual payment settings" });
     }
   });
-  app2.put("/api/admin/manual-payment-settings", async (req, res) => {
+  app3.put("/api/admin/manual-payment-settings", async (req, res) => {
     try {
       const { paybill, account } = req.body;
       console.log("Admin updated manual M-Pesa payment settings:", { paybill, account });
@@ -7905,7 +7889,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating manual payment settings" });
     }
   });
-  app2.get("/api/manual-payment-settings", async (req, res) => {
+  app3.get("/api/manual-payment-settings", async (req, res) => {
     try {
       const paybillSetting = await storage.getSystemSetting("manual_mpesa", "paybill");
       const accountSetting = await storage.getSystemSetting("manual_mpesa", "account");
@@ -7918,7 +7902,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching manual payment settings" });
     }
   });
-  app2.get("/api/admin/messaging-settings", async (req, res) => {
+  app3.get("/api/admin/messaging-settings", async (req, res) => {
     try {
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
@@ -7945,7 +7929,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching messaging settings" });
     }
   });
-  app2.put("/api/admin/messaging-settings", async (req, res) => {
+  app3.put("/api/admin/messaging-settings", async (req, res) => {
     try {
       const { apiKey, accountEmail, senderId, whatsappAccessToken, whatsappPhoneNumberId, whatsappBusinessAccountId } = req.body;
       console.log("Admin updated messaging settings (SMS via TalkNTalk, WhatsApp via Meta)");
@@ -8002,7 +7986,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating messaging settings" });
     }
   });
-  app2.get("/api/admin/message-toggles", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/message-toggles", requireAdminAuth2, async (req, res) => {
     try {
       const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
       const enablePasswordSetting = await storage.getSystemSetting("messaging", "enable_password_reset_messages");
@@ -8023,7 +8007,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching message toggles" });
     }
   });
-  app2.put("/api/admin/message-toggles", requireAdminAuth, async (req, res) => {
+  app3.put("/api/admin/message-toggles", requireAdminAuth2, async (req, res) => {
     try {
       const { enableOtpMessages, enablePasswordResetMessages, enableFundReceiptMessages, enableKycVerifiedMessages, enableCardActivationMessages, enableLoginAlertMessages } = req.body;
       await storage.setSystemSetting({
@@ -8072,7 +8056,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating message toggles" });
     }
   });
-  app2.post("/api/admin/whatsapp/create-templates", requireAdminAuth, async (req, res) => {
+  app3.post("/api/admin/whatsapp/create-templates", requireAdminAuth2, async (req, res) => {
     try {
       const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
       console.log("[Admin] Creating WhatsApp templates...");
@@ -8096,7 +8080,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/admin/whatsapp/templates", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/whatsapp/templates", requireAdminAuth2, async (req, res) => {
     try {
       const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
       const templates = await whatsappService2.fetchTemplatesFromMeta();
@@ -8114,7 +8098,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/admin/verification-settings", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/verification-settings", requireAdminAuth2, async (req, res) => {
     try {
       const enableOtpSetting = await storage.getSystemSetting("verification", "enable_phone_otp_login");
       const enableEmailVerifySetting = await storage.getSystemSetting("verification", "enable_email_verification");
@@ -8129,7 +8113,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching verification settings" });
     }
   });
-  app2.put("/api/admin/verification-settings", requireAdminAuth, async (req, res) => {
+  app3.put("/api/admin/verification-settings", requireAdminAuth2, async (req, res) => {
     try {
       const { enablePhoneOtpLogin, enableEmailVerification, enableLoginAlert } = req.body;
       await storage.setSystemSetting({
@@ -8160,7 +8144,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating verification settings" });
     }
   });
-  app2.post("/api/admin/send-message", async (req, res) => {
+  app3.post("/api/admin/send-message", async (req, res) => {
     try {
       const { userId, message } = req.body;
       if (!userId || !message) {
@@ -8184,7 +8168,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error sending message" });
     }
   });
-  app2.get("/api/admin/email-settings", requireAdminAuth, async (req, res) => {
+  app3.get("/api/admin/email-settings", requireAdminAuth2, async (req, res) => {
     try {
       const smtpHostSetting = await storage.getSystemSetting("email", "smtp_host");
       const smtpPortSetting = await storage.getSystemSetting("email", "smtp_port");
@@ -8208,7 +8192,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching email settings" });
     }
   });
-  app2.put("/api/admin/email-settings", requireAdminAuth, async (req, res) => {
+  app3.put("/api/admin/email-settings", requireAdminAuth2, async (req, res) => {
     try {
       const { smtpHost, smtpPort, smtpSecure, smtpUsername, smtpPassword, fromEmail, fromName } = req.body;
       console.log("Admin updated email settings");
@@ -8263,7 +8247,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating email settings" });
     }
   });
-  app2.post("/api/admin/send-test-email", requireAdminAuth, async (req, res) => {
+  app3.post("/api/admin/send-test-email", requireAdminAuth2, async (req, res) => {
     try {
       const { email } = req.body;
       if (!email) {
@@ -8288,7 +8272,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error sending test email" });
     }
   });
-  app2.post("/api/admin/send-custom-email", requireAdminAuth, async (req, res) => {
+  app3.post("/api/admin/send-custom-email", requireAdminAuth2, async (req, res) => {
     try {
       const { email, subject, message, imageUrl, linkText, linkUrl } = req.body;
       if (!email || !subject || !message) {
@@ -8320,7 +8304,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error sending custom email" });
     }
   });
-  app2.get("/api/users/search", requireAuth, async (req, res) => {
+  app3.get("/api/users/search", requireAuth, async (req, res) => {
     try {
       const { q: searchQuery } = req.query;
       if (!searchQuery || typeof searchQuery !== "string" || searchQuery.length < 2) {
@@ -8367,7 +8351,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error searching users" });
     }
   });
-  app2.post("/api/transfer", async (req, res) => {
+  app3.post("/api/transfer", async (req, res) => {
     try {
       const { fromUserId, toUserId, amount, currency, description } = req.body;
       if (!fromUserId || !toUserId || !amount || !currency) {
@@ -8439,7 +8423,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error processing transfer" });
     }
   });
-  app2.get("/api/notifications/:userId", async (req, res) => {
+  app3.get("/api/notifications/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
       const userNotifications = await storage.getNotificationsByUserId(userId);
@@ -8451,7 +8435,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching notifications" });
     }
   });
-  app2.post("/api/notifications/:id/read", async (req, res) => {
+  app3.post("/api/notifications/:id/read", async (req, res) => {
     try {
       const { id } = req.params;
       await storage.markNotificationAsRead(id);
@@ -8461,7 +8445,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating notification" });
     }
   });
-  app2.get("/api/admin/withdrawals", async (req, res) => {
+  app3.get("/api/admin/withdrawals", async (req, res) => {
     try {
       const transactions2 = await storage.getAllTransactions();
       const withdrawals = transactions2.filter((t) => t.type === "withdraw");
@@ -8484,7 +8468,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching withdrawal requests" });
     }
   });
-  app2.post("/api/admin/withdrawals/:id/approve", async (req, res) => {
+  app3.post("/api/admin/withdrawals/:id/approve", async (req, res) => {
     try {
       const { id } = req.params;
       const { adminNotes } = req.body;
@@ -8518,7 +8502,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error approving withdrawal" });
     }
   });
-  app2.post("/api/admin/withdrawals/:id/reject", async (req, res) => {
+  app3.post("/api/admin/withdrawals/:id/reject", async (req, res) => {
     try {
       const { id } = req.params;
       const { adminNotes } = req.body;
@@ -8544,7 +8528,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error rejecting withdrawal" });
     }
   });
-  app2.post("/api/admin/broadcast-notification", async (req, res) => {
+  app3.post("/api/admin/broadcast-notification", async (req, res) => {
     try {
       const { title, message, type, actionUrl, expiresIn } = req.body;
       if (!title || !message) {
@@ -8569,7 +8553,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error broadcasting notification" });
     }
   });
-  app2.get("/api/admin/notifications", async (req, res) => {
+  app3.get("/api/admin/notifications", async (req, res) => {
     try {
       const globalNotifications = await storage.getGlobalNotifications();
       res.json({ notifications: globalNotifications });
@@ -8578,7 +8562,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching notifications" });
     }
   });
-  app2.delete("/api/admin/notifications/:id", async (req, res) => {
+  app3.delete("/api/admin/notifications/:id", async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteNotification(id);
@@ -8591,7 +8575,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error deleting notification" });
     }
   });
-  app2.get("/api/admin/system-logs", async (req, res) => {
+  app3.get("/api/admin/system-logs", async (req, res) => {
     try {
       const minutes = req.query.minutes ? parseInt(req.query.minutes) : 30;
       const logs = await storage.getSystemLogs(minutes);
@@ -8601,7 +8585,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching system logs" });
     }
   });
-  app2.put("/api/admin/withdrawals/:id/status", async (req, res) => {
+  app3.put("/api/admin/withdrawals/:id/status", async (req, res) => {
     try {
       const { id } = req.params;
       const { status, adminNotes } = req.body;
@@ -8625,7 +8609,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating withdrawal status" });
     }
   });
-  app2.get("/api/system-settings/card-price", async (req, res) => {
+  app3.get("/api/system-settings/card-price", async (req, res) => {
     try {
       const cardPriceSetting = await storage.getSystemSetting("virtual_card", "price");
       const cardPrice = cardPriceSetting?.value || "60.00";
@@ -8635,7 +8619,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching card price" });
     }
   });
-  app2.put("/api/system-settings/card-price", async (req, res) => {
+  app3.put("/api/system-settings/card-price", async (req, res) => {
     try {
       const { price } = req.body;
       if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
@@ -8662,7 +8646,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating card price" });
     }
   });
-  app2.post("/api/convert-to-kes", async (req, res) => {
+  app3.post("/api/convert-to-kes", async (req, res) => {
     try {
       const { usdAmount } = req.body;
       if (!usdAmount || isNaN(parseFloat(usdAmount)) || parseFloat(usdAmount) <= 0) {
@@ -8679,7 +8663,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error converting currency" });
     }
   });
-  app2.post("/api/admin/login-as-user", async (req, res) => {
+  app3.post("/api/admin/login-as-user", async (req, res) => {
     try {
       const { userId } = req.body;
       if (!userId) {
@@ -8711,7 +8695,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error logging in as user" });
     }
   });
-  app2.get("/api/transaction-status/:reference", async (req, res) => {
+  app3.get("/api/transaction-status/:reference", async (req, res) => {
     try {
       const { reference } = req.params;
       if (!reference) {
@@ -8730,7 +8714,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error checking transaction status" });
     }
   });
-  app2.post("/api/transactions", async (req, res) => {
+  app3.post("/api/transactions", async (req, res) => {
     try {
       const { userId, type, amount, currency, description, fee, recipientDetails } = req.body;
       if (type !== "withdraw") {
@@ -8797,7 +8781,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error processing withdrawal request" });
     }
   });
-  app2.post("/api/payhero-callback", async (req, res) => {
+  app3.post("/api/payhero-callback", async (req, res) => {
     try {
       console.log("PayHero callback received:", JSON.stringify(req.body, null, 2));
       const callbackData = req.body;
@@ -8874,7 +8858,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error processing payment callback" });
     }
   });
-  app2.get("/api/system/status", async (req, res) => {
+  app3.get("/api/system/status", async (req, res) => {
     try {
       console.log("\u{1F50D} System status check initiated");
       const statusChecks = {
@@ -9015,7 +8999,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/sitemap.xml", async (req, res) => {
+  app3.get("/sitemap.xml", async (req, res) => {
     try {
       const baseUrl = "https://greenpay.world";
       const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
@@ -9061,7 +9045,7 @@ ${publicPages.map((page) => `  <url>
       res.status(500).send("Error generating sitemap");
     }
   });
-  app2.get("/robots.txt", (req, res) => {
+  app3.get("/robots.txt", (req, res) => {
     const robotsTxt = `User-agent: *
 Disallow: /admin/
 Disallow: /api/
@@ -9070,7 +9054,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     res.header("Content-Type", "text/plain");
     res.send(robotsTxt);
   });
-  const httpServer = createServer(app2);
+  const httpServer = createServer(app3);
   const wss = new WebSocketServer({ server: httpServer, path: "/ws/logs" });
   const logClients = /* @__PURE__ */ new Set();
   class LogStreamService {
@@ -9183,6 +9167,26 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   }, 1e3);
   return httpServer;
 }
+app.post("/api/admin/whatsapp/retry-template", requireAdminAuth, async (req, res) => {
+  try {
+    const { templateName } = req.body;
+    const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+    console.log(`[Admin] Retrying template: ${templateName}`);
+    const templates = {
+      "otp": { name: "otp", category: "AUTHENTICATION", components: [{ type: "BODY", text: "Your verification code is {{1}}. Valid for 10 minutes." }] },
+      "password_reset": { name: "password_reset", category: "AUTHENTICATION", components: [{ type: "BODY", text: "Your password reset code is {{1}}. Valid for 10 minutes." }] }
+    };
+    const template = templates[templateName];
+    if (!template) {
+      return res.status(400).json({ message: "Unknown template" });
+    }
+    const success = await whatsappService2.createTemplate(template.name, template.category, template.components);
+    res.json({ success, templateName });
+  } catch (error) {
+    console.error("[Admin] Retry template error:", error);
+    res.status(500).json({ message: "Failed to retry template", error: String(error) });
+  }
+});
 
 // server/vite.ts
 import express from "express";
@@ -9249,7 +9253,7 @@ function log(message, source = "express") {
   });
   console.log(`${formattedTime} [${source}] ${message}`);
 }
-async function setupVite(app2, server) {
+async function setupVite(app3, server) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -9268,8 +9272,8 @@ async function setupVite(app2, server) {
     server: serverOptions,
     appType: "custom"
   });
-  app2.use(vite.middlewares);
-  app2.use("*", async (req, res, next) => {
+  app3.use(vite.middlewares);
+  app3.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
       const clientTemplate = path2.resolve(
@@ -9291,15 +9295,15 @@ async function setupVite(app2, server) {
     }
   });
 }
-function serveStatic(app2) {
+function serveStatic(app3) {
   const distPath = path2.resolve(import.meta.dirname, "public");
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
-  app2.use(express.static(distPath));
-  app2.use("*", (_req, res) => {
+  app3.use(express.static(distPath));
+  app3.use("*", (_req, res) => {
     res.sendFile(path2.resolve(distPath, "index.html"));
   });
 }
@@ -9380,9 +9384,9 @@ var missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
 if (missingVars.length > 0) {
   console.warn(`Warning: Missing environment variables: ${missingVars.join(", ")}`);
 }
-var app = express2();
-app.use(express2.json({ limit: "50mb" }));
-app.use(express2.urlencoded({ extended: true, limit: "50mb" }));
+var app2 = express2();
+app2.use(express2.json({ limit: "50mb" }));
+app2.use(express2.urlencoded({ extended: true, limit: "50mb" }));
 var pgSession = ConnectPgSimple(session);
 var sessionStore;
 if (process.env.DATABASE_URL) {
@@ -9403,7 +9407,7 @@ var isReplitEnvironment = process.env.REPLIT_DEPLOYMENT === "1" || !!process.env
 var isProduction = process.env.NODE_ENV === "production";
 var shouldTrustProxy = isReplitEnvironment || isProduction;
 if (shouldTrustProxy) {
-  app.set("trust proxy", 1);
+  app2.set("trust proxy", 1);
 }
 if (isProduction && !process.env.SESSION_SECRET) {
   console.error("SESSION_SECRET environment variable is required in production");
@@ -9430,9 +9434,9 @@ var sessionConfig = {
     // More permissive for cross-site navigation compatibility
   }
 };
-app.use(session(sessionConfig));
+app2.use(session(sessionConfig));
 if (process.env.NODE_ENV === "development") {
-  app.use((req, res, next) => {
+  app2.use((req, res, next) => {
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
@@ -9440,7 +9444,7 @@ if (process.env.NODE_ENV === "development") {
     next();
   });
 }
-app.use((req, res, next) => {
+app2.use((req, res, next) => {
   const start = Date.now();
   const path3 = req.path;
   let capturedJsonResponse = void 0;
@@ -9483,8 +9487,8 @@ app.use((req, res, next) => {
   try {
     systemLogger.init();
     console.log("\u2705 System logger initialized - capturing console output to database");
-    const server = await registerRoutes(app);
-    app.use((err, _req, res, _next) => {
+    const server = await registerRoutes(app2);
+    app2.use((err, _req, res, _next) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
       console.error("Server error:", {
@@ -9497,10 +9501,10 @@ app.use((req, res, next) => {
         throw err;
       }
     });
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
+    if (app2.get("env") === "development") {
+      await setupVite(app2, server);
     } else {
-      serveStatic(app);
+      serveStatic(app2);
     }
     const port = parseInt(process.env.PORT || "5000", 10);
     server.listen({

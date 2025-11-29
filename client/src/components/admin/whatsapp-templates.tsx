@@ -20,6 +20,7 @@ export default function WhatsAppTemplates() {
   const [loading, setLoading] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [retrying, setRetrying] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -49,6 +50,31 @@ export default function WhatsAppTemplates() {
       setTemplates([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const retryTemplate = async (templateName: string) => {
+    setRetrying(templateName);
+    try {
+      const response = await apiRequest('POST', '/api/admin/whatsapp/retry-template', { templateName });
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Template Retry",
+          description: data.success ? `${templateName} template created successfully` : `Failed to create ${templateName} template`
+        });
+        if (data.success) {
+          fetchTemplates();
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Retry Failed",
+        description: "Failed to retry template creation",
+        variant: "destructive"
+      });
+    } finally {
+      setRetrying(null);
     }
   };
 
