@@ -2836,54 +2836,40 @@ var init_whatsapp = __esm({
         return cleaned;
       }
       /**
-       * Send text message via WhatsApp Business API
+       * Send template message via WhatsApp Business API (hello_world template)
+       * Template messages have higher delivery rates and are pre-approved by Meta
        */
       async sendTextMessage(phoneNumber, message) {
         await this.refreshCredentials();
         if (!this.checkCredentials()) {
           console.error("[WhatsApp] \u2717 Credentials not configured or empty. Cannot send message.");
-          console.error("[WhatsApp] Debug info:", {
-            tokenExists: !!this.accessToken,
-            tokenEmpty: this.accessToken === "",
-            phoneIdExists: !!this.phoneNumberId,
-            phoneIdEmpty: this.phoneNumberId === ""
-          });
           return false;
         }
         try {
           const formattedPhone = this.formatPhoneNumber(phoneNumber);
           const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
-          console.log("[WhatsApp] Sending message with token:", {
-            tokenType: typeof this.accessToken,
-            tokenLength: this.accessToken?.length,
-            tokenFirstChars: this.accessToken?.substring(0, 20),
-            tokenLastChars: this.accessToken?.substring(this.accessToken.length - 20),
-            phoneNumberId: this.phoneNumberId,
-            url,
-            formattedPhone
-          });
           const payload = {
             messaging_product: "whatsapp",
             to: formattedPhone,
-            type: "text",
-            text: {
-              body: message
+            type: "template",
+            template: {
+              name: "hello_world",
+              language: {
+                code: "en_US"
+              }
             }
           };
-          const authHeader = `Bearer ${this.accessToken}`;
-          console.log("[WhatsApp] Auth header length:", authHeader.length);
-          console.log("[WhatsApp] Auth header first 50 chars:", authHeader.substring(0, 50));
           const response = await fetch6(url, {
             method: "POST",
             headers: {
-              "Authorization": authHeader,
+              "Authorization": `Bearer ${this.accessToken}`,
               "Content-Type": "application/json"
             },
             body: JSON.stringify(payload)
           });
           const responseData = await response.json();
           if (response.ok && responseData.messages) {
-            console.log(`[WhatsApp] \u2713 Text message sent to ${phoneNumber}`);
+            console.log(`[WhatsApp] \u2713 Template message sent to ${phoneNumber}`);
             return true;
           } else {
             const errorMsg = responseData.error?.message || "Unknown error";
@@ -2891,7 +2877,7 @@ var init_whatsapp = __esm({
             return false;
           }
         } catch (error) {
-          console.error("[WhatsApp] Error sending text message:", error);
+          console.error("[WhatsApp] Error sending template message:", error);
           return false;
         }
       }
@@ -2949,6 +2935,109 @@ var init_whatsapp = __esm({
           }
         } catch (error) {
           console.error("[WhatsApp] Error sending OTP:", error);
+          return false;
+        }
+      }
+      /**
+       * Send account verification code via template message
+       */
+      async sendAccountVerification(phoneNumber, verificationCode) {
+        await this.refreshCredentials();
+        if (!this.checkCredentials()) {
+          console.error("[WhatsApp] \u2717 Credentials not configured - verification not sent");
+          return false;
+        }
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: "account_verification",
+              language: { code: "en_US" },
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    { type: "text", text: verificationCode }
+                  ]
+                }
+              ]
+            }
+          };
+          const response = await fetch6(url, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`[WhatsApp] \u2713 Account verification sent to ${phoneNumber}`);
+            return true;
+          } else {
+            const errorMsg = responseData.error?.message || "Unknown error";
+            console.error(`[WhatsApp] \u2717 Account verification failed: ${errorMsg}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error sending account verification:", error);
+          return false;
+        }
+      }
+      /**
+       * Send login alert via template message
+       */
+      async sendLoginAlert(phoneNumber, location, ipAddress) {
+        await this.refreshCredentials();
+        if (!this.checkCredentials()) {
+          console.error("[WhatsApp] \u2717 Credentials not configured - login alert not sent");
+          return false;
+        }
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: "login_alert",
+              language: { code: "en_US" },
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    { type: "text", text: location },
+                    { type: "text", text: ipAddress }
+                  ]
+                }
+              ]
+            }
+          };
+          const response = await fetch6(url, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`[WhatsApp] \u2713 Login alert sent to ${phoneNumber}`);
+            return true;
+          } else {
+            const errorMsg = responseData.error?.message || "Unknown error";
+            console.error(`[WhatsApp] \u2717 Login alert failed: ${errorMsg}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error sending login alert:", error);
           return false;
         }
       }
@@ -3174,22 +3263,30 @@ var init_messaging = __esm({
         };
       }
       /**
-       * Send login alert with location and IP via SMS, WhatsApp, and Email
+       * Send login alert with location and IP via SMS, WhatsApp (template), and Email
        */
       async sendLoginAlert(phone, location, ip, email, userName) {
-        const message = `New login from ${location} (IP: ${ip}). Not you? Contact support.`;
         const timestamp2 = (/* @__PURE__ */ new Date()).toLocaleString("en-US", {
           dateStyle: "long",
           timeStyle: "short"
         });
-        const mobileResult = await this.sendMessage(phone, message);
+        const credentials = await this.getCredentials();
+        let smsResult = false;
+        let whatsappResult = false;
+        if (credentials) {
+          const message = `New login from ${location} (IP: ${ip}). Not you? Contact support.`;
+          smsResult = await this.sendSMS(phone, message, credentials);
+        }
+        if (whatsappService.isConfigured()) {
+          whatsappResult = await whatsappService.sendLoginAlert(phone, location, ip);
+        }
         let emailResult = false;
         if (email) {
           emailResult = await emailService.sendLoginAlert(email, location, ip, timestamp2, userName);
         }
         return {
-          sms: mobileResult.sms,
-          whatsapp: mobileResult.whatsapp,
+          sms: smsResult,
+          whatsapp: whatsappResult,
           email: emailResult
         };
       }
@@ -7504,6 +7601,52 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Error updating messaging settings:", error);
       res.status(500).json({ message: "Error updating messaging settings" });
+    }
+  });
+  app2.get("/api/admin/verification-settings", requireAdminAuth, async (req, res) => {
+    try {
+      const enableOtpSetting = await storage.getSystemSetting("verification", "enable_phone_otp_login");
+      const enableEmailVerifySetting = await storage.getSystemSetting("verification", "enable_email_verification");
+      const enableLoginAlertSetting = await storage.getSystemSetting("verification", "enable_login_alert");
+      res.json({
+        enablePhoneOtpLogin: enableOtpSetting?.value !== "false",
+        enableEmailVerification: enableEmailVerifySetting?.value !== "false",
+        enableLoginAlert: enableLoginAlertSetting?.value !== "false"
+      });
+    } catch (error) {
+      console.error("Error fetching verification settings:", error);
+      res.status(500).json({ message: "Error fetching verification settings" });
+    }
+  });
+  app2.put("/api/admin/verification-settings", requireAdminAuth, async (req, res) => {
+    try {
+      const { enablePhoneOtpLogin, enableEmailVerification, enableLoginAlert } = req.body;
+      await storage.setSystemSetting({
+        category: "verification",
+        key: "enable_phone_otp_login",
+        value: enablePhoneOtpLogin ? "true" : "false",
+        description: "Require phone OTP for login"
+      });
+      await storage.setSystemSetting({
+        category: "verification",
+        key: "enable_email_verification",
+        value: enableEmailVerification ? "true" : "false",
+        description: "Require email verification during signup"
+      });
+      await storage.setSystemSetting({
+        category: "verification",
+        key: "enable_login_alert",
+        value: enableLoginAlert ? "true" : "false",
+        description: "Send login alerts to user"
+      });
+      console.log("Verification settings updated:", { enablePhoneOtpLogin, enableEmailVerification, enableLoginAlert });
+      res.json({
+        success: true,
+        message: "Verification settings updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating verification settings:", error);
+      res.status(500).json({ message: "Error updating verification settings" });
     }
   });
   app2.post("/api/admin/send-message", async (req, res) => {

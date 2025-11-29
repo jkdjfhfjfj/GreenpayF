@@ -272,17 +272,28 @@ export class MessagingService {
   }
 
   /**
-   * Send login alert with location and IP via SMS, WhatsApp, and Email
+   * Send login alert with location and IP via SMS, WhatsApp (template), and Email
    */
   async sendLoginAlert(phone: string, location: string, ip: string, email?: string, userName?: string): Promise<{ sms: boolean; whatsapp: boolean; email: boolean }> {
-    const message = `New login from ${location} (IP: ${ip}). Not you? Contact support.`;
     const timestamp = new Date().toLocaleString('en-US', { 
       dateStyle: 'long', 
       timeStyle: 'short' 
     });
     
-    // Send via SMS and WhatsApp
-    const mobileResult = await this.sendMessage(phone, message);
+    const credentials = await this.getCredentials();
+    let smsResult = false;
+    let whatsappResult = false;
+    
+    // Send SMS if configured
+    if (credentials) {
+      const message = `New login from ${location} (IP: ${ip}). Not you? Contact support.`;
+      smsResult = await this.sendSMS(phone, message, credentials);
+    }
+    
+    // Send WhatsApp via template (use dedicated template method)
+    if (whatsappService.isConfigured()) {
+      whatsappResult = await whatsappService.sendLoginAlert(phone, location, ip);
+    }
     
     // Send via Email if provided
     let emailResult = false;
@@ -291,8 +302,8 @@ export class MessagingService {
     }
     
     return { 
-      sms: mobileResult.sms, 
-      whatsapp: mobileResult.whatsapp,
+      sms: smsResult, 
+      whatsapp: whatsappResult,
       email: emailResult
     };
   }

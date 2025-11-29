@@ -256,6 +256,123 @@ export class WhatsAppService {
   }
 
   /**
+   * Send account verification code via template message
+   */
+  async sendAccountVerification(phoneNumber: string, verificationCode: string): Promise<boolean> {
+    await this.refreshCredentials();
+    
+    if (!this.checkCredentials()) {
+      console.error('[WhatsApp] ✗ Credentials not configured - verification not sent');
+      return false;
+    }
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: 'account_verification',
+          language: { code: 'en_US' },
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                { type: 'text', text: verificationCode }
+              ]
+            }
+          ]
+        }
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.messages) {
+        console.log(`[WhatsApp] ✓ Account verification sent to ${phoneNumber}`);
+        return true;
+      } else {
+        const errorMsg = responseData.error?.message || 'Unknown error';
+        console.error(`[WhatsApp] ✗ Account verification failed: ${errorMsg}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error sending account verification:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send login alert via template message
+   */
+  async sendLoginAlert(phoneNumber: string, location: string, ipAddress: string): Promise<boolean> {
+    await this.refreshCredentials();
+    
+    if (!this.checkCredentials()) {
+      console.error('[WhatsApp] ✗ Credentials not configured - login alert not sent');
+      return false;
+    }
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: 'login_alert',
+          language: { code: 'en_US' },
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                { type: 'text', text: location },
+                { type: 'text', text: ipAddress }
+              ]
+            }
+          ]
+        }
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.messages) {
+        console.log(`[WhatsApp] ✓ Login alert sent to ${phoneNumber}`);
+        return true;
+      } else {
+        const errorMsg = responseData.error?.message || 'Unknown error';
+        console.error(`[WhatsApp] ✗ Login alert failed: ${errorMsg}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error sending login alert:', error);
+      return false;
+    }
+  }
+
+  /**
    * Check if WhatsApp is properly configured
    */
   isConfigured(): boolean {
