@@ -5393,6 +5393,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // USER ACTIVITY TIMELINE - Get all user activities from last 48 hours
+  app.get("/api/admin/users/:userId/activity", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const hours = req.query.hours ? parseInt(req.query.hours as string) : 48;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const now = new Date();
+      const timeWindowMs = hours * 60 * 60 * 1000;
+      const cutoffTime = new Date(now.getTime() - timeWindowMs);
+
+      // Fetch all data for this user
+      const transactions = await storage.getTransactionsByUserId(userId);
+      const loginHistory = await storage.getLoginHistoryByUserId(userId, 100);
+      const kyc = await storage.getKycByUserId(userId);
+      const virtualCard = await storage.getVirtualCardByUserId(userId);
+
+      // Build unified activity timeline
+      const activities: any[] = [];
+
+      // Add transactions
+      transactions.forEach(txn => {
+        const txnDate = new Date(txn.createdAt);
+        if (txnDate >= cutoffTime) {
+          activities.push({
+            id: txn.id,
+            type: txn.type === 'send' ? 'transfer_sent' : txn.type === 'receive' ? 'transfer_received' : txn.type,
+            action: txn.type === 'send' ? `Sent $${txn.amount} ${txn.currency}` : txn.type === 'receive' ? `Received $${txn.amount} ${txn.currency}` : `${txn.type}: $${txn.amount}`,
+            details: {
+              amount: txn.amount,
+              currency: txn.currency,
+              recipient: txn.recipient || txn.sender,
+              status: txn.status,
+              description: txn.description
+            },
+            timestamp: txnDate,
+            icon: txn.type === 'send' ? '📤' : txn.type === 'receive' ? '📥' : '💳'
+          });
+        }
+      });
+
+      // Add login history
+      loginHistory.forEach(login => {
+        const loginDate = new Date(login.createdAt);
+        if (loginDate >= cutoffTime) {
+          activities.push({
+            id: login.id,
+            type: 'login',
+            action: `Login from ${login.location || 'Unknown Location'}`,
+            details: {
+              device: login.deviceType,
+              browser: login.browser,
+              ipAddress: login.ipAddress,
+              location: login.location,
+              status: login.status
+            },
+            timestamp: loginDate,
+            icon: '🔐'
+          });
+        }
+      });
+
+      // Add KYC updates
+      if (kyc) {
+        const kycDate = new Date(kyc.updatedAt || kyc.createdAt);
+        if (kycDate >= cutoffTime) {
+          activities.push({
+            id: kyc.id,
+            type: 'kyc',
+            action: `KYC Status: ${kyc.status}`,
+            details: {
+              documentType: kyc.documentType,
+              status: kyc.status,
+              verificationNotes: kyc.verificationNotes
+            },
+            timestamp: kycDate,
+            icon: '📋'
+          });
+        }
+      }
+
+      // Add virtual card activities
+      if (virtualCard) {
+        const cardDate = new Date(virtualCard.purchaseDate || virtualCard.updatedAt);
+        if (cardDate >= cutoffTime) {
+          activities.push({
+            id: virtualCard.id,
+            type: 'card_purchase',
+            action: `Virtual Card Purchase - $${virtualCard.purchaseAmount}`,
+            details: {
+              cardNumber: virtualCard.cardNumber,
+              status: virtualCard.status,
+              balance: virtualCard.balance
+            },
+            timestamp: cardDate,
+            icon: '💳'
+          });
+        }
+      }
+
+      // Sort by timestamp descending (newest first)
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      res.json({
+        userId,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          phone: user.phone
+        },
+        timeWindow: `${hours} hours`,
+        totalActivities: activities.length,
+        activities
+      });
+    } catch (error) {
+      console.error('Error fetching user activity:', error);
+      res.status(500).json({ message: "Error fetching user activity" });
+    }
+  });
+
   // Admin login as user endpoint
   app.post("/api/admin/login-as-user", async (req, res) => {
     try {
