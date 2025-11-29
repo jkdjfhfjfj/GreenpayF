@@ -507,42 +507,40 @@ export default function MessagingSettings() {
       </Card>
 
       {/* WhatsApp Templates */}
-      {isWhatsAppConfigured && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              WhatsApp Message Templates
-            </CardTitle>
-            <CardDescription>
-              Create pre-approved message templates in Meta Business Manager
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Click the button below to automatically create all required WhatsApp message templates in your Meta Business Account. Templates must be approved by Meta before they can be used.
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            WhatsApp Message Templates
+          </CardTitle>
+          <CardDescription>
+            Create pre-approved message templates in Meta Business Manager
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Click the button below to automatically create all required WhatsApp message templates in your Meta Business Account. Templates must be approved by Meta before they can be used.
+            </p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm text-yellow-800 flex items-start gap-2">
+                <span className="text-lg">⚠️</span>
+                <span>
+                  Templates will be created in pending status. You must approve them in Meta Business Manager before users can receive messages.
+                </span>
               </p>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800 flex items-start gap-2">
-                  <span className="text-lg">⚠️</span>
-                  <span>
-                    Templates will be created in pending status. You must approve them in Meta Business Manager before users can receive messages.
-                  </span>
-                </p>
-              </div>
-              <Button 
-                onClick={handleCreateTemplates} 
-                disabled={creatingTemplates}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                {creatingTemplates ? 'Creating Templates...' : 'Create All WhatsApp Templates'}
-              </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <Button 
+              onClick={handleCreateTemplates} 
+              disabled={creatingTemplates}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              {creatingTemplates ? 'Creating Templates...' : 'Create All WhatsApp Templates'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Automatic Notifications Info */}
       <Card>
