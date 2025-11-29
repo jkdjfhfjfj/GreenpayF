@@ -5861,7 +5861,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   app.post("/api/admin/whatsapp/send-template", requireAdminAuth, async (req, res) => {
     try {
       const { userId, templateName, parameters } = req.body;
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
