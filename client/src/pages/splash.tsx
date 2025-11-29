@@ -25,7 +25,7 @@ export default function SplashPage() {
   }, [isAuthenticated, isLoading, setLocation]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-[#10b981] to-[#059669] flex flex-col" style={{ background: 'linear-gradient(to bottom right, #10b981, #059669)' }}>
       <div className="flex-1 flex flex-col items-center justify-center text-white px-6">
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
@@ -33,7 +33,7 @@ export default function SplashPage() {
           transition={{ duration: 0.6, type: "spring" }}
           className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-8 elevation-3"
         >
-          <span className="material-icons text-primary text-4xl">attach_money</span>
+          <span className="material-icons text-[#10b981] text-4xl" style={{ fontSize: '40px', color: '#10b981' }}>attach_money</span>
         </motion.div>
         
         <motion.h1
@@ -65,7 +65,8 @@ export default function SplashPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setLocation("/login")}
-            className="w-full bg-white text-primary font-semibold py-4 px-6 rounded-xl ripple elevation-2 transition-all duration-200 hover:bg-gray-50"
+            className="w-full bg-white text-[#10b981] font-semibold py-4 px-6 rounded-xl ripple elevation-2 transition-all duration-200 hover:bg-gray-50"
+            style={{ color: '#10b981', backgroundColor: '#ffffff' }}
             data-testid="button-signin"
           >
             Sign In

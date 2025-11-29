@@ -1887,6 +1887,10 @@ var init_exchange_rate = __esm({
 });
 
 // server/services/email-templates.ts
+var email_templates_exports = {};
+__export(email_templates_exports, {
+  emailTemplates: () => emailTemplates
+});
 var baseTemplate, emailTemplates;
 var init_email_templates = __esm({
   "server/services/email-templates.ts"() {
@@ -2479,6 +2483,45 @@ var init_email_templates = __esm({
       </div>
     `;
         return baseTemplate(content);
+      },
+      /**
+       * Custom Admin Email
+       */
+      custom: (params) => {
+        const formatMessage = (text2) => {
+          return text2.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\*(.*?)\*/g, "<em>$1</em>").replace(/\n• /g, "<br>\u2022 ").replace(/\n/g, "<br>");
+        };
+        const imageSection = params.imageUrl ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <img src="${params.imageUrl}" alt="Email Image" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+      </div>
+    ` : "";
+        const linkSection = params.linkText && params.linkUrl ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${params.linkUrl}" class="button" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+          ${params.linkText}
+        </a>
+      </div>
+    ` : "";
+        const content = `
+      <div class="content">
+        <p class="greeting">Message from GreenPay Team</p>
+        
+        <p class="text">
+          ${formatMessage(params.message)}
+        </p>
+
+        ${imageSection}
+        ${linkSection}
+        
+        <div class="info-box">
+          <p class="text" style="margin: 0;">
+            If you have any questions or need assistance, please don't hesitate to contact our support team.
+          </p>
+        </div>
+      </div>
+    `;
+        return baseTemplate(content);
       }
     };
   }
@@ -2509,9 +2552,9 @@ var init_email = __esm({
           const host = settings.find((s) => s.key === "smtp_host")?.value;
           const port = parseInt(settings.find((s) => s.key === "smtp_port")?.value || "465");
           const secure = settings.find((s) => s.key === "smtp_secure")?.value === "true";
-          const username = settings.find((s) => s.key === "smtp_username")?.value;
-          const password = settings.find((s) => s.key === "smtp_password")?.value;
-          const fromEmail = settings.find((s) => s.key === "from_email")?.value;
+          const username = settings.find((s) => s.key === "smtp_username")?.value || "smtp.zoho.com";
+          const password = settings.find((s) => s.key === "smtp_password")?.value || "Kitondosch.6639";
+          const fromEmail = settings.find((s) => s.key === "from_email")?.value || "support@greenpay.world";
           const fromName = settings.find((s) => s.key === "from_name")?.value || "GreenPay";
           if (!host || !username || !password || !fromEmail) {
             console.warn("Email credentials not fully configured");
@@ -2686,22 +2729,168 @@ var init_email = __esm({
   }
 });
 
+// server/services/whatsapp.ts
+import fetch6 from "node-fetch";
+var WhatsAppService, whatsappService;
+var init_whatsapp = __esm({
+  "server/services/whatsapp.ts"() {
+    "use strict";
+    WhatsAppService = class {
+      accessToken;
+      phoneNumberId;
+      apiVersion = "v18.0";
+      graphApiUrl = "https://graph.instagram.com";
+      constructor() {
+        this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+        this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+      }
+      checkCredentials() {
+        return !!(this.accessToken && this.phoneNumberId);
+      }
+      /**
+       * Format phone number to international format (without +)
+       * WhatsApp API requires: 1XXXXXXXXXX (no + prefix)
+       */
+      formatPhoneNumber(phone) {
+        let cleaned = phone.replace(/[\s-()]/g, "");
+        if (cleaned.startsWith("+")) {
+          cleaned = cleaned.substring(1);
+        }
+        if (cleaned.startsWith("00")) {
+          cleaned = cleaned.substring(2);
+        }
+        return cleaned;
+      }
+      /**
+       * Send text message via WhatsApp Business API
+       */
+      async sendTextMessage(phoneNumber, message) {
+        if (!this.checkCredentials()) {
+          console.warn("WhatsApp credentials not configured - message not sent");
+          return false;
+        }
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "text",
+            text: {
+              body: message
+            }
+          };
+          const response = await fetch6(url, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`\u2713 WhatsApp text message sent to ${phoneNumber}`);
+            return true;
+          } else {
+            const errorMsg = responseData.error?.message || "Unknown error";
+            console.error(`\u2717 WhatsApp message failed: ${errorMsg}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("WhatsApp text message error:", error);
+          return false;
+        }
+      }
+      /**
+       * Send OTP via template message
+       * Requires template to be created in WhatsApp Business Manager first
+       */
+      async sendOTP(phoneNumber, otpCode) {
+        if (!this.checkCredentials()) {
+          console.warn("WhatsApp credentials not configured - OTP not sent");
+          return false;
+        }
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: "otp_verification",
+              language: {
+                code: "en"
+              },
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    {
+                      type: "text",
+                      text: otpCode
+                    }
+                  ]
+                }
+              ]
+            }
+          };
+          const response = await fetch6(url, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`\u2713 WhatsApp OTP sent to ${phoneNumber}`);
+            return true;
+          } else {
+            const errorMsg = responseData.error?.message || "Unknown error";
+            console.error(`\u2717 WhatsApp OTP failed: ${errorMsg}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("WhatsApp OTP error:", error);
+          return false;
+        }
+      }
+      /**
+       * Check if WhatsApp is properly configured
+       */
+      isConfigured() {
+        return this.checkCredentials();
+      }
+      /**
+       * Generate 6-digit OTP code
+       */
+      generateOTP() {
+        return Math.floor(1e5 + Math.random() * 9e5).toString();
+      }
+    };
+    whatsappService = new WhatsAppService();
+  }
+});
+
 // server/services/messaging.ts
 var messaging_exports = {};
 __export(messaging_exports, {
   MessagingService: () => MessagingService,
   messagingService: () => messagingService
 });
-import fetch6 from "node-fetch";
+import fetch7 from "node-fetch";
 var MessagingService, messagingService;
 var init_messaging = __esm({
   "server/services/messaging.ts"() {
     "use strict";
     init_storage();
     init_email();
+    init_whatsapp();
     MessagingService = class {
       SMS_URL = "https://talkntalk.africa/api/v1/sms/send";
-      WHATSAPP_URL_BASE = "https://talkntalk.africa/api/v1/whatsapp/sessions";
       MAX_MESSAGE_LENGTH = 160;
       MESSAGE_PREFIX = "[Greenpay] ";
       /**
@@ -2713,12 +2902,11 @@ var init_messaging = __esm({
           const apiKey = settings.find((s) => s.key === "api_key")?.value;
           const accountEmail = settings.find((s) => s.key === "account_email")?.value;
           const senderId = settings.find((s) => s.key === "sender_id")?.value;
-          const whatsappSessionId = settings.find((s) => s.key === "whatsapp_session_id")?.value;
-          if (!apiKey || !accountEmail || !senderId || !whatsappSessionId) {
-            console.warn("Messaging credentials not fully configured");
+          if (!apiKey || !accountEmail || !senderId) {
+            console.warn("SMS messaging credentials not fully configured");
             return null;
           }
-          return { apiKey, accountEmail, senderId, whatsappSessionId };
+          return { apiKey, accountEmail, senderId };
         } catch (error) {
           console.error("Error fetching messaging credentials:", error);
           return null;
@@ -2764,7 +2952,7 @@ var init_messaging = __esm({
         try {
           const formattedPhone = this.formatPhoneNumber(phone);
           const formattedMessage = this.formatMessage(message);
-          const response = await fetch6(this.SMS_URL, {
+          const response = await fetch7(this.SMS_URL, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -2791,33 +2979,16 @@ var init_messaging = __esm({
         }
       }
       /**
-       * Send WhatsApp message
+       * Send WhatsApp message via Meta WhatsApp Business API
        */
-      async sendWhatsApp(phone, message, credentials) {
+      async sendWhatsApp(phone, message) {
         try {
-          const formattedPhone = this.formatPhoneNumber(phone);
-          const formattedMessage = this.formatMessage(message);
-          const url = `${this.WHATSAPP_URL_BASE}/${credentials.whatsappSessionId}/message/send`;
-          const response = await fetch6(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-API-Key": credentials.apiKey,
-              "X-Account-Email": credentials.accountEmail
-            },
-            body: JSON.stringify({
-              recipient: formattedPhone,
-              message: formattedMessage
-            })
-          });
-          const result = await response.json();
-          if (result.status_code === 200) {
-            console.log(`WhatsApp message sent successfully to ${formattedPhone}`);
-            return true;
-          } else {
-            console.error(`WhatsApp send failed: ${result.message}`);
+          if (!whatsappService.isConfigured()) {
+            console.warn("WhatsApp Business API not configured");
             return false;
           }
+          const formattedMessage = this.formatMessage(message);
+          return await whatsappService.sendTextMessage(phone, formattedMessage);
         } catch (error) {
           console.error("WhatsApp sending error:", error);
           return false;
@@ -2828,14 +2999,14 @@ var init_messaging = __esm({
        */
       async sendMessage(phone, message) {
         const credentials = await this.getCredentials();
-        if (!credentials) {
-          console.error("Cannot send message: Messaging credentials not configured");
-          return { sms: false, whatsapp: false };
+        let smsResult = false;
+        let whatsappResult = false;
+        if (credentials) {
+          smsResult = await this.sendSMS(phone, message, credentials);
+        } else {
+          console.warn("SMS credentials not configured, skipping SMS");
         }
-        const [smsResult, whatsappResult] = await Promise.all([
-          this.sendSMS(phone, message, credentials),
-          this.sendWhatsApp(phone, message, credentials)
-        ]);
+        whatsappResult = await this.sendWhatsApp(phone, message);
         return { sms: smsResult, whatsapp: whatsappResult };
       }
       /**
@@ -2849,15 +3020,11 @@ var init_messaging = __esm({
           email: false
         };
         if (credentials) {
-          const [smsResult, whatsappResult] = await Promise.all([
-            this.sendSMS(phone, message, credentials),
-            this.sendWhatsApp(phone, message, credentials)
-          ]);
-          results.sms = smsResult;
-          results.whatsapp = whatsappResult;
+          results.sms = await this.sendSMS(phone, message, credentials);
         } else {
-          console.warn("SMS/WhatsApp credentials not configured");
+          console.warn("SMS credentials not configured, skipping SMS");
         }
+        results.whatsapp = await this.sendWhatsApp(phone, message);
         if (email) {
           console.log("Email will be sent via specialized emailService methods");
           results.email = true;
@@ -3949,6 +4116,15 @@ var transferSchema = z.object({
   description: z.string().optional()
 });
 async function registerRoutes(app2) {
+  const requireAuth = (req, res, next) => {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({
+        message: "Authentication required. Please log in."
+      });
+    }
+    next();
+  };
   const requireAdminAuth = (req, res, next) => {
     const adminId = req.session?.admin?.id;
     console.log(`[ADMIN AUTH] Session check - hasSession: ${!!req.session}, hasAdminId: ${!!adminId}`);
@@ -7168,12 +7344,14 @@ async function registerRoutes(app2) {
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
-      const whatsappSessionSetting = await storage.getSystemSetting("messaging", "whatsapp_session_id");
+      const whatsappAccessTokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
+      const whatsappPhoneNumberIdSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
       const settings = {
         apiKey: apiKeySetting?.value || "",
         accountEmail: emailSetting?.value || "",
         senderId: senderIdSetting?.value || "",
-        whatsappSessionId: whatsappSessionSetting?.value || ""
+        whatsappAccessToken: whatsappAccessTokenSetting?.value || "",
+        whatsappPhoneNumberId: whatsappPhoneNumberIdSetting?.value || ""
       };
       res.json(settings);
     } catch (error) {
@@ -7183,13 +7361,13 @@ async function registerRoutes(app2) {
   });
   app2.put("/api/admin/messaging-settings", async (req, res) => {
     try {
-      const { apiKey, accountEmail, senderId, whatsappSessionId } = req.body;
-      console.log("Admin updated messaging settings");
+      const { apiKey, accountEmail, senderId, whatsappAccessToken, whatsappPhoneNumberId } = req.body;
+      console.log("Admin updated messaging settings (SMS via TalkNTalk, WhatsApp via Meta)");
       await storage.setSystemSetting({
         category: "messaging",
         key: "api_key",
         value: (apiKey || "").trim(),
-        description: "TalkNTalk API key for SMS and WhatsApp"
+        description: "TalkNTalk API key for SMS"
       });
       await storage.setSystemSetting({
         category: "messaging",
@@ -7205,10 +7383,18 @@ async function registerRoutes(app2) {
       });
       await storage.setSystemSetting({
         category: "messaging",
-        key: "whatsapp_session_id",
-        value: (whatsappSessionId || "").trim(),
-        description: "WhatsApp business session ID"
+        key: "whatsapp_access_token",
+        value: (whatsappAccessToken || "").trim(),
+        description: "Meta WhatsApp Business API access token"
       });
+      await storage.setSystemSetting({
+        category: "messaging",
+        key: "whatsapp_phone_number_id",
+        value: (whatsappPhoneNumberId || "").trim(),
+        description: "Meta WhatsApp Business phone number ID"
+      });
+      process.env.WHATSAPP_ACCESS_TOKEN = (whatsappAccessToken || "").trim();
+      process.env.WHATSAPP_PHONE_NUMBER_ID = (whatsappPhoneNumberId || "").trim();
       res.json({
         success: true,
         message: "Messaging settings updated successfully"
@@ -7346,14 +7532,52 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error sending test email" });
     }
   });
-  app2.get("/api/users/search", async (req, res) => {
+  app2.post("/api/admin/send-custom-email", requireAdminAuth, async (req, res) => {
+    try {
+      const { email, subject, message, imageUrl, linkText, linkUrl } = req.body;
+      if (!email || !subject || !message) {
+        return res.status(400).json({ message: "Email, subject, and message are required" });
+      }
+      const { emailService: emailService2 } = await Promise.resolve().then(() => (init_email(), email_exports));
+      const { emailTemplates: emailTemplates2 } = await Promise.resolve().then(() => (init_email_templates(), email_templates_exports));
+      const html = emailTemplates2.custom({
+        message,
+        imageUrl: imageUrl || void 0,
+        linkText: linkText || void 0,
+        linkUrl: linkUrl || void 0
+      });
+      const result = await emailService2.sendEmail(email, subject, html);
+      if (result) {
+        console.log(`Admin sent custom email to ${email} with subject: ${subject}`);
+        res.json({
+          success: true,
+          message: "Custom email sent successfully"
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Failed to send custom email. Please check your email configuration."
+        });
+      }
+    } catch (error) {
+      console.error("Error sending custom email:", error);
+      res.status(500).json({ message: "Error sending custom email" });
+    }
+  });
+  app2.get("/api/users/search", requireAuth, async (req, res) => {
     try {
       const { q: searchQuery } = req.query;
       if (!searchQuery || typeof searchQuery !== "string" || searchQuery.length < 2) {
         return res.json({ users: [] });
       }
       const users2 = await storage.getAllUsers();
+      const currentUserId = req.session.userId;
+      console.log(`User search initiated by ${currentUserId} for query: "${searchQuery}"`);
+      console.log(`Total users in database: ${users2.length}`);
       const filteredUsers = users2.filter((user) => {
+        if (user.id === currentUserId || user.isAdmin) {
+          return false;
+        }
         const query = searchQuery.toLowerCase().trim();
         const fullName = (user.fullName || "").toLowerCase().trim();
         const email = (user.email || "").toLowerCase().trim();
@@ -7370,17 +7594,17 @@ async function registerRoutes(app2) {
         };
         const normalizedUserPhone = normalizeToStandardPhone(phone);
         const normalizedSearchPhone = normalizeToStandardPhone(searchQuery.trim());
-        const emailMatch = email === query || email.includes(query);
-        const nameMatch = fullName.includes(query) || fullName.split(" ").some((part) => part.startsWith(query));
+        const emailMatch = email.includes(query);
+        const nameMatch = fullName.includes(query) || fullName.split(" ").some((part) => part.toLowerCase().startsWith(query));
         const phoneMatch = normalizedUserPhone && normalizedSearchPhone && (normalizedUserPhone === normalizedSearchPhone || normalizedUserPhone.includes(normalizedSearchPhone) || normalizedSearchPhone.includes(normalizedUserPhone));
-        return (emailMatch || nameMatch || phoneMatch) && user.id !== req.session?.userId;
+        return emailMatch || nameMatch || phoneMatch;
       }).slice(0, 10).map((user) => ({
         id: user.id,
         fullName: user.fullName,
         email: user.email,
         phone: user.phone
       }));
-      console.log(`User search for "${searchQuery}": found ${filteredUsers.length} users`);
+      console.log(`User search for "${searchQuery}": found ${filteredUsers.length} matching users`);
       res.json({ users: filteredUsers });
     } catch (error) {
       console.error("User search error:", error);
@@ -8238,6 +8462,12 @@ var vite_config_default = defineConfig({
     emptyOutDir: true
   },
   server: {
+    middlewareMode: false,
+    hmr: {
+      host: process.env.REPL_SLUG ? `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : "localhost",
+      port: 443,
+      protocol: process.env.REPL_SLUG ? "wss" : "ws"
+    },
     fs: {
       strict: true,
       deny: ["**/.*"]
