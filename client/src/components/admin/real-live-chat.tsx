@@ -26,7 +26,7 @@ interface Message {
   senderId: string;
   senderType: 'user' | 'admin';
   content: string;
-  messageType: 'text' | 'file' | 'image';
+  messageType: 'text' | 'file' | 'image' | 'video';
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
@@ -387,31 +387,57 @@ export default function RealLiveChat() {
                           </div>
                         )}
                         
-                        {message.messageType === 'file' || message.messageType === 'image' ? (
+                        {message.messageType === 'file' || message.messageType === 'image' || message.messageType === 'video' ? (
                           <div className="space-y-2">
                             {message.messageType === 'image' && message.fileUrl ? (
                               <img 
                                 src={message.fileUrl} 
                                 alt={message.fileName}
-                                className="max-w-full rounded border"
+                                className="max-w-full rounded border cursor-pointer hover:opacity-80"
+                                onClick={() => window.open(message.fileUrl, '_blank')}
                                 data-testid={`image-${message.id}`}
                               />
-                            ) : (
-                              <div className="flex items-center space-x-2 p-2 bg-background/10 rounded">
+                            ) : message.messageType === 'video' && message.fileUrl ? (
+                              <video
+                                controls
+                                className="max-w-full rounded border"
+                                style={{ maxHeight: '250px' }}
+                                data-testid={`video-${message.id}`}
+                              >
+                                <source src={message.fileUrl} type="video/mp4" />
+                                Your browser does not support the video tag.
+                              </video>
+                            ) : message.fileUrl ? (
+                              <a
+                                href={message.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center space-x-2 p-2 bg-background/10 rounded hover:bg-background/20 transition-colors"
+                              >
                                 {message.messageType === 'image' ? (
-                                  <ImageIcon className="w-4 h-4" />
+                                  <ImageIcon className="w-4 h-4 flex-shrink-0" />
                                 ) : (
-                                  <FileText className="w-4 h-4" />
+                                  <FileText className="w-4 h-4 flex-shrink-0" />
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">{message.fileName}</p>
+                                  <p className="text-sm font-medium truncate">{message.fileName || 'Download file'}</p>
+                                  {message.fileSize && (
+                                    <p className="text-xs opacity-75">{formatFileSize(message.fileSize)}</p>
+                                  )}
+                                </div>
+                              </a>
+                            ) : (
+                              <div className="flex items-center space-x-2 p-2 bg-background/10 rounded">
+                                <FileText className="w-4 h-4" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{message.fileName || 'File'}</p>
                                   {message.fileSize && (
                                     <p className="text-xs opacity-75">{formatFileSize(message.fileSize)}</p>
                                   )}
                                 </div>
                               </div>
                             )}
-                            {message.content !== message.fileName && (
+                            {message.content !== message.fileName && message.content && (
                               <p className="text-sm">{message.content}</p>
                             )}
                           </div>

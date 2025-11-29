@@ -18,7 +18,7 @@ interface Message {
   senderId: string;
   senderType: 'user' | 'admin';
   content: string;
-  messageType: 'text' | 'file' | 'image';
+  messageType: 'text' | 'file' | 'image' | 'video';
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
@@ -288,6 +288,26 @@ export default function LiveChatPage() {
                             window.open(url, '_blank');
                           }}
                         />
+                      </div>
+                    )}
+                    {message.messageType === 'video' && message.fileUrl && (
+                      <div className="mb-2">
+                        <video 
+                          controls
+                          className="max-w-full h-auto rounded"
+                          style={{ maxHeight: '250px' }}
+                        >
+                          <source 
+                            src={message.fileUrl.startsWith('http://') || message.fileUrl.startsWith('https://') 
+                              ? message.fileUrl 
+                              : message.fileUrl.startsWith('/') 
+                                ? message.fileUrl 
+                                : `/${message.fileUrl}`
+                            } 
+                            type="video/mp4"
+                          />
+                          Your browser does not support the video tag.
+                        </video>
                       </div>
                     )}
                     {message.messageType === 'file' && message.fileUrl && (
