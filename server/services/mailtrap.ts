@@ -1,0 +1,191 @@
+import fetch from 'node-fetch';
+import { storage } from '../storage';
+
+interface MailtrapTemplate {
+  uuid: string;
+  variables: Record<string, string>;
+}
+
+const TEMPLATE_UUIDs = {
+  otp: '64254a5b-a2ba-4b7d-aa41-5a0907c836db',
+  password_reset: '97fe2c00-4cfd-433b-b262-25632cbdbed7',
+  welcome: '7711c72e-431b-4fb9-bea9-9738d4d8bfe7',
+  kyc_submitted: 'dd087e67-8a7b-4bb8-9645-acbd61666d76',
+  kyc_verified: 'c6353bf3-8e12-4852-8607-82223f49a4aa',
+  login_alert: '42ce5e3b-eed9-41aa-808c-cfecbd906e60',
+  fund_receipt: 'placeholder-fund-receipt', // To be added
+  card_activation: 'placeholder-card-activation' // To be added
+};
+
+export class MailtrapService {
+  private apiKey: string | null = null;
+  private apiUrl = 'https://send.api.mailtrap.io/api/send';
+  private fromEmail = 'support@greenpay.world';
+  private fromName = 'GreenPay';
+
+  constructor() {
+    this.loadApiKey();
+  }
+
+  /**
+   * Load Mailtrap API key from system settings
+   */
+  private async loadApiKey(): Promise<void> {
+    try {
+      const setting = await storage.getSystemSetting('email', 'mailtrap_api_key');
+      if (setting?.value) {
+        this.apiKey = setting.value as string;
+        console.log('[Mailtrap] ✓ API key loaded');
+      } else {
+        console.warn('[Mailtrap] ⚠️ API key not configured');
+      }
+    } catch (error) {
+      console.error('[Mailtrap] Error loading API key:', error);
+    }
+  }
+
+  /**
+   * Refresh API key when settings are updated
+   */
+  async refreshApiKey(): Promise<void> {
+    console.log('[Mailtrap] Refreshing API key...');
+    await this.loadApiKey();
+  }
+
+  /**
+   * Send email using Mailtrap template
+   */
+  async sendTemplate(
+    toEmail: string,
+    templateUuid: string,
+    variables: Record<string, string>
+  ): Promise<boolean> {
+    try {
+      if (!this.apiKey) {
+        console.error('[Mailtrap] ✗ API key not configured');
+        return false;
+      }
+
+      const payload = {
+        template_uuid: templateUuid,
+        template_variables: variables,
+        from: {
+          email: this.fromEmail,
+          name: this.fromName
+        },
+        to: [
+          { email: toEmail }
+        ]
+      };
+
+      console.log(`[Mailtrap] Sending template ${templateUuid} to ${toEmail}`);
+
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Api-Token': this.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error(`[Mailtrap] ✗ Send failed: ${response.status} - ${error}`);
+        return false;
+      }
+
+      const result = await response.json() as any;
+      console.log(`[Mailtrap] ✓ Email sent successfully - MessageId: ${result.message_id}`);
+      return true;
+    } catch (error) {
+      console.error('[Mailtrap] Error sending email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send OTP verification email
+   */
+  async sendOTP(toEmail: string, firstName: string, lastName: string, otp: string): Promise<boolean> {
+    return this.sendTemplate(toEmail, TEMPLATE_UUIDs.otp, {
+      first_name: firstName,
+      last_name: lastName,
+      otp: otp
+    });
+  }
+
+  /**
+   * Send password reset email
+   */
+  async sendPasswordReset(toEmail: string, firstName: string, lastName: string, resetCode: string): Promise<boolean> {
+    return this.sendTemplate(toEmail, TEMPLATE_UUIDs.password_reset, {
+      first_name: firstName,
+      last_name: lastName,
+      reset_code: resetCode
+    });
+  }
+
+  /**
+   * Send welcome email
+   */
+  async sendWelcome(toEmail: string, firstName: string, lastName: string): Promise<boolean> {
+    return this.sendTemplate(toEmail, TEMPLATE_UUIDs.welcome, {
+      first_name: firstName,
+      last_name: lastName
+    });
+  }
+
+  /**
+   * Send KYC submitted notification
+   */
+  async sendKYCSubmitted(toEmail: string, firstName: string, lastName: string): Promise<boolean> {
+    return this.sendTemplate(toEmail, TEMPLATE_UUIDs.kyc_submitted, {
+      first_name: firstName,
+      last_name: lastName
+    });
+  }
+
+  /**
+   * Send KYC verified notification
+   */
+  async sendKYCVerified(toEmail: string, firstName: string, lastName: string): Promise<boolean> {
+    return this.sendTemplate(toEmail, TEMPLATE_UUIDs.kyc_verified, {
+      first_name: firstName,
+      last_name: lastName
+    });
+  }
+
+  /**
+   * Send login alert email
+   */
+  async sendLoginAlert(
+    toEmail: string,
+    firstName: string,
+    lastName: string,
+    location: string,
+    ipAddress: string,
+    device: string
+  ): Promise<boolean> {
+    return this.sendTemplate(toEmail, TEMPLATE_UUIDs.login_alert, {
+      first_name: firstName,
+      last_name: lastName,
+      location: location,
+      ip_address: ipAddress,
+      device: device
+    });
+  }
+
+  /**
+   * Admin: Send custom template to user
+   */
+  async sendCustomTemplate(
+    toEmail: string,
+    templateUuid: string,
+    variables: Record<string, string>
+  ): Promise<boolean> {
+    return this.sendTemplate(toEmail, templateUuid, variables);
+  }
+}
+
+export const mailtrapService = new MailtrapService();
