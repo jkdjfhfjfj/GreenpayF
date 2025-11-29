@@ -4997,16 +4997,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check sender's balance using real-time calculation
-      const senderTransactions = await storage.getTransactionsByUserId(fromUserId);
-      const senderBalance = senderTransactions.reduce((balance, txn) => {
+      // FETCH ALL TRANSACTIONS BEFORE CREATING NEW ONES (to avoid double-counting)
+      const senderTransactionsBefore = await storage.getTransactionsByUserId(fromUserId);
+      const recipientTransactionsBefore = await storage.getTransactionsByUserId(toUserId);
+      
+      // Calculate sender balance from EXISTING transactions only
+      const senderBalance = senderTransactionsBefore.reduce((balance, txn) => {
         if (txn.status === 'completed') {
           if (txn.type === 'receive' || txn.type === 'deposit') {
             return balance + parseFloat(txn.amount);
           } else if (txn.type === 'send' || txn.type === 'withdraw') {
             return balance - parseFloat(txn.amount) - parseFloat(txn.fee || '0');
           }
-          // card_purchase not deducted from balance (paid via M-Pesa)
         }
         return balance;
       }, parseFloat(fromUser.balance || '0'));
@@ -5014,6 +5016,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (senderBalance < transferAmount) {
         return res.status(400).json({ message: "Insufficient balance" });
       }
+
+      // Calculate recipient balance from EXISTING transactions only
+      const recipientBalance = recipientTransactionsBefore.reduce((balance, txn) => {
+        if (txn.status === 'completed') {
+          if (txn.type === 'receive' || txn.type === 'deposit') {
+            return balance + parseFloat(txn.amount);
+          } else if (txn.type === 'send' || txn.type === 'withdraw') {
+            return balance - parseFloat(txn.amount) - parseFloat(txn.fee || '0');
+          }
+        }
+        return balance;
+      }, parseFloat(toUser.balance || '0'));
+
+      // Calculate new balances (only add/subtract transfer amount ONCE)
+      const senderNewBalance = senderBalance - transferAmount;
+      const recipientNewBalance = recipientBalance + transferAmount;
 
       // Create transfer transactions
       const now = new Date().toISOString();
@@ -5046,24 +5064,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transferId: transferId,
         fee: '0'
       });
-
-      // Calculate new balances
-      const senderNewBalance = senderBalance - transferAmount;
-      
-      // Get recipient's transactions to calculate their new balance correctly
-      const recipientTransactions = await storage.getTransactionsByUserId(toUserId);
-      const recipientBalance = recipientTransactions.reduce((balance, txn) => {
-        if (txn.status === 'completed') {
-          if (txn.type === 'receive' || txn.type === 'deposit') {
-            return balance + parseFloat(txn.amount);
-          } else if (txn.type === 'send' || txn.type === 'withdraw') {
-            return balance - parseFloat(txn.amount) - parseFloat(txn.fee || '0');
-          }
-        }
-        return balance;
-      }, parseFloat(toUser.balance || '0'));
-      
-      const recipientNewBalance = recipientBalance + transferAmount;
 
       // UPDATE BALANCES IN DATABASE
       console.log('[Transfer] Updating balances - Sender:', senderNewBalance, 'Recipient:', recipientNewBalance);
