@@ -2735,17 +2735,54 @@ var WhatsAppService, whatsappService;
 var init_whatsapp = __esm({
   "server/services/whatsapp.ts"() {
     "use strict";
+    init_storage();
     WhatsAppService = class {
       accessToken;
       phoneNumberId;
       apiVersion = "v18.0";
       graphApiUrl = "https://graph.instagram.com";
       constructor() {
-        this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-        this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+        this.loadCredentials();
+      }
+      /**
+       * Load credentials from environment variables and database
+       */
+      async loadCredentials() {
+        try {
+          const tokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
+          const phoneSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
+          this.accessToken = tokenSetting?.value || process.env.WHATSAPP_ACCESS_TOKEN;
+          this.phoneNumberId = phoneSetting?.value || process.env.WHATSAPP_PHONE_NUMBER_ID;
+          if (this.accessToken && this.phoneNumberId) {
+            console.log("[WhatsApp] \u2713 Credentials loaded successfully");
+          } else {
+            console.warn("[WhatsApp] \u26A0\uFE0F Credentials not found. Token:", !!this.accessToken, "Phone ID:", !!this.phoneNumberId);
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error loading credentials from database:", error);
+          this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+          this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+        }
+      }
+      /**
+       * Refresh credentials when settings are updated
+       */
+      async refreshCredentials() {
+        console.log("[WhatsApp] Refreshing credentials...");
+        await this.loadCredentials();
       }
       checkCredentials() {
-        return !!(this.accessToken && this.phoneNumberId);
+        const hasToken = !!(this.accessToken && this.accessToken.trim());
+        const hasPhoneId = !!(this.phoneNumberId && this.phoneNumberId.trim());
+        if (!hasToken || !hasPhoneId) {
+          console.warn("[WhatsApp] Configuration missing:", {
+            hasToken,
+            hasPhoneId,
+            tokenLength: this.accessToken?.length || 0,
+            phoneIdLength: this.phoneNumberId?.length || 0
+          });
+        }
+        return hasToken && hasPhoneId;
       }
       /**
        * Format phone number to international format (without +)
@@ -2765,8 +2802,15 @@ var init_whatsapp = __esm({
        * Send text message via WhatsApp Business API
        */
       async sendTextMessage(phoneNumber, message) {
+        await this.refreshCredentials();
         if (!this.checkCredentials()) {
-          console.warn("WhatsApp credentials not configured - message not sent");
+          console.error("[WhatsApp] \u2717 Credentials not configured or empty. Cannot send message.");
+          console.error("[WhatsApp] Debug info:", {
+            tokenExists: !!this.accessToken,
+            tokenEmpty: this.accessToken === "",
+            phoneIdExists: !!this.phoneNumberId,
+            phoneIdEmpty: this.phoneNumberId === ""
+          });
           return false;
         }
         try {
@@ -2790,15 +2834,15 @@ var init_whatsapp = __esm({
           });
           const responseData = await response.json();
           if (response.ok && responseData.messages) {
-            console.log(`\u2713 WhatsApp text message sent to ${phoneNumber}`);
+            console.log(`[WhatsApp] \u2713 Text message sent to ${phoneNumber}`);
             return true;
           } else {
             const errorMsg = responseData.error?.message || "Unknown error";
-            console.error(`\u2717 WhatsApp message failed: ${errorMsg}`);
+            console.error(`[WhatsApp] \u2717 Message failed: ${errorMsg}`, { status: response.status, data: responseData });
             return false;
           }
         } catch (error) {
-          console.error("WhatsApp text message error:", error);
+          console.error("[WhatsApp] Error sending text message:", error);
           return false;
         }
       }
@@ -2807,8 +2851,9 @@ var init_whatsapp = __esm({
        * Requires template to be created in WhatsApp Business Manager first
        */
       async sendOTP(phoneNumber, otpCode) {
+        await this.refreshCredentials();
         if (!this.checkCredentials()) {
-          console.warn("WhatsApp credentials not configured - OTP not sent");
+          console.error("[WhatsApp] \u2717 Credentials not configured - OTP not sent");
           return false;
         }
         try {
@@ -2846,15 +2891,15 @@ var init_whatsapp = __esm({
           });
           const responseData = await response.json();
           if (response.ok && responseData.messages) {
-            console.log(`\u2713 WhatsApp OTP sent to ${phoneNumber}`);
+            console.log(`[WhatsApp] \u2713 OTP sent to ${phoneNumber}`);
             return true;
           } else {
             const errorMsg = responseData.error?.message || "Unknown error";
-            console.error(`\u2717 WhatsApp OTP failed: ${errorMsg}`);
+            console.error(`[WhatsApp] \u2717 OTP failed: ${errorMsg}`, { status: response.status, data: responseData });
             return false;
           }
         } catch (error) {
-          console.error("WhatsApp OTP error:", error);
+          console.error("[WhatsApp] Error sending OTP:", error);
           return false;
         }
       }

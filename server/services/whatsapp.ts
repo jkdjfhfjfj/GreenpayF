@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { storage } from '../storage';
 
 /**
  * WhatsApp Business Meta API Service
@@ -12,12 +13,56 @@ export class WhatsAppService {
   private graphApiUrl = 'https://graph.instagram.com';
 
   constructor() {
-    this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-    this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    this.loadCredentials();
+  }
+
+  /**
+   * Load credentials from environment variables and database
+   */
+  private async loadCredentials(): Promise<void> {
+    try {
+      // Try to get from database first (allows admin updates without restart)
+      const tokenSetting = await storage.getSystemSetting("messaging", "whatsapp_access_token");
+      const phoneSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
+      
+      this.accessToken = tokenSetting?.value || process.env.WHATSAPP_ACCESS_TOKEN;
+      this.phoneNumberId = phoneSetting?.value || process.env.WHATSAPP_PHONE_NUMBER_ID;
+      
+      if (this.accessToken && this.phoneNumberId) {
+        console.log('[WhatsApp] ✓ Credentials loaded successfully');
+      } else {
+        console.warn('[WhatsApp] ⚠️ Credentials not found. Token:', !!this.accessToken, 'Phone ID:', !!this.phoneNumberId);
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error loading credentials from database:', error);
+      // Fallback to env vars
+      this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+      this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    }
+  }
+
+  /**
+   * Refresh credentials when settings are updated
+   */
+  async refreshCredentials(): Promise<void> {
+    console.log('[WhatsApp] Refreshing credentials...');
+    await this.loadCredentials();
   }
 
   private checkCredentials(): boolean {
-    return !!(this.accessToken && this.phoneNumberId);
+    const hasToken = !!(this.accessToken && this.accessToken.trim());
+    const hasPhoneId = !!(this.phoneNumberId && this.phoneNumberId.trim());
+    
+    if (!hasToken || !hasPhoneId) {
+      console.warn('[WhatsApp] Configuration missing:', {
+        hasToken,
+        hasPhoneId,
+        tokenLength: this.accessToken?.length || 0,
+        phoneIdLength: this.phoneNumberId?.length || 0
+      });
+    }
+    
+    return hasToken && hasPhoneId;
   }
 
   /**
@@ -42,8 +87,17 @@ export class WhatsAppService {
    * Send text message via WhatsApp Business API
    */
   async sendTextMessage(phoneNumber: string, message: string): Promise<boolean> {
+    // Refresh credentials before sending (in case they were just updated)
+    await this.refreshCredentials();
+    
     if (!this.checkCredentials()) {
-      console.warn('WhatsApp credentials not configured - message not sent');
+      console.error('[WhatsApp] ✗ Credentials not configured or empty. Cannot send message.');
+      console.error('[WhatsApp] Debug info:', {
+        tokenExists: !!this.accessToken,
+        tokenEmpty: this.accessToken === '',
+        phoneIdExists: !!this.phoneNumberId,
+        phoneIdEmpty: this.phoneNumberId === ''
+      });
       return false;
     }
 
@@ -72,15 +126,15 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`✓ WhatsApp text message sent to ${phoneNumber}`);
+        console.log(`[WhatsApp] ✓ Text message sent to ${phoneNumber}`);
         return true;
       } else {
         const errorMsg = responseData.error?.message || 'Unknown error';
-        console.error(`✗ WhatsApp message failed: ${errorMsg}`);
+        console.error(`[WhatsApp] ✗ Message failed: ${errorMsg}`, { status: response.status, data: responseData });
         return false;
       }
     } catch (error) {
-      console.error('WhatsApp text message error:', error);
+      console.error('[WhatsApp] Error sending text message:', error);
       return false;
     }
   }
@@ -90,8 +144,11 @@ export class WhatsAppService {
    * Requires template to be created in WhatsApp Business Manager first
    */
   async sendOTP(phoneNumber: string, otpCode: string): Promise<boolean> {
+    // Refresh credentials before sending
+    await this.refreshCredentials();
+    
     if (!this.checkCredentials()) {
-      console.warn('WhatsApp credentials not configured - OTP not sent');
+      console.error('[WhatsApp] ✗ Credentials not configured - OTP not sent');
       return false;
     }
 
@@ -134,15 +191,15 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`✓ WhatsApp OTP sent to ${phoneNumber}`);
+        console.log(`[WhatsApp] ✓ OTP sent to ${phoneNumber}`);
         return true;
       } else {
         const errorMsg = responseData.error?.message || 'Unknown error';
-        console.error(`✗ WhatsApp OTP failed: ${errorMsg}`);
+        console.error(`[WhatsApp] ✗ OTP failed: ${errorMsg}`, { status: response.status, data: responseData });
         return false;
       }
     } catch (error) {
-      console.error('WhatsApp OTP error:', error);
+      console.error('[WhatsApp] Error sending OTP:', error);
       return false;
     }
   }
