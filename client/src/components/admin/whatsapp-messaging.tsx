@@ -115,7 +115,11 @@ export default function WhatsAppMessaging() {
       formData.append('file', mediaFile);
       
       try {
-        const uploadResponse = await apiRequest("POST", "/api/upload", formData);
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
         if (!uploadResponse.ok) {
           throw new Error(`Upload failed: ${uploadResponse.status}`);
         }
