@@ -5865,28 +5865,3 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   }, 1000);
 
   return httpServer;
-}
-  // Retry template creation
-  app.post("/api/admin/whatsapp/retry-template", requireAdminAuth, async (req, res) => {
-    try {
-      const { templateName } = req.body;
-      const { whatsappService } = await import('./services/whatsapp');
-      
-      console.log(`[Admin] Retrying template: ${templateName}`);
-      const templates = {
-        'otp': { name: 'otp', category: 'AUTHENTICATION', components: [{ type: 'BODY', text: 'Your verification code is {{1}}. Valid for 10 minutes.' }] },
-        'password_reset': { name: 'password_reset', category: 'AUTHENTICATION', components: [{ type: 'BODY', text: 'Your password reset code is {{1}}. Valid for 10 minutes.' }] },
-      };
-      
-      const template = templates[templateName as keyof typeof templates];
-      if (!template) {
-        return res.status(400).json({ message: "Unknown template" });
-      }
-      
-      const success = await whatsappService.createTemplate(template.name, template.category, template.components);
-      res.json({ success, templateName });
-    } catch (error) {
-      console.error('[Admin] Retry template error:', error);
-      res.status(500).json({ message: "Failed to retry template", error: String(error) });
-    }
-  });
