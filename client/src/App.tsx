@@ -52,6 +52,7 @@ import TermsAndConditionsPage from "@/pages/terms-and-conditions";
 import PrivacyPolicyPage from "@/pages/privacy-policy";
 import LoansPage from "@/pages/loans";
 import APIServicePage from "@/pages/api-service";
+import ApiDocumentationPage from "@/pages/api-documentation";
 
 // User Route Guard Component
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -148,6 +149,7 @@ function Router() {
       <Route path="/privacy" component={PrivacyPolicyPage} />
       <Route path="/loans" component={LoansPage} />
       <Route path="/api-service" component={APIServicePage} />
+      <Route path="/api-documentation" component={ApiDocumentationPage} />
       {/* Admin routes - protected by AdminRoute guard */}
       <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin/login" component={AdminLogin} />

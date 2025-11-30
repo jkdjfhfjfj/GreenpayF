@@ -210,6 +210,13 @@ export default function APIServicePage() {
               </p>
               <div className="flex gap-2 flex-wrap">
                 <Button
+                  size="sm"
+                  onClick={() => setLocation("/api-documentation")}
+                >
+                  <Code className="w-4 h-4 mr-2" />
+                  Documentation
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
@@ -219,8 +226,7 @@ export default function APIServicePage() {
                     )
                   }
                 >
-                  <Code className="w-4 h-4 mr-2" />
-                  API Docs
+                  External Docs
                 </Button>
                 <Button
                   variant="outline"
@@ -232,7 +238,7 @@ export default function APIServicePage() {
                     )
                   }
                 >
-                  Key Management Guide
+                  Key Management
                 </Button>
               </div>
             </div>
