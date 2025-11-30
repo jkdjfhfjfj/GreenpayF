@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,7 +33,7 @@ export default function AdminLogin() {
   const { toast } = useToast();
 
   // Check database connection on component mount
-  useState(() => {
+  useEffect(() => {
     checkDatabaseConnection();
   }, []);
 
