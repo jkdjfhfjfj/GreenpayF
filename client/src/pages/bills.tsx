@@ -146,102 +146,34 @@ export default function BillsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
+      {/* Top Navigation */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-green-600 via-green-500 to-emerald-500 p-8 text-white relative overflow-hidden"
+        className="bg-card shadow-sm p-4 flex items-center elevation-1"
       >
-        {/* Decorative background elements */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 blur-3xl"></div>
-
-        <div className="relative z-10">
-          {/* Back Button and Title */}
-          <div className="flex items-center mb-6">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLocation("/dashboard")}
-              className="mr-3"
-            >
-              <span className="material-icons">arrow_back</span>
-            </motion.button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold flex items-center">
-                Pay Bills
-              </h1>
-              <p className="text-sm text-white/80">Pay utility and service bills instantly</p>
-            </div>
-          </div>
-
-          {/* Balance and Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-            {/* Main Balance Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-gradient-to-br from-white/15 to-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl hover:bg-white/20 transition-all"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-white/80 font-medium mb-2 flex items-center gap-1">
-                    <Zap className="w-3.5 h-3.5" />
-                    Available KES Balance
-                  </p>
-                  <motion.p
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="text-4xl font-bold"
-                  >
-                    KSh {kesBalance.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </motion.p>
-                  <p className="text-xs text-white/70 mt-2">Ready to pay bills</p>
-                </div>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="p-3 bg-white/10 rounded-full"
-                >
-                  <Receipt className="w-6 h-6 text-white/80" />
-                </motion.div>
-              </div>
-            </motion.div>
-
-            {/* Quick Info Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-              className="bg-gradient-to-br from-white/15 to-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-white/70">Processing</p>
-                    <p className="text-sm font-bold">Instant</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <Receipt className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-white/70">Providers</p>
-                    <p className="text-sm font-bold">6+ Services</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setLocation("/dashboard")}
+          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
+        >
+          arrow_back
+        </motion.button>
+        <h1 className="text-lg font-semibold">Pay Bills</h1>
       </motion.div>
 
       <div className="p-6 space-y-6">
+        {/* Available Balance */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-xl border border-green-200 dark:border-green-800"
+        >
+          <p className="text-xs text-green-700 dark:text-green-300 mb-1">Available KES Balance</p>
+          <p className="text-3xl font-bold text-green-900 dark:text-green-100">KSh {kesBalance.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </motion.div>
+
         {/* Start Payment Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
