@@ -1957,14 +1957,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export transactions to email
+  // Export transactions to email with PDF attachment
   app.post("/api/transactions/export-email", requireAuth, async (req, res) => {
     try {
-      const { email, transactions } = req.body;
+      const { transactions } = req.body;
       const userId = (req.session as any).userId;
 
-      if (!email || !transactions || !Array.isArray(transactions)) {
-        return res.status(400).json({ message: "Email and transactions array required" });
+      if (!transactions || !Array.isArray(transactions)) {
+        return res.status(400).json({ message: "Transactions array required" });
       }
 
       if (transactions.length === 0) {
@@ -1980,22 +1980,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalSent = 0;
       let totalReceived = 0;
       let transactionCount = transactions.length;
-      let transactionsList = "";
 
-      transactions.forEach((txn: any, index: number) => {
+      transactions.forEach((txn: any) => {
         const amount = parseFloat(txn.amount);
-        const icon = txn.type === 'send' ? '📤' : txn.type === 'receive' ? '📥' : '💳';
-        const prefix = txn.type === 'send' || txn.type === 'withdraw' ? '-' : '+';
-        const date = new Date(txn.createdAt).toLocaleDateString();
-        const status = txn.status === 'completed' ? '✓' : txn.status === 'pending' ? '⏳' : '✗';
-
         if (txn.type === 'send' || txn.type === 'withdraw') {
           totalSent += amount;
         } else if (txn.type === 'receive' || txn.type === 'deposit') {
           totalReceived += amount;
         }
+      });
 
-        transactionsList += `${icon} ${txn.type.toUpperCase()} - ${prefix}${txn.currency}${amount} (${date}) ${status}\n`;
+      // Generate PDF
+      const { generateTransactionPDF } = await import('./lib/pdf-export');
+      const pdfBuffer = await generateTransactionPDF(transactions, {
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone
+      });
+
+      const pdfBase64 = Buffer.from(pdfBuffer).toString('base64');
+
+      const generatedOn = new Date().toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
       });
 
       const templateVariables: any = {
@@ -2003,23 +2014,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total_transactions: transactionCount.toString(),
         total_sent: totalSent.toFixed(2),
         total_received: totalReceived.toFixed(2),
-        export_date: new Date().toLocaleDateString(),
-        transactions_list: transactionsList,
+        generated_on: generatedOn,
         account_email: user.email,
       };
+
+      const attachments = [
+        {
+          filename: `transactions-${new Date().toISOString().split('T')[0]}.pdf`,
+          content: pdfBase64,
+          disposition: 'attachment'
+        }
+      ];
 
       // Send via Mailtrap
       const { MailtrapService } = await import('./services/mailtrap');
       const mailtrapService = new MailtrapService();
       
       const success = await mailtrapService.sendTemplate(
-        email,
-        'transaction-export-uuid', // UPDATE THIS WITH ACTUAL TEMPLATE UUID
-        templateVariables
+        user.email,
+        '307e5609-66bb-4235-8653-27f0d5d74a39',
+        templateVariables,
+        attachments
       );
 
       if (success) {
-        console.log(`✅ Transaction export email sent to ${email} - ${transactionCount} transactions`);
+        console.log(`✅ Transaction export email sent to ${user.email} - ${transactionCount} transactions with PDF`);
         res.json({
           success: true,
           message: "Transaction report sent successfully to your email",

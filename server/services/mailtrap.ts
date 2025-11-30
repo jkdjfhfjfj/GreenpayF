@@ -15,7 +15,7 @@ const TEMPLATE_UUIDs = {
   login_alert: '42ce5e3b-eed9-41aa-808c-cfecbd906e60',
   fund_receipt: '5e2a2ec4-37fb-4178-96c4-598977065f9c',
   card_activation: 'placeholder-card-activation', // To be added
-  transaction_export: 'transaction-export-uuid' // Update with actual UUID
+  transaction_export: '307e5609-66bb-4235-8653-27f0d5d74a39'
 };
 
 export class MailtrapService {
@@ -71,12 +71,13 @@ export class MailtrapService {
   }
 
   /**
-   * Send email using Mailtrap template
+   * Send email using Mailtrap template with optional attachments
    */
   async sendTemplate(
     toEmail: string,
     templateUuid: string,
-    variables: Record<string, string>
+    variables: Record<string, string>,
+    attachments?: Array<{ filename: string; content: string; disposition: string }>
   ): Promise<boolean> {
     try {
       if (!this.apiKey) {
@@ -84,7 +85,7 @@ export class MailtrapService {
         return false;
       }
 
-      const payload = {
+      const payload: any = {
         template_uuid: templateUuid,
         template_variables: variables,
         from: {
@@ -96,7 +97,11 @@ export class MailtrapService {
         ]
       };
 
-      console.log(`[Mailtrap] Sending template ${templateUuid} to ${toEmail}`);
+      if (attachments && attachments.length > 0) {
+        payload.attachments = attachments;
+      }
+
+      console.log(`[Mailtrap] Sending template ${templateUuid} to ${toEmail}${attachments ? ' with attachments' : ''}`);
 
       const response = await fetch(this.apiUrl, {
         method: 'POST',
