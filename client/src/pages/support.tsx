@@ -78,6 +78,13 @@ export default function SupportPage() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-card shadow-sm p-4 flex items-center elevation-1"
       >
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setLocation("/dashboard")}
+          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
+        >
+          arrow_back
+        </motion.button>
         <h1 className="text-lg font-semibold">Support</h1>
       </motion.div>
 
