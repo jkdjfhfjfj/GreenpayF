@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   CreditCard, 
@@ -120,20 +119,20 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-gradient-to-r from-green-500 to-emerald-600 dark:from-green-700 dark:to-emerald-800 border-b border-green-600 dark:border-green-900 shadow-md">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-white" />
+              <Shield className="w-8 h-8 text-green-600" />
               <div>
-                <h1 className="text-xl font-bold text-white">GreenPay Admin</h1>
-                <p className="text-sm text-white/80">Administrative Panel</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">GreenPay Admin</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Administrative Panel</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-white">{adminData.fullName}</p>
-                <p className="text-xs text-white/80">{adminData.email}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{adminData.fullName}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{adminData.email}</p>
               </div>
               <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-admin-logout">
                 <LogOut className="w-4 h-4" />
@@ -146,8 +145,7 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-            <TabsList className="grid grid-cols-10 w-full md:w-auto inline-grid md:inline-flex">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="kyc">KYC</TabsTrigger>
@@ -161,8 +159,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="logs">Security Logs</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
-          </div>
+          </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             {/* Key Metrics */}

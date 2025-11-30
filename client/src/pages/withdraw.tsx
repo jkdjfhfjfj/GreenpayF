@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useAppSettings } from "@/hooks/use-settings";
 import { apiRequest } from "@/lib/queryClient";
 import { mockCurrencies } from "@/lib/mock-data";
 import { formatNumber } from "@/lib/formatters";
@@ -36,7 +35,6 @@ export default function WithdrawPage() {
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const { toast } = useToast();
   const { user } = useAuth();
-  const { withdrawalFee } = useAppSettings();
 
   // Use KES balance for withdrawals - users must convert USD to KES first
   const realTimeBalance = parseFloat(user?.kesBalance || '0');
@@ -138,11 +136,7 @@ export default function WithdrawPage() {
 
   const getWithdrawFee = () => {
     const method = withdrawMethods.find(m => m.id === selectedMethod);
-    if (method?.fee) {
-      return method.fee;
-    }
-    // Use dynamic fee from admin settings
-    return `KSh ${formatNumber(withdrawalFee)}`;
+    return method?.fee || "KSh 2.99";
   };
 
   return (
@@ -274,7 +268,7 @@ export default function WithdrawPage() {
 
               {/* Quick Amount Buttons */}
               <div className="grid grid-cols-4 gap-2">
-                {["50", "500", "10000", "100000"].map((amount) => (
+                {["50", "100", "250", "500"].map((amount) => (
                   <motion.button
                     key={amount}
                     type="button"
@@ -548,7 +542,7 @@ export default function WithdrawPage() {
                   <span>You Receive</span>
                   <span className="text-primary">
                     KSh {form.watch("amount") ? 
-                      formatNumber(parseFloat(form.watch("amount")) - withdrawalFee) : 
+                      formatNumber(parseFloat(form.watch("amount")) - parseFloat(getWithdrawFee().replace('KSh ', ''))) : 
                       "0.00"}
                   </span>
                 </div>
