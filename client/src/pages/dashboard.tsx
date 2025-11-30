@@ -179,7 +179,7 @@ export default function DashboardPage() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setLocation('/live-chat')}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+              className="p-2 rounded-full hover:opacity-80 transition-opacity"
               title="Contact Support"
               data-testid="button-support"
             >
@@ -188,7 +188,7 @@ export default function DashboardPage() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={toggleDarkMode}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+              className="p-2 rounded-full hover:opacity-80 transition-opacity"
               data-testid="button-dark-mode"
             >
               <span className="material-icons text-white text-xl">brightness_6</span>
@@ -230,7 +230,7 @@ export default function DashboardPage() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowBalance(!showBalance)}
-              className="bg-white/10 p-2 rounded-full backdrop-blur-sm"
+              className="p-2 rounded-full hover:opacity-80 transition-opacity"
               data-testid="button-toggle-balance"
             >
               <span className="material-icons text-white text-lg">
