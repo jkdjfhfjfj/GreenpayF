@@ -38,7 +38,7 @@ import PaymentSuccessPage from "@/pages/payment-success";
 import PaymentFailedPage from "@/pages/payment-failed";
 import PaymentProcessingPage from "@/pages/payment-processing";
 import AdminLogin from "@/pages/admin-login";
-import AdminDashboard from "@/pages/admin-dashboard-new";
+import AdminDashboard from "@/pages/admin-dashboard";
 import SendMoneyLanding from "@/pages/landing/send-money";
 import VirtualCardsLanding from "@/pages/landing/virtual-cards";
 import ExchangeLanding from "@/pages/landing/exchange";
