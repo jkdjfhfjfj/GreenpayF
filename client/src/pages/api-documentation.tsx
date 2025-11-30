@@ -1,107 +1,212 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Globe, Zap, Shield, BookOpen } from "lucide-react";
+import { Download, Copy, Play, Check, Globe, Zap, Shield, BookOpen, Code2, Eye, EyeOff } from "lucide-react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { useToast } from "@/hooks/use-toast";
+
+interface Endpoint {
+  method: string;
+  path: string;
+  title: string;
+  description: string;
+  request?: string;
+  response?: string;
+  category: string;
+}
+
+const ENDPOINTS: Endpoint[] = [
+  // Authentication
+  { method: "POST", path: "/auth/signup", title: "Sign Up", description: "Create new user account", category: "Authentication", request: '{\n  "fullName": "John Doe",\n  "email": "john@example.com",\n  "phone": "+254712345678",\n  "country": "KE",\n  "password": "SecurePass123!"\n}', response: '{\n  "user": {\n    "id": "user-id",\n    "email": "john@example.com",\n    "fullName": "John Doe"\n  }\n}' },
+  { method: "POST", path: "/auth/login", title: "Login", description: "User login with email and password", category: "Authentication", request: '{\n  "email": "john@example.com",\n  "password": "SecurePass123!"\n}', response: '{\n  "user": {...},\n  "requiresTwoFactor": false\n}' },
+  { method: "POST", path: "/auth/verify-otp", title: "Verify OTP", description: "Verify OTP code for login", category: "Authentication", request: '{\n  "code": "123456"\n}', response: '{\n  "success": true,\n  "user": {...}\n}' },
+  { method: "POST", path: "/auth/setup-2fa", title: "Setup 2FA", description: "Setup two-factor authentication", category: "Authentication", response: '{\n  "qrCode": "data:image/png;base64,...",\n  "secret": "JBSWY3DPEBLW64TMMQ====="\n}' },
+  
+  // Financial
+  { method: "GET", path: "/exchange-rates/:base", title: "Get Exchange Rates", description: "Get exchange rates for a base currency", category: "Financial", response: '{\n  "base": "USD",\n  "rates": {"KES": 145.50, "EUR": 0.92}\n}' },
+  { method: "POST", path: "/exchange/convert", title: "Convert Currency", description: "Convert between currencies", category: "Financial", request: '{\n  "amount": "100",\n  "fromCurrency": "USD",\n  "toCurrency": "KES"\n}', response: '{\n  "fromAmount": "100",\n  "toAmount": "14550.00",\n  "rate": 145.50\n}' },
+  { method: "GET", path: "/transactions", title: "Get Transactions", description: "Retrieve user transactions", category: "Financial", response: '{\n  "transactions": [{\n    "id": "txn-id",\n    "type": "send",\n    "amount": "500",\n    "status": "completed"\n  }]\n}' },
+  { method: "POST", path: "/deposit/initialize-payment", title: "Initialize Deposit", description: "Start a deposit transaction", category: "Financial", request: '{\n  "amount": "1000",\n  "currency": "KES",\n  "paymentMethod": "mpesa"\n}', response: '{\n  "paymentId": "pay-id",\n  "status": "pending"\n}' },
+  { method: "POST", path: "/airtime/purchase", title: "Purchase Airtime", description: "Buy airtime for a phone", category: "Financial", request: '{\n  "phoneNumber": "+254712345678",\n  "amount": "50",\n  "provider": "safaricom"\n}', response: '{\n  "transaction": {...},\n  "status": "completed"\n}' },
+  
+  // User Profile
+  { method: "GET", path: "/users/profile", title: "Get Profile", description: "Retrieve user profile information", category: "User Profile", response: '{\n  "id": "user-id",\n  "fullName": "John Doe",\n  "email": "john@example.com",\n  "balance": "10000.00"\n}' },
+  { method: "PUT", path: "/users/profile", title: "Update Profile", description: "Update user profile data", category: "User Profile", request: '{\n  "fullName": "John Updated",\n  "phone": "+254712345679"\n}', response: '{\n  "user": {...},\n  "message": "Profile updated"\n}' },
+  { method: "POST", path: "/kyc/submit", title: "Submit KYC", description: "Submit KYC documents for verification", category: "User Profile", request: '{\n  "documentType": "national_id",\n  "frontImage": "base64-image",\n  "dateOfBirth": "1990-01-15"\n}', response: '{\n  "kyc": {...},\n  "status": "pending"\n}' },
+  { method: "GET", path: "/notifications", title: "Get Notifications", description: "Retrieve user notifications", category: "User Profile", response: '{\n  "notifications": [{\n    "id": "notif-id",\n    "title": "Payment Received",\n    "read": false\n  }]\n}' },
+  
+  // Support
+  { method: "POST", path: "/support/tickets", title: "Create Ticket", description: "Create a support ticket", category: "Support", request: '{\n  "issueType": "payment_issue",\n  "description": "Transaction failed"\n}', response: '{\n  "ticket": {...},\n  "status": "open"\n}' },
+  { method: "GET", path: "/support/tickets", title: "Get Tickets", description: "Retrieve all support tickets", category: "Support", response: '{\n  "tickets": [{\n    "id": "ticket-id",\n    "status": "open"\n  }]\n}' },
+  
+  // System
+  { method: "GET", path: "/system/status", title: "System Status", description: "Check API and system health", category: "System", response: '{\n  "status": "operational",\n  "version": "1.0.0",\n  "components": {...}\n}' },
+];
 
 export default function ApiDocumentationPage() {
   const [, setLocation] = useLocation();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showResponse, setShowResponse] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState("");
+  const { toast } = useToast();
 
-  const downloadPDF = (docType: string) => {
+  const categories = Array.from(new Set(ENDPOINTS.map(e => e.category)));
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    toast({ description: "Copied to clipboard" });
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const generateCurlCommand = (endpoint: Endpoint): string => {
+    const url = `https://greenpay.world/api${endpoint.path}`;
+    let cmd = `curl -X ${endpoint.method} "${url}"`;
+    cmd += '\n  -H "Authorization: Bearer YOUR_API_KEY"';
+    cmd += '\n  -H "Content-Type: application/json"';
+    if (endpoint.request) {
+      cmd += `\n  -d '${endpoint.request}'`;
+    }
+    return cmd;
+  };
+
+  const testEndpoint = async (endpoint: Endpoint) => {
+    if (!apiKey) {
+      toast({ description: "Please enter your API key first", variant: "destructive" });
+      return;
+    }
+    try {
+      const url = `https://greenpay.world/api${endpoint.path}`;
+      const response = await fetch(url, {
+        method: endpoint.method,
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: endpoint.request ? JSON.parse(endpoint.request) : undefined
+      });
+      const data = await response.json();
+      setShowResponse(JSON.stringify(data, null, 2));
+      toast({ description: "Endpoint tested successfully" });
+    } catch (error) {
+      toast({ description: "Error testing endpoint", variant: "destructive" });
+    }
+  };
+
+  const downloadAllPDFs = () => {
     try {
       const pdf = new jsPDF();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       let yPosition = 20;
 
-      // Add GreenPay branding
-      pdf.setFillColor(34, 197, 94); // Green
-      pdf.rect(0, 0, pageWidth, 30, 'F');
-      
+      // Title Page
+      pdf.setFillColor(34, 197, 94);
+      pdf.rect(0, 0, pageWidth, 60, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('GreenPay API Documentation', 20, 18);
+      pdf.setFontSize(24);
+      pdf.text('GreenPay API', 20, 30);
+      pdf.setFontSize(14);
+      pdf.text('Complete Developer Documentation', 20, 45);
       
-      // Reset colors
+      pdf.addPage();
+      yPosition = 20;
       pdf.setTextColor(0, 0, 0);
-      pdf.setFont('helvetica', 'normal');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.text('Table of Contents', 20, yPosition);
+      yPosition += 15;
       
-      yPosition = 45;
-
-      if (docType === 'api-reference') {
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('API Reference', 20, yPosition);
-        
-        yPosition += 15;
-        pdf.setFontSize(11);
+      categories.forEach(cat => {
         pdf.setFont('helvetica', 'normal');
-        
-        const content = [
-          { title: '1. Authentication', desc: 'All API requests require Bearer token authentication in the Authorization header.' },
-          { title: '2. Financial Operations', desc: 'Transfer funds, check balances, and manage transactions securely.' },
-          { title: '3. User Profile', desc: 'Retrieve and update user information, KYC status, and preferences.' },
-          { title: '4. Virtual Cards', desc: 'Create, manage, and monitor virtual payment cards.' },
-          { title: '5. Support Tickets', desc: 'Create and track customer support tickets programmatically.' },
-          { title: '6. System Status', desc: 'Check API health and system status in real-time.' },
-        ];
+        pdf.setTextColor(34, 197, 94);
+        pdf.text(`• ${cat}`, 25, yPosition);
+        yPosition += 7;
+      });
 
-        content.forEach((section, idx) => {
-          if (yPosition > pageHeight - 30) {
+      // Endpoints by category
+      categories.forEach(category => {
+        pdf.addPage();
+        yPosition = 20;
+        
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFillColor(34, 197, 94);
+        pdf.rect(0, yPosition - 8, pageWidth, 12, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(category, 20, yPosition);
+        yPosition += 20;
+
+        ENDPOINTS.filter(e => e.category === category).forEach(endpoint => {
+          if (yPosition > pageHeight - 40) {
             pdf.addPage();
             yPosition = 20;
           }
-          
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(34, 197, 94);
-          pdf.text(section.title, 20, yPosition);
-          yPosition += 7;
-          
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(0, 0, 0);
-          const wrapped = pdf.splitTextToSize(section.desc, 170);
-          pdf.text(wrapped, 20, yPosition);
-          yPosition += wrapped.length * 5 + 8;
-        });
-      } else if (docType === 'key-management') {
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('API Key Management Guide', 20, yPosition);
-        
-        yPosition += 15;
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica', 'normal');
-        
-        const sections = [
-          { title: 'Generate API Keys', desc: 'Create new API keys with specific scopes and rate limits for your applications.' },
-          { title: 'Key Scopes & Permissions', desc: 'Control access levels: read_only, write, admin. Each key can have multiple scopes.' },
-          { title: 'Rate Limiting', desc: 'Standard limit: 1000 requests/hour. Premium: 10000 requests/hour.' },
-          { title: 'Key Rotation', desc: 'Rotate keys every 90 days for security. Old keys can be revoked immediately.' },
-          { title: 'Webhook Verification', desc: 'Validate webhook signatures using HMAC-SHA256 for security.' },
-          { title: 'Troubleshooting', desc: 'Common issues: expired keys, insufficient scopes, rate limit exceeded.' },
-        ];
 
-        sections.forEach((section) => {
-          if (yPosition > pageHeight - 30) {
-            pdf.addPage();
-            yPosition = 20;
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(11);
+          pdf.text(`${endpoint.method} ${endpoint.path}`, 20, yPosition);
+          yPosition += 7;
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
+          pdf.setTextColor(100, 100, 100);
+          pdf.text(endpoint.title, 20, yPosition);
+          yPosition += 5;
+          
+          const desc = pdf.splitTextToSize(endpoint.description, 170);
+          pdf.text(desc, 20, yPosition);
+          yPosition += desc.length * 4 + 5;
+
+          if (endpoint.request) {
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(34, 197, 94);
+            pdf.text('Request:', 20, yPosition);
+            yPosition += 5;
+            
+            pdf.setFont('courier', 'normal');
+            pdf.setFontSize(9);
+            pdf.setTextColor(50, 50, 50);
+            const reqLines = endpoint.request.split('\n');
+            reqLines.forEach(line => {
+              if (yPosition > pageHeight - 20) {
+                pdf.addPage();
+                yPosition = 20;
+              }
+              pdf.text(line, 25, yPosition);
+              yPosition += 4;
+            });
+            yPosition += 3;
+          }
+
+          if (endpoint.response) {
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(34, 197, 94);
+            pdf.text('Response:', 20, yPosition);
+            yPosition += 5;
+            
+            pdf.setFont('courier', 'normal');
+            pdf.setFontSize(9);
+            pdf.setTextColor(50, 50, 50);
+            const respLines = endpoint.response.split('\n');
+            respLines.forEach(line => {
+              if (yPosition > pageHeight - 20) {
+                pdf.addPage();
+                yPosition = 20;
+              }
+              pdf.text(line, 25, yPosition);
+              yPosition += 4;
+            });
           }
           
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(34, 197, 94);
-          pdf.text(section.title, 20, yPosition);
-          yPosition += 7;
-          
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(0, 0, 0);
-          const wrapped = pdf.splitTextToSize(section.desc, 170);
-          pdf.text(wrapped, 20, yPosition);
-          yPosition += wrapped.length * 5 + 8;
+          yPosition += 10;
         });
-      }
+      });
 
-      // Add footer on all pages
+      // Add footer to all pages
       const pageCount = pdf.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         pdf.setPage(i);
@@ -111,35 +216,13 @@ export default function ApiDocumentationPage() {
         pdf.text('GreenPay © 2024', 20, pageHeight - 10);
       }
 
-      pdf.save(`GreenPay-${docType}.pdf`);
+      pdf.save('GreenPay-API-Complete-Documentation.pdf');
+      toast({ description: "PDF downloaded successfully" });
     } catch (error) {
       console.error('PDF generation error:', error);
+      toast({ description: "Error generating PDF", variant: "destructive" });
     }
   };
-
-  const docs = [
-    {
-      title: "API Reference",
-      description: "Complete API documentation with all 30+ endpoints, request/response examples, and code samples",
-      icon: FileText,
-      docType: "api-reference",
-      features: ["Authentication", "Financial Ops", "User Profile", "Virtual Cards", "Support", "System Status"]
-    },
-    {
-      title: "API Key Management",
-      description: "Security best practices, key rotation, rate limiting, and webhook verification",
-      icon: Shield,
-      docType: "key-management",
-      features: ["Generate Keys", "Scopes", "Rate Limits", "Rotation", "Webhooks", "Troubleshooting"]
-    }
-  ];
-
-  const languages = [
-    { name: "English", flag: "🇬🇧" },
-    { name: "Español", flag: "🇪🇸" },
-    { name: "Français", flag: "🇫🇷" },
-    { name: "Kiswahili", flag: "🇰🇪" },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-green-50 pb-20">
@@ -149,7 +232,7 @@ export default function ApiDocumentationPage() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-r from-green-600 to-green-700 shadow-lg p-6 sticky top-0 z-50"
       >
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -160,168 +243,253 @@ export default function ApiDocumentationPage() {
             </motion.button>
             <div>
               <h1 className="text-2xl font-bold text-white">GreenPay API</h1>
-              <p className="text-green-100 text-sm">Complete Developer Documentation</p>
+              <p className="text-green-100 text-sm">Complete Developer Documentation & Reference</p>
             </div>
           </div>
-          <Globe className="w-10 h-10 text-green-200 opacity-50" />
+          <Button
+            onClick={downloadAllPDFs}
+            className="bg-white text-green-600 hover:bg-green-50"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download Full PDF
+          </Button>
         </div>
       </motion.div>
 
-      <div className="max-w-6xl mx-auto p-6 space-y-8">
-        {/* Hero Section */}
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* API Key Input */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md border-l-4 border-green-600 p-8"
+          className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600"
         >
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">Build with GreenPay</h2>
-              <p className="text-gray-600 text-lg mb-4">
-                Integrate powerful payment and financial services into your application with our comprehensive REST API
-              </p>
-              <div className="flex items-center gap-2 text-sm text-green-600 font-semibold">
-                <Zap className="w-4 h-4" />
-                Fast • Secure • Reliable
-              </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-3">Test Endpoints</h3>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              placeholder="Enter your API key (gpay_...)"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-600"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setApiKey("")}
+            >
+              Clear
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Your API key is never stored or sent to servers - all tests run locally</p>
+        </motion.div>
+
+        {/* Endpoints by Category */}
+        {categories.map((category, catIdx) => (
+          <motion.div
+            key={category}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 * catIdx }}
+            className="space-y-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-1 w-8 bg-green-600 rounded"></div>
+              <h2 className="text-2xl font-bold text-gray-900">{category}</h2>
+              <span className="text-sm font-semibold bg-green-100 text-green-700 px-3 py-1 rounded-full">
+                {ENDPOINTS.filter(e => e.category === category).length} endpoints
+              </span>
             </div>
-            <BookOpen className="w-24 h-24 text-green-100" />
-          </div>
-        </motion.div>
 
-        {/* Language Selector */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-900">Available Languages</h3>
-            <Globe className="w-5 h-5 text-green-600" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {languages.map((lang) => (
-              <div
-                key={lang.name}
-                className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200 text-center hover:shadow-md transition-shadow cursor-pointer"
-              >
-                <span className="text-3xl mb-2 block">{lang.flag}</span>
-                <span className="text-sm font-semibold text-gray-800">{lang.name}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Documentation Cards */}
-        <div className="space-y-4">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">Documentation</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {docs.map((doc, idx) => {
-              const IconComponent = doc.icon;
-              return (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 * (idx + 1) }}
-                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all border border-green-100 overflow-hidden"
-                >
-                  <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 border-b border-green-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <IconComponent className="w-10 h-10 text-green-600" />
-                      <span className="text-xs font-bold text-green-700 bg-green-200 px-3 py-1 rounded-full">
-                        {doc.features.length} Topics
-                      </span>
-                    </div>
-                    <h4 className="text-xl font-bold text-gray-900">{doc.title}</h4>
-                  </div>
-
-                  <div className="p-6 space-y-4">
-                    <p className="text-gray-600 text-sm leading-relaxed">{doc.description}</p>
-
-                    <div className="flex flex-wrap gap-2">
-                      {doc.features.map((feature, i) => (
-                        <span
-                          key={i}
-                          className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold"
-                        >
-                          {feature}
-                        </span>
-                      ))}
+            <div className="grid grid-cols-1 gap-4">
+              {ENDPOINTS.filter(e => e.category === category).map((endpoint, idx) => {
+                const endpointId = `${endpoint.method}-${endpoint.path}`;
+                const curlCmd = generateCurlCommand(endpoint);
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.05 * idx }}
+                    className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all"
+                  >
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 border-b">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className={`text-xs font-bold px-2 py-1 rounded text-white ${
+                              endpoint.method === 'GET' ? 'bg-blue-600' :
+                              endpoint.method === 'POST' ? 'bg-green-600' :
+                              endpoint.method === 'PUT' ? 'bg-orange-600' : 'bg-red-600'
+                            }`}>
+                              {endpoint.method}
+                            </span>
+                            <code className="font-mono text-sm font-semibold text-gray-900">{endpoint.path}</code>
+                          </div>
+                          <h4 className="text-lg font-bold text-gray-900">{endpoint.title}</h4>
+                          <p className="text-sm text-gray-600">{endpoint.description}</p>
+                        </div>
+                        <Code2 className="w-6 h-6 text-green-600 opacity-20 flex-shrink-0" />
+                      </div>
                     </div>
 
-                    <button
-                      onClick={() => downloadPDF(doc.docType)}
-                      className="w-full mt-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download PDF
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
+                    {/* Content */}
+                    <div className="p-4 space-y-4">
+                      {/* cURL Example */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-sm font-semibold text-gray-700">cURL Example</label>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => copyToClipboard(curlCmd, `curl-${endpointId}`)}
+                            className="h-6"
+                          >
+                            {copiedId === `curl-${endpointId}` ? (
+                              <>
+                                <Check className="w-3 h-3 mr-1" /> Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3 mr-1" /> Copy
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        <pre className="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto">
+                          {curlCmd}
+                        </pre>
+                      </div>
 
-        {/* Quick Start Guide */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-lg p-8 text-white"
-        >
-          <h3 className="text-2xl font-bold mb-6">Quick Start Guide</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[
-              { num: "1", title: "Generate Key", desc: "Create API key in dashboard" },
-              { num: "2", title: "Add Token", desc: "Include Bearer in header" },
-              { num: "3", title: "Make Request", desc: "Call any endpoint" },
-              { num: "4", title: "Handle Response", desc: "Process the result" },
-            ].map((step, i) => (
-              <div key={i} className="bg-white/10 rounded-lg p-4 backdrop-blur-sm border border-white/20">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-lg mb-3">
-                  {step.num}
-                </div>
-                <h4 className="font-bold mb-1">{step.title}</h4>
-                <p className="text-sm text-green-100">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+                      {/* Request Body */}
+                      {endpoint.request && (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-semibold text-gray-700">Request</label>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => copyToClipboard(endpoint.request!, `req-${endpointId}`)}
+                              className="h-6"
+                            >
+                              {copiedId === `req-${endpointId}` ? (
+                                <>
+                                  <Check className="w-3 h-3 mr-1" /> Copied
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3 mr-1" /> Copy
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <pre className="bg-gray-50 border border-gray-300 text-gray-900 p-3 rounded text-xs overflow-x-auto">
+                            {endpoint.request}
+                          </pre>
+                        </div>
+                      )}
 
-        {/* Support Section */}
+                      {/* Test Button */}
+                      <Button
+                        onClick={() => testEndpoint(endpoint)}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                        size="sm"
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Test Endpoint
+                      </Button>
+
+                      {/* Response */}
+                      {endpoint.response && (
+                        <div>
+                          <button
+                            onClick={() => setShowResponse(showResponse === endpointId ? null : endpointId)}
+                            className="text-sm font-semibold text-gray-700 flex items-center gap-2 hover:text-green-600"
+                          >
+                            {showResponse === endpointId ? (
+                              <>
+                                <EyeOff className="w-4 h-4" /> Hide Response
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-4 h-4" /> Show Response Example
+                              </>
+                            )}
+                          </button>
+                          {showResponse === endpointId && (
+                            <pre className="bg-green-50 border border-green-300 text-gray-900 p-3 rounded text-xs overflow-x-auto mt-2">
+                              {endpoint.response}
+                            </pre>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        ))}
+
+        {/* Quick Reference */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
+          className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-lg p-8 text-white"
+        >
+          <h3 className="text-2xl font-bold mb-6">Quick Reference</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h4 className="font-bold mb-3 flex items-center gap-2">
+                <Zap className="w-5 h-5" /> Base URL
+              </h4>
+              <code className="bg-white/10 p-3 rounded text-sm">https://greenpay.world/api</code>
+            </div>
+            <div>
+              <h4 className="font-bold mb-3 flex items-center gap-2">
+                <Shield className="w-5 h-5" /> Authentication
+              </h4>
+              <code className="bg-white/10 p-3 rounded text-sm">Bearer YOUR_API_KEY</code>
+            </div>
+            <div>
+              <h4 className="font-bold mb-3 flex items-center gap-2">
+                <Globe className="w-5 h-5" /> Rate Limit
+              </h4>
+              <p className="text-sm text-green-100">100-10,000 req/min by tier</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Support */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
           className="bg-white rounded-xl shadow-md p-8 text-center border-t-4 border-green-600"
         >
           <h3 className="text-2xl font-bold text-gray-900 mb-3">Need Help?</h3>
-          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-            Our dedicated API support team is ready to help you integrate and optimize your implementation
-          </p>
+          <p className="text-gray-600 mb-6">Our API team is ready to help you build amazing integrations</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button
               onClick={() => setLocation("/support")}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold transition-all"
+              className="bg-green-600 hover:bg-green-700 text-white"
             >
               Support Tickets
             </Button>
             <Button
               variant="outline"
               onClick={() => window.open("mailto:api-support@greenpay.world", "_blank")}
-              className="border-green-600 text-green-600 hover:bg-green-50 px-6 py-2 rounded-lg font-bold transition-all"
+              className="border-green-600 text-green-600 hover:bg-green-50"
             >
               Email Support
             </Button>
           </div>
         </motion.div>
 
-        {/* Footer Info */}
+        {/* Footer */}
         <div className="text-center text-sm text-gray-500 py-6 border-t">
-          <p>© 2024 GreenPay. All documentation is provided under our Developer License Agreement.</p>
+          <p>© 2024 GreenPay. All rights reserved. API v1.0.0</p>
         </div>
       </div>
     </div>
