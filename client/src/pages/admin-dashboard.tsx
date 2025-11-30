@@ -37,6 +37,7 @@ import AdminSettings from "@/components/admin/admin-settings";
 import MessagingSettings from "@/components/admin/messaging-settings";
 import WhatsAppTemplates from "@/components/admin/whatsapp-templates";
 import WhatsAppMessaging from "@/components/admin/whatsapp-messaging";
+import DatabaseManagement from "@/components/admin/database-management";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -159,6 +160,7 @@ export default function AdminDashboard() {
               </TabsTrigger>
               <TabsTrigger value="messaging" className="rounded-md px-3 py-1.5">Messaging</TabsTrigger>
               <TabsTrigger value="templates" className="rounded-md px-3 py-1.5">Templates</TabsTrigger>
+              <TabsTrigger value="database" className="rounded-md px-3 py-1.5">Database Management</TabsTrigger>
               <TabsTrigger value="logs" className="rounded-md px-3 py-1.5">Security Logs</TabsTrigger>
               <TabsTrigger value="settings" className="rounded-md px-3 py-1.5">Settings</TabsTrigger>
             </TabsList>
@@ -410,6 +412,20 @@ function AdminWhatsAppTab() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function DatabaseManagementTab() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Database Backup & Restore</CardTitle>
+        <CardDescription>Manage database backups and restore from exports</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <DatabaseManagement />
+      </CardContent>
+    </Card>
   );
 }
 
