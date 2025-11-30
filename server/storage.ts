@@ -275,7 +275,7 @@ export class MemStorage implements IStorage {
       twoFactorEnabled: false,
       twoFactorBackupCodes: null,
       biometricEnabled: false,
-      biometricCredentials: null,
+      biometricCredentialId: null,
       darkMode: false,
       pushNotificationsEnabled: true,
       balance: "0.00",

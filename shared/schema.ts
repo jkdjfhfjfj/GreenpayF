@@ -19,7 +19,7 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorBackupCodes: text("two_factor_backup_codes"), // JSON stringified array
   biometricEnabled: boolean("biometric_enabled").default(false),
-  biometricCredentials: text("biometric_credentials"), // JSON stringified object
+  biometricCredentialId: text("biometric_credential_id"), // WebAuthn credential ID
   darkMode: boolean("dark_mode").default(false),
   pushNotificationsEnabled: boolean("push_notifications_enabled").default(true),
   balance: decimal("balance", { precision: 10, scale: 2 }).default("0.00"), // USD balance

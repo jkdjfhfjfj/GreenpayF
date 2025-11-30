@@ -282,8 +282,17 @@ export default function SettingsPage() {
       return response.json();
     },
     onSuccess: (data) => {
-      // Backup codes should already be in state from setup mutation
-      setTwoFAStep('backup');
+      // Show backup codes if they exist in state
+      if (backupCodes.length > 0) {
+        setTwoFAStep('backup');
+      } else {
+        // If no codes in state, close and enable 2FA
+        setIs2FASetup(false);
+        setTwoFAStep('qr');
+        setVerificationCode('');
+        setBackupCodes([]);
+        handleSettingUpdate('twoFactorEnabled', true);
+      }
       setVerificationCode('');
       toast({
         title: "2FA Enabled",
