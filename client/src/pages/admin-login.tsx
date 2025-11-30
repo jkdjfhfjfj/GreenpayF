@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Lock, Key, Upload, CheckCircle2, AlertCircle, Zap, Database, CheckCircle } from "lucide-react";
+import { Shield, Lock, Key, CheckCircle2, AlertCircle, Zap, Database, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
@@ -24,17 +24,12 @@ export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [restoreFile, setRestoreFile] = useState<File | null>(null);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [restoreStatus, setRestoreStatus] = useState<{ success?: boolean; message?: string; recordsRestored?: any } | null>(null);
   const [tablesExist, setTablesExist] = useState(true);
   const [checkingTables, setCheckingTables] = useState(true);
   const [isInitializing, setIsInitializing] = useState(false);
   const [tableStatus, setTableStatus] = useState<any>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const [error, setError] = useState<string | null>(null);
 
   // Check if database tables exist on component mount
   useEffect(() => {
@@ -69,6 +64,8 @@ export default function AdminLogin() {
           description: "Database tables created successfully",
         });
         setTablesExist(true);
+        // Refresh table status
+        await handleCheckTableStatus();
       } else {
         toast({
           title: "Error",
@@ -151,73 +148,6 @@ export default function AdminLogin() {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleRestoreSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!restoreFile) {
-      toast({
-        title: "No File Selected",
-        description: "Please select a backup file to restore",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsRestoring(true);
-    setRestoreStatus(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", restoreFile);
-
-      const response = await fetch("/api/admin/database/restore-public", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setRestoreStatus({
-          success: true,
-          message: "Database restored successfully",
-          recordsRestored: result.recordsRestored,
-        });
-        toast({
-          title: "Restore Successful",
-          description: "Your database has been restored from the backup",
-        });
-        setRestoreFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      } else {
-        setRestoreStatus({
-          success: false,
-          message: result.error || "Failed to restore database",
-        });
-        toast({
-          title: "Restore Failed",
-          description: result.error || "Failed to restore database",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "Unknown error");
-      setRestoreStatus({
-        success: false,
-        message: error instanceof Error ? error.message : "An error occurred during restore",
-      });
-      toast({
-        title: "Restore Error",
-        description: error instanceof Error ? error.message : "An error occurred during database restore",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRestoring(false);
     }
   };
 
@@ -513,7 +443,6 @@ export default function AdminLogin() {
                 )}
               </div>
             </TabsContent>
-
           </Tabs>
         </CardContent>
       </Card>
