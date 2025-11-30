@@ -21,7 +21,6 @@ const adminLoginSchema = z.object({
 type AdminLoginForm = z.infer<typeof adminLoginSchema>;
 
 export default function AdminLogin() {
-  console.log("🔵 AdminLogin component rendered");
   const [, setLocation] = useLocation();
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,11 +81,9 @@ export default function AdminLogin() {
   };
 
   const handleRestoreSubmit = async (e: React.FormEvent) => {
-    console.log("🟡 Restore submit handler called", { hasFile: !!restoreFile });
     e.preventDefault();
     
     if (!restoreFile) {
-      console.log("🔴 No restore file selected");
       toast({
         title: "No File Selected",
         description: "Please select a backup file to restore",
@@ -99,7 +96,6 @@ export default function AdminLogin() {
     setRestoreStatus(null);
 
     try {
-      console.log("📤 Starting restore with file:", restoreFile.name);
       const formData = new FormData();
       formData.append("file", restoreFile);
 
@@ -108,12 +104,9 @@ export default function AdminLogin() {
         body: formData,
       });
 
-      console.log("📥 Restore response status:", response.status);
       const result = await response.json();
-      console.log("📊 Restore result:", result);
 
       if (response.ok) {
-        console.log("✅ Restore successful");
         setRestoreStatus({
           success: true,
           message: "Database restored successfully",
@@ -128,7 +121,6 @@ export default function AdminLogin() {
           fileInputRef.current.value = "";
         }
       } else {
-        console.log("❌ Restore failed:", result.error);
         setRestoreStatus({
           success: false,
           message: result.error || "Failed to restore database",
@@ -140,7 +132,6 @@ export default function AdminLogin() {
         });
       }
     } catch (error) {
-      console.error("💥 Restore error:", error);
       setError(error instanceof Error ? error.message : "Unknown error");
       setRestoreStatus({
         success: false,
