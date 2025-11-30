@@ -527,30 +527,37 @@ export default function ApiDocumentationPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-green-600 to-green-700 shadow-lg p-6 sticky top-0 z-50"
+        className="bg-gradient-to-r from-green-600 to-green-700 shadow-lg p-4 sm:p-6 sticky top-0 z-50"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Title */}
-          <div className="flex items-center gap-3 flex-1">
-            <button
-              onClick={() => setLocation("/api-service")}
-              className="text-white hover:bg-green-700 p-2 rounded-lg transition-colors"
-            >
-              ← Back
-            </button>
+          {/* Back Button */}
+          <button
+            onClick={() => setLocation("/api-service")}
+            className="text-white hover:bg-green-700 p-2 rounded-lg transition-colors"
+          >
+            ← Back
+          </button>
+
+          {/* Desktop Title - Hidden on Mobile */}
+          <div className="hidden sm:flex items-center gap-3 flex-1 mx-4">
             <div>
               <h1 className="text-2xl font-bold text-white">GreenPay API</h1>
               <p className="text-green-100 text-sm">Complete API Reference & Examples</p>
             </div>
           </div>
 
-          {/* Right - Download Button */}
+          {/* Mobile Title - Visible only on Mobile */}
+          <div className="sm:hidden flex-1 mx-3">
+            <h1 className="text-lg font-bold text-white">Documentation</h1>
+          </div>
+
+          {/* Download Button */}
           <button
             onClick={generatePDF}
-            className="bg-white text-green-600 hover:bg-green-50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all"
+            className="bg-white text-green-600 hover:bg-green-50 p-2 sm:px-4 sm:py-2 rounded-lg font-semibold flex items-center gap-2 transition-all"
           >
             <Download className="w-4 h-4" />
-            Download PDF
+            <span className="hidden sm:inline">Download PDF</span>
           </button>
         </div>
       </motion.div>
