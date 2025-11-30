@@ -6416,65 +6416,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Restore database from backup
+  // Helper function for database restore logic (shared between authenticated and unauthenticated endpoints)
+  const performDatabaseRestore = async (fileBuffer: Buffer) => {
+    const backup = JSON.parse(fileBuffer.toString());
+    
+    if (!backup.data || !backup.version) {
+      throw new Error("Invalid backup file format");
+    }
+
+    const recordsRestored: { [key: string]: number } = {};
+
+    // Restore users
+    if (backup.data.users?.length > 0) {
+      for (const user of backup.data.users) {
+        try {
+          await db.insert(users).values(user).onConflictDoUpdate({
+            target: users.id,
+            set: user
+          });
+        } catch (err) {
+          console.log("User insert/update skipped (may already exist)");
+        }
+      }
+      recordsRestored.users = backup.data.users.length;
+    }
+
+    // Restore other tables
+    const tableMap: { [key: string]: any } = {
+      admins, kycDocuments, virtualCards, recipients, transactions,
+      paymentRequests, chatMessages, notifications, supportTickets,
+      conversations, messages, adminLogs, systemLogs, systemSettings, apiConfigurations
+    };
+
+    for (const [tableName, tableData] of Object.entries(backup.data)) {
+      if (tableName === 'users' || !Array.isArray(tableData)) continue;
+      
+      const table = tableMap[tableName];
+      if (!table || tableData.length === 0) continue;
+
+      try {
+        for (const record of tableData) {
+          try {
+            await db.insert(table).values(record).onConflictDoUpdate({
+              target: table.id,
+              set: record
+            });
+          } catch (err) {
+            console.log(`Record insert/update skipped for ${tableName}`);
+          }
+        }
+        recordsRestored[tableName] = tableData.length;
+      } catch (err) {
+        console.warn(`Failed to restore ${tableName}:`, err);
+      }
+    }
+
+    return recordsRestored;
+  };
+
+  // Restore database from backup (AUTHENTICATED - admin panel)
   app.post("/api/admin/database/restore", requireAdminAuth, backupUpload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file provided" });
       }
 
-      const backup = JSON.parse(req.file.buffer.toString());
-      
-      if (!backup.data || !backup.version) {
-        return res.status(400).json({ error: "Invalid backup file format" });
-      }
-
-      const recordsRestored: { [key: string]: number } = {};
-
-      // Restore users
-      if (backup.data.users?.length > 0) {
-        for (const user of backup.data.users) {
-          try {
-            await db.insert(users).values(user).onConflictDoUpdate({
-              target: users.id,
-              set: user
-            });
-          } catch (err) {
-            console.log("User insert/update skipped (may already exist)");
-          }
-        }
-        recordsRestored.users = backup.data.users.length;
-      }
-
-      // Restore other tables
-      const tableMap: { [key: string]: any } = {
-        admins, kycDocuments, virtualCards, recipients, transactions,
-        paymentRequests, chatMessages, notifications, supportTickets,
-        conversations, messages, adminLogs, systemLogs, systemSettings, apiConfigurations
-      };
-
-      for (const [tableName, tableData] of Object.entries(backup.data)) {
-        if (tableName === 'users' || !Array.isArray(tableData)) continue;
-        
-        const table = tableMap[tableName];
-        if (!table || tableData.length === 0) continue;
-
-        try {
-          for (const record of tableData) {
-            try {
-              await db.insert(table).values(record).onConflictDoUpdate({
-                target: table.id,
-                set: record
-              });
-            } catch (err) {
-              console.log(`Record insert/update skipped for ${tableName}`);
-            }
-          }
-          recordsRestored[tableName] = tableData.length;
-        } catch (err) {
-          console.warn(`Failed to restore ${tableName}:`, err);
-        }
-      }
+      const recordsRestored = await performDatabaseRestore(req.file.buffer);
 
       res.json({
         success: true,
@@ -6483,6 +6490,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Database restore error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to restore database" 
+      });
+    }
+  });
+
+  // Restore database from backup (UNAUTHENTICATED - login page only)
+  app.post("/api/admin/database/restore-public", backupUpload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      const recordsRestored = await performDatabaseRestore(req.file.buffer);
+
+      res.json({
+        success: true,
+        message: "Database restored successfully",
+        recordsRestored
+      });
+    } catch (error) {
+      console.error("Database restore error (public):", error);
       res.status(500).json({ 
         success: false,
         error: error instanceof Error ? error.message : "Failed to restore database" 
