@@ -530,6 +530,25 @@ export const userActivityLog = pgTable("user_activity_log", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Bill Payments table - KPLC, Zuku, StartimesTV, etc
+export const billPayments = pgTable("bill_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  provider: text("provider").notNull(), // KPLC, Zuku, StarimesTV, Nairobi_Water, Kenya_Power, Airtel_Money, etc
+  meterNumber: text("meter_number"), // For electricity/water bills
+  accountNumber: text("account_number"), // For cable/internet bills
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("KES").notNull(),
+  status: text("status").default("pending"), // pending, processing, completed, failed
+  reference: text("reference"), // Transaction reference from provider
+  description: text("description"),
+  fee: decimal("fee", { precision: 10, scale: 2 }).default("0.00"),
+  metadata: jsonb("metadata"), // Provider-specific response data
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Loans table - Performance-based lending
 export const loans = pgTable("loans", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -550,6 +569,14 @@ export const loans = pgTable("loans", {
   adminNotes: text("admin_notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schema for bill payments
+export const insertBillPaymentSchema = createInsertSchema(billPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
 });
 
 // Insert schemas for new tables
@@ -635,3 +662,5 @@ export type WhatsappConfig = typeof whatsappConfig.$inferSelect;
 export type InsertWhatsappConfig = z.infer<typeof insertWhatsappConfigSchema>;
 export type UserActivityLog = typeof userActivityLog.$inferSelect;
 export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
+export type BillPayment = typeof billPayments.$inferSelect;
+export type InsertBillPayment = z.infer<typeof insertBillPaymentSchema>;

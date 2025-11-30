@@ -43,6 +43,8 @@ import {
   type InsertWhatsappMessage,
   type WhatsappConfig,
   type InsertWhatsappConfig,
+  type BillPayment,
+  type InsertBillPayment,
   users,
   kycDocuments,
   virtualCards,
@@ -69,6 +71,7 @@ import {
   whatsappMessages,
   whatsappConfig,
   userActivityLog,
+  billPayments,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
