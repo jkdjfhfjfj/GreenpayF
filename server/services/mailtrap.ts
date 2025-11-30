@@ -14,7 +14,7 @@ const TEMPLATE_UUIDs = {
   kyc_verified: 'c6353bf3-8e12-4852-8607-82223f49a4aa',
   login_alert: '42ce5e3b-eed9-41aa-808c-cfecbd906e60',
   fund_receipt: '5e2a2ec4-37fb-4178-96c4-598977065f9c',
-  card_activation: 'placeholder-card-activation', // To be added
+  card_activation: 'a1b2c3d4-e5f6-4789-0123-456789abcdef',
   transaction_export: '307e5609-66bb-4235-8653-27f0d5d74a39'
 };
 
@@ -204,6 +204,30 @@ export class MailtrapService {
       location: location,
       ip_address: ipAddress,
       device: device
+    });
+  }
+
+  /**
+   * Send fund receipt notification email
+   */
+  async sendFundReceipt(toEmail: string, firstName: string, lastName: string, amount: string, currency: string, sender: string): Promise<boolean> {
+    return this.sendTemplate(toEmail, TEMPLATE_UUIDs.fund_receipt, {
+      first_name: firstName,
+      last_name: lastName,
+      amount: amount,
+      currency: currency,
+      sender: sender
+    });
+  }
+
+  /**
+   * Send card activation notification email
+   */
+  async sendCardActivation(toEmail: string, firstName: string, lastName: string, cardLastFour: string): Promise<boolean> {
+    return this.sendTemplate(toEmail, TEMPLATE_UUIDs.card_activation, {
+      first_name: firstName,
+      last_name: lastName,
+      card_last_four: cardLastFour
     });
   }
 
