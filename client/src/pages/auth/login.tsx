@@ -85,25 +85,13 @@ export default function LoginPage() {
       }
 
       try {
-        // Fetch available biometric credentials from server
-        const credResponse = await apiRequest("GET", "/api/auth/biometric/credentials");
-        const { credentials } = await credResponse.json();
-
-        if (!credentials || credentials.length === 0) {
-          throw new Error("No biometric credentials registered. Please set up biometric login in settings first.");
-        }
-
         const challenge = crypto.getRandomValues(new Uint8Array(32));
         
+        // Simple approach: let browser discover credentials automatically
         const assertionOptions: PublicKeyCredentialRequestOptions = {
           challenge,
           timeout: 60000,
           userVerification: "preferred",
-          allowCredentials: credentials.map(c => ({
-            id: c.credentialId as any, // credentialId is already in proper format
-            type: "public-key" as const,
-            transports: c.transports as any,
-          })),
         };
 
         const assertion = await navigator.credentials.get({
@@ -119,10 +107,6 @@ export default function LoginPage() {
         });
         return response.json();
       } catch (error: any) {
-        // Handle Permissions Policy error
-        if (error.message?.includes("publickey-credentials-get")) {
-          throw new Error("WebAuthn not enabled in this context. Please try again or use password login.");
-        }
         throw error;
       }
     },
