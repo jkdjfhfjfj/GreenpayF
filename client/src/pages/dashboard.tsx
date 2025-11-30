@@ -154,13 +154,6 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
       >
-        {/* User Location Info */}
-        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/20">
-          <MapPin className="w-4 h-4" />
-          <span className="text-xs text-white/70">Logged in</span>
-          <span className="text-sm font-semibold">{user?.country || "Location"}</span>
-        </div>
-
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center flex-1">
             {user?.profilePhotoUrl ? (
@@ -203,7 +196,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Country Badge */}
+        {/* Logged In + Country Location */}
         {user?.country && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -211,8 +204,9 @@ export default function DashboardPage() {
             transition={{ delay: 0.05 }}
             className="flex items-center gap-2 mb-3 justify-end"
           >
+            <span className="text-white/70 text-xs">Logged in</span>
             <span className="text-white/70 text-xs font-medium">{user.country}</span>
-            <span className="material-icons text-white/70 text-sm">location_on</span>
+            <MapPin className="w-3.5 h-3.5 text-white/70" />
           </motion.div>
         )}
 
