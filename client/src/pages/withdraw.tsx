@@ -274,7 +274,7 @@ export default function WithdrawPage() {
                     className="p-3 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
                     data-testid={`quick-amount-${amount}`}
                   >
-                    ${amount}
+                    KSh {amount}
                   </motion.button>
                 ))}
               </div>

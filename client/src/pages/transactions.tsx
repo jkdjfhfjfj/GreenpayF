@@ -5,8 +5,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { formatNumber, getCurrencySymbol } from "@/lib/formatters";
 import { generateTransactionPDF } from "@/lib/pdf-export";
-import { Download, Mail, Filter, X, ChevronRight, Copy, Calendar, User, Tag, DollarSign } from "lucide-react";
+import { Download, Mail, Filter, X, ChevronRight, Copy, Calendar, User, Tag, DollarSign, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 type TransactionFilter = "all" | "sent" | "received" | "pending";
@@ -32,12 +33,18 @@ export default function TransactionsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const queryClient = useQueryClient();
+
   const { data: transactionData, isLoading } = useQuery({
     queryKey: ["/api/transactions", user?.id],
     enabled: !!user?.id,
   });
 
   const transactions = (transactionData as any)?.transactions || [];
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/transactions", user?.id] });
+  };
 
   const filteredTransactions = transactions.filter((transaction: any) => {
     // Basic filter
@@ -179,6 +186,16 @@ export default function TransactionsPage() {
             <h1 className="text-lg font-semibold">Transactions</h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleRefresh}
+              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors text-xs md:text-sm"
+              title="Refresh Transactions"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline font-medium">Refresh</span>
+            </motion.button>
+
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
