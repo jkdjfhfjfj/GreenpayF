@@ -223,9 +223,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send welcome SMS/WhatsApp with instructions
       if (user.phone) {
         const { messagingService } = await import('./services/messaging');
+        const { whatsappService } = await import('./services/whatsapp');
         const domain = process.env.REPLIT_DOMAINS || 'greenpay.app';
         const loginUrl = `https://${domain.split(',')[0]}/login`;
         
+        // Send WhatsApp create_acc template if WhatsApp is configured
+        whatsappService.sendAccountCreation(user.phone, user.fullName || 'User')
+          .catch(err => console.error('[Signup] WhatsApp account creation error:', err));
+        
+        // Also send fallback SMS message
         messagingService.sendMessage(
           user.phone,
           `Welcome to GreenPay! To send and receive money, you need to: 1) Purchase a virtual card 2) Verify your KYC. Login here: ${loginUrl}`
