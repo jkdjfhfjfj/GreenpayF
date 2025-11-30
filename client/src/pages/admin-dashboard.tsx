@@ -145,32 +145,60 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <ScrollArea className="w-full whitespace-nowrap rounded-lg border">
-            <TabsList className="inline-flex h-12 w-full justify-start rounded-none bg-transparent p-1">
-              <TabsTrigger value="overview" className="rounded-md px-3 py-1.5">Overview</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-md px-3 py-1.5">Users</TabsTrigger>
-              <TabsTrigger value="kyc" className="rounded-md px-3 py-1.5">KYC</TabsTrigger>
-              <TabsTrigger value="transactions" className="rounded-md px-3 py-1.5">Transactions</TabsTrigger>
-              <TabsTrigger value="cards" className="rounded-md px-3 py-1.5">Virtual Cards</TabsTrigger>
-              <TabsTrigger value="whatsapp" className="rounded-md px-3 py-1.5 flex items-center gap-1">
-                <MessageCircle className="w-4 h-4" />
-                WhatsApp
-              </TabsTrigger>
-              <TabsTrigger value="messaging" className="rounded-md px-3 py-1.5">Messaging</TabsTrigger>
-              <TabsTrigger value="templates" className="rounded-md px-3 py-1.5">Templates</TabsTrigger>
-              <TabsTrigger value="logs" className="rounded-md px-3 py-1.5">Security Logs</TabsTrigger>
-              <TabsTrigger value="database" className="rounded-md px-3 py-1.5 flex items-center gap-1">
-                <Database className="w-4 h-4" />
-                Database
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="rounded-md px-3 py-1.5">Settings</TabsTrigger>
-            </TabsList>
-          </ScrollArea>
+      <div className="flex gap-8">
+        {/* Sidebar Navigation */}
+        <aside className="w-48 pt-8">
+          <nav className="space-y-2">
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="flex flex-col w-full gap-1 h-auto bg-transparent p-0 rounded-none">
+                <TabsTrigger value="overview" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="users" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <Users className="w-4 h-4 mr-2" />
+                  Users
+                </TabsTrigger>
+                <TabsTrigger value="kyc" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <FileCheck className="w-4 h-4 mr-2" />
+                  KYC
+                </TabsTrigger>
+                <TabsTrigger value="transactions" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <Activity className="w-4 h-4 mr-2" />
+                  Transactions
+                </TabsTrigger>
+                <TabsTrigger value="cards" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Virtual Cards
+                </TabsTrigger>
+                <Separator className="my-2" />
+                <TabsTrigger value="whatsapp" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  WhatsApp
+                </TabsTrigger>
+                <TabsTrigger value="messaging" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <Mail className="w-4 h-4 mr-2" />
+                  Messaging
+                </TabsTrigger>
+                <TabsTrigger value="templates" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  Templates
+                </TabsTrigger>
+                <Separator className="my-2" />
+                <TabsTrigger value="logs" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Security Logs
+                </TabsTrigger>
+                <TabsTrigger value="database" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <Database className="w-4 h-4 mr-2" />
+                  Database
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="w-full justify-start rounded-md px-3 py-2 text-sm">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+              <TabsContent value="overview" className="space-y-6">
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
@@ -313,46 +341,53 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="users">
-            <AdminUsersTab />
-          </TabsContent>
+              <TabsContent value="users">
+                <AdminUsersTab />
+              </TabsContent>
 
-          <TabsContent value="kyc">
-            <AdminKycTab />
-          </TabsContent>
+              <TabsContent value="kyc">
+                <AdminKycTab />
+              </TabsContent>
 
-          <TabsContent value="transactions">
-            <AdminTransactionsTab />
-          </TabsContent>
+              <TabsContent value="transactions">
+                <AdminTransactionsTab />
+              </TabsContent>
 
-          <TabsContent value="cards">
-            <AdminCardsTab />
-          </TabsContent>
+              <TabsContent value="cards">
+                <AdminCardsTab />
+              </TabsContent>
 
-          <TabsContent value="whatsapp">
-            <AdminWhatsAppTab />
-          </TabsContent>
+              <TabsContent value="whatsapp">
+                <AdminWhatsAppTab />
+              </TabsContent>
 
-          <TabsContent value="messaging">
-            <MessagingSettings />
-          </TabsContent>
+              <TabsContent value="messaging">
+                <MessagingSettings />
+              </TabsContent>
 
-          <TabsContent value="templates">
-            <WhatsAppTemplates />
-          </TabsContent>
+              <TabsContent value="templates">
+                <WhatsAppTemplates />
+              </TabsContent>
 
-          <TabsContent value="logs">
-            <AdminLogsTab />
-          </TabsContent>
+              <TabsContent value="logs">
+                <AdminLogsTab />
+              </TabsContent>
 
-          <TabsContent value="database">
-            <DatabaseManagement />
-          </TabsContent>
+              <TabsContent value="database">
+                <DatabaseManagement />
+              </TabsContent>
 
-          <TabsContent value="settings">
-            <AdminSettingsTab />
-          </TabsContent>
-        </Tabs>
+              <TabsContent value="settings">
+                <AdminSettingsTab />
+              </TabsContent>
+            </Tabs>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 py-8">
+          {/* Content is rendered by TabsContent above */}
+        </main>
       </div>
     </div>
   );
