@@ -530,20 +530,8 @@ export default function ApiDocumentationPage() {
         className="bg-gradient-to-r from-green-600 to-green-700 shadow-lg p-6 sticky top-0 z-50"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Left - User Location */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-white">
-              <MapPin className="w-5 h-5" />
-              <div>
-                <p className="text-xs text-green-100">Logged in</p>
-                <p className="text-sm font-semibold">{user?.country || "Country"}</p>
-              </div>
-            </div>
-            <div className="w-px h-8 bg-green-500 opacity-50"></div>
-          </div>
-
-          {/* Center - Title */}
-          <div className="flex items-center gap-3 flex-1 ml-4">
+          {/* Title */}
+          <div className="flex items-center gap-3 flex-1">
             <button
               onClick={() => setLocation("/api-service")}
               className="text-white hover:bg-green-700 p-2 rounded-lg transition-colors"
