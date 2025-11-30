@@ -373,11 +373,10 @@ export default function SettingsPage() {
         throw new Error("Biometric enrollment was cancelled or failed");
       }
 
-      // Send to server for storage - encode credential ID as base64
-      const credentialIdBase64 = btoa(credential.id);
+      // Send to server for storage - store credential ID as is
       const response = await apiRequest("POST", `/api/auth/biometric/setup`, {
         userId: user?.id,
-        credentialId: credentialIdBase64,
+        credentialId: credential.id,
       });
       return response.json();
     },

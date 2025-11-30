@@ -95,22 +95,12 @@ export default function LoginPage() {
 
         const challenge = crypto.getRandomValues(new Uint8Array(32));
         
-        // Helper function to convert base64 to Uint8Array
-        const base64ToUint8Array = (base64: string): Uint8Array => {
-          const binaryString = atob(base64);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          return bytes;
-        };
-        
         const assertionOptions: PublicKeyCredentialRequestOptions = {
           challenge,
           timeout: 60000,
           userVerification: "preferred",
           allowCredentials: credentials.map(c => ({
-            id: base64ToUint8Array(c.credentialId),
+            id: c.credentialId as any, // credentialId is already in proper format
             type: "public-key" as const,
             transports: c.transports as any,
           })),
