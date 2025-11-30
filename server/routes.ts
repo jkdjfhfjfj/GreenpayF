@@ -2214,12 +2214,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available biometric credentials for login
   app.get("/api/auth/biometric/credentials", async (req, res) => {
     try {
-      const users = await storage.getAllUsers({ limit: 1000 });
-      const credentials = users.users
-        .filter(u => u.biometricEnabled && u.biometricCredentialId)
-        .map(u => {
+      const allUsers = await storage.getAllUsers({ limit: 1000 });
+      const users = Array.isArray(allUsers) ? allUsers : (allUsers?.users || []);
+      
+      const credentials = users
+        .filter((u: any) => u.biometricEnabled && u.biometricCredentialId)
+        .map((u: any) => {
           try {
-            const stored = JSON.parse(u.biometricCredentialId);
+            const stored = typeof u.biometricCredentialId === 'string' 
+              ? JSON.parse(u.biometricCredentialId)
+              : u.biometricCredentialId;
             return {
               credentialId: stored.credentialId,
               type: "public-key" as const,
@@ -2229,7 +2233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return null;
           }
         })
-        .filter(c => c !== null);
+        .filter((c: any) => c !== null);
       
       res.json({ credentials });
     } catch (error) {
@@ -2247,10 +2251,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Find user with matching biometric credential
-      const users = await storage.getAllUsers({ limit: 1000 });
-      const user = users.users.find(u => {
+      const allUsers = await storage.getAllUsers({ limit: 1000 });
+      const users = Array.isArray(allUsers) ? allUsers : (allUsers?.users || []);
+      
+      const user = users.find((u: any) => {
         try {
-          const stored = u.biometricCredentialId ? JSON.parse(u.biometricCredentialId) : null;
+          const stored = u.biometricCredentialId ? (
+            typeof u.biometricCredentialId === 'string'
+              ? JSON.parse(u.biometricCredentialId)
+              : u.biometricCredentialId
+          ) : null;
           return stored && stored.credentialId === credentialId && u.biometricEnabled;
         } catch {
           return false;
