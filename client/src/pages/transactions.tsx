@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { formatNumber, getCurrencySymbol } from "@/lib/formatters";
 import { generateTransactionPDF } from "@/lib/pdf-export";
-import { Download, Mail, Filter, X } from "lucide-react";
+import { Download, Mail, Filter, X, ChevronRight, Copy, Calendar, User, Tag, DollarSign } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,6 +28,7 @@ export default function TransactionsPage() {
   const [showEmailExport, setShowEmailExport] = useState(false);
   const [exportEmail, setExportEmail] = useState("");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({});
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -164,30 +165,30 @@ export default function TransactionsPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 elevation-1"
+        className="bg-card shadow-sm p-3 md:p-4 elevation-1"
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-2">
           <h1 className="text-lg font-semibold">Transactions</h1>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="flex items-center space-x-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors"
+              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors text-xs md:text-sm"
               title="Advanced Filters"
             >
               <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">Filters</span>
+              <span className="hidden sm:inline font-medium">Filters</span>
             </motion.button>
             
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowEmailExport(true)}
               disabled={filteredTransactions.length === 0}
-              className="flex items-center space-x-1 px-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               title="Export & Send via Email"
             >
               <Mail className="h-4 w-4" />
-              <span className="text-sm font-medium">Email Export</span>
+              <span className="hidden sm:inline font-medium">Email</span>
             </motion.button>
 
             <motion.button
@@ -202,17 +203,17 @@ export default function TransactionsPage() {
                 }
               }}
               disabled={filteredTransactions.length === 0}
-              className="flex items-center space-x-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="button-export-pdf"
             >
               <Download className="h-4 w-4" />
-              <span className="text-sm font-medium">Export PDF</span>
+              <span className="hidden sm:inline font-medium">PDF</span>
             </motion.button>
           </div>
         </div>
         
         {/* Filter Tabs */}
-        <div className="flex space-x-1 bg-muted p-1 rounded-lg mb-4">
+        <div className="flex gap-1 bg-muted p-1 rounded-lg mb-4 overflow-x-auto">
           {[
             { id: "all", label: "All" },
             { id: "sent", label: "Sent" },
@@ -222,7 +223,7 @@ export default function TransactionsPage() {
             <button
               key={filter.id}
               onClick={() => setActiveFilter(filter.id as TransactionFilter)}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all ${
+              className={`py-2 px-2 md:px-3 text-xs md:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
                 activeFilter === filter.id
                   ? "bg-card text-foreground elevation-1"
                   : "text-muted-foreground hover:text-foreground"
@@ -254,12 +255,12 @@ export default function TransactionsPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {/* Status Filter */}
               <select
                 value={advancedFilters.status || ""}
                 onChange={(e) => setAdvancedFilters({ ...advancedFilters, status: e.target.value || undefined })}
-                className="px-3 py-2 text-sm border rounded-md bg-background"
+                className="px-2 py-2 text-xs md:text-sm border rounded-md bg-background"
               >
                 <option value="">All Status</option>
                 <option value="completed">Completed</option>
@@ -271,23 +272,23 @@ export default function TransactionsPage() {
               <select
                 value={advancedFilters.type || ""}
                 onChange={(e) => setAdvancedFilters({ ...advancedFilters, type: e.target.value || undefined })}
-                className="px-3 py-2 text-sm border rounded-md bg-background"
+                className="px-2 py-2 text-xs md:text-sm border rounded-md bg-background"
               >
                 <option value="">All Types</option>
                 <option value="send">Sent</option>
                 <option value="receive">Received</option>
                 <option value="deposit">Deposit</option>
                 <option value="withdraw">Withdraw</option>
-                <option value="card_purchase">Card Purchase</option>
+                <option value="card_purchase">Card</option>
               </select>
 
               {/* Currency Filter */}
               <select
                 value={advancedFilters.currency || ""}
                 onChange={(e) => setAdvancedFilters({ ...advancedFilters, currency: e.target.value || undefined })}
-                className="px-3 py-2 text-sm border rounded-md bg-background"
+                className="px-2 py-2 text-xs md:text-sm border rounded-md bg-background"
               >
-                <option value="">All Currency</option>
+                <option value="">Currency</option>
                 <option value="USD">USD</option>
                 <option value="KES">KES</option>
               </select>
@@ -295,21 +296,21 @@ export default function TransactionsPage() {
               {/* Min Amount */}
               <input
                 type="number"
-                placeholder="Min Amount"
+                placeholder="Min"
                 value={advancedFilters.minAmount || ""}
                 onChange={(e) => setAdvancedFilters({ ...advancedFilters, minAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
-                className="px-3 py-2 text-sm border rounded-md bg-background"
+                className="px-2 py-2 text-xs md:text-sm border rounded-md bg-background"
               />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {/* Max Amount */}
               <input
                 type="number"
-                placeholder="Max Amount"
+                placeholder="Max"
                 value={advancedFilters.maxAmount || ""}
                 onChange={(e) => setAdvancedFilters({ ...advancedFilters, maxAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
-                className="px-3 py-2 text-sm border rounded-md bg-background"
+                className="px-2 py-2 text-xs md:text-sm border rounded-md bg-background"
               />
 
               {/* Date From */}
@@ -317,7 +318,7 @@ export default function TransactionsPage() {
                 type="date"
                 value={advancedFilters.dateFrom || ""}
                 onChange={(e) => setAdvancedFilters({ ...advancedFilters, dateFrom: e.target.value || undefined })}
-                className="px-3 py-2 text-sm border rounded-md bg-background"
+                className="px-2 py-2 text-xs md:text-sm border rounded-md bg-background"
               />
 
               {/* Date To */}
@@ -325,10 +326,10 @@ export default function TransactionsPage() {
                 type="date"
                 value={advancedFilters.dateTo || ""}
                 onChange={(e) => setAdvancedFilters({ ...advancedFilters, dateTo: e.target.value || undefined })}
-                className="px-3 py-2 text-sm border rounded-md bg-background"
+                className="px-2 py-2 text-xs md:text-sm border rounded-md bg-background"
               />
 
-              <div className="flex items-center text-xs text-muted-foreground">
+              <div className="flex items-center text-xs text-muted-foreground bg-background rounded-md px-2 py-2">
                 Found: <span className="ml-1 font-semibold text-foreground">{filteredTransactions.length}</span>
               </div>
             </div>
@@ -340,7 +341,7 @@ export default function TransactionsPage() {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-50 border border-blue-200 p-4 rounded-lg mt-4 space-y-3"
+            className="bg-blue-50 border border-blue-200 p-3 md:p-4 rounded-lg mt-4 space-y-3"
           >
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-sm">Export to Email</h3>
@@ -377,7 +378,7 @@ export default function TransactionsPage() {
                 disabled={exportMutation.isPending || !exportEmail}
                 className="flex-1 px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
               >
-                {exportMutation.isPending ? "Sending..." : "Send Report"}
+                {exportMutation.isPending ? "Sending..." : "Send"}
               </button>
               <button
                 onClick={() => setShowEmailExport(false)}
@@ -390,13 +391,13 @@ export default function TransactionsPage() {
         )}
       </motion.div>
 
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         {/* Monthly Summary - Separate USD and KES */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-card p-4 rounded-xl border border-border mb-6 elevation-1"
+          className="bg-card p-3 md:p-4 rounded-xl border border-border mb-4 md:mb-6 elevation-1"
         >
           <div className="text-center">
             <p className="text-sm text-muted-foreground mb-3">This Month</p>
