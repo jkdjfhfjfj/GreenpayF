@@ -1,46 +1,22 @@
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
-import { Receipt, CheckCircle, Clock } from "lucide-react";
-
-const billPaymentSchema = z.object({
-  provider: z.string().min(1, "Please select a provider"),
-  meterNumber: z.string().optional(),
-  accountNumber: z.string().optional(),
-  amount: z.string().min(1, "Amount is required").refine((val) => {
-    const num = parseFloat(val);
-    return num > 0 && num <= 1000000;
-  }, "Amount must be between 1 and 1,000,000"),
-}).refine((data) => {
-  const { provider, meterNumber, accountNumber } = data;
-  const needsMeter = ["KPLC", "Kenya_Power", "Nairobi_Water"].includes(provider);
-  const needsAccount = ["Zuku", "StarimesTV", "Airtel_Money"].includes(provider);
-  
-  if (needsMeter && !meterNumber) return false;
-  if (needsAccount && !accountNumber) return false;
-  return true;
-}, "Please provide required identification for selected provider");
-
-type BillPaymentForm = z.infer<typeof billPaymentSchema>;
+import { Receipt, CheckCircle, Clock, Zap } from "lucide-react";
 
 const BILL_PROVIDERS = [
-  { value: "KPLC", label: "KPLC (Electricity)", needsId: "meterNumber" },
-  { value: "Zuku", label: "Zuku (Cable TV)", needsId: "accountNumber" },
-  { value: "StarimesTV", label: "StarimesTV (Cable)", needsId: "accountNumber" },
-  { value: "Nairobi_Water", label: "Nairobi Water", needsId: "meterNumber" },
-  { value: "Kenya_Power", label: "Kenya Power", needsId: "meterNumber" },
-  { value: "Airtel_Money", label: "Airtel Money", needsId: "accountNumber" },
+  { id: "KPLC", name: "KPLC", label: "KPLC (Electricity)", icon: "⚡", color: "from-yellow-500 to-yellow-600", needsId: "meterNumber" },
+  { id: "Zuku", name: "Zuku", label: "Zuku (Cable TV)", icon: "📺", color: "from-purple-500 to-purple-600", needsId: "accountNumber" },
+  { id: "StarimesTV", name: "StarimesTV", label: "StarimesTV (Cable)", icon: "📡", color: "from-orange-500 to-orange-600", needsId: "accountNumber" },
+  { id: "Nairobi_Water", name: "Nairobi Water", label: "Nairobi Water", icon: "💧", color: "from-blue-500 to-blue-600", needsId: "meterNumber" },
+  { id: "Kenya_Power", name: "Kenya Power", label: "Kenya Power", icon: "🔌", color: "from-red-500 to-red-600", needsId: "meterNumber" },
+  { id: "Airtel_Money", name: "Airtel Money", label: "Airtel Money", icon: "💰", color: "from-red-500 to-red-700", needsId: "accountNumber" },
 ];
 
 interface BillPaymentRecord {
@@ -59,18 +35,14 @@ export default function BillsPage() {
   const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [billHistory, setBillHistory] = useState<BillPaymentRecord[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState("");
   const [loadingHistory, setLoadingHistory] = useState(true);
 
-  const form = useForm<BillPaymentForm>({
-    resolver: zodResolver(billPaymentSchema),
-    defaultValues: {
-      provider: "",
-      meterNumber: "",
-      accountNumber: "",
-      amount: "",
-    },
-  });
+  // Modal state management
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1: Provider, 2: Details, 3: Confirm, 4: Success
+  const [selectedProvider, setSelectedProvider] = useState<typeof BILL_PROVIDERS[0] | null>(null);
+  const [identifier, setIdentifier] = useState("");
+  const [amount, setAmount] = useState("");
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -92,26 +64,28 @@ export default function BillsPage() {
   };
 
   const billPaymentMutation = useMutation({
-    mutationFn: async (data: BillPaymentForm) => {
+    mutationFn: async () => {
       const response = await apiRequest("POST", "/api/bills/pay", {
         userId: user?.id,
-        provider: data.provider,
-        meterNumber: data.meterNumber || null,
-        accountNumber: data.accountNumber || null,
-        amount: data.amount,
+        provider: selectedProvider?.id,
+        meterNumber: selectedProvider?.needsId === "meterNumber" ? identifier : null,
+        accountNumber: selectedProvider?.needsId === "accountNumber" ? identifier : null,
+        amount,
       });
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Bill Paid!",
-        description: "Your bill payment has been processed successfully.",
-      });
-      form.reset();
-      setSelectedProvider("");
-      refreshUser();
-      queryClient.invalidateQueries({ queryKey: ["/api/transactions", user?.id] });
-      fetchBillHistory();
+      setStep(4);
+      setTimeout(() => {
+        toast({
+          title: "Bill Paid Successfully!",
+          description: "Your bill payment has been processed.",
+        });
+        resetModal();
+        refreshUser();
+        queryClient.invalidateQueries({ queryKey: ["/api/transactions", user?.id] });
+        fetchBillHistory();
+      }, 1500);
     },
     onError: (error: any) => {
       toast({
@@ -119,27 +93,56 @@ export default function BillsPage() {
         description: error.message || "Unable to process bill payment. Please try again.",
         variant: "destructive",
       });
+      setStep(2);
     },
   });
 
-  const onSubmit = (data: BillPaymentForm) => {
-    const kesBalance = parseFloat(user?.kesBalance || '0');
-    const amount = parseFloat(data.amount);
-    
-    if (kesBalance < amount) {
+  const resetModal = () => {
+    setShowModal(false);
+    setStep(1);
+    setSelectedProvider(null);
+    setIdentifier("");
+    setAmount("");
+  };
+
+  const handleProviderSelect = (provider: typeof BILL_PROVIDERS[0]) => {
+    setSelectedProvider(provider);
+    setStep(2);
+  };
+
+  const handleContinue = () => {
+    if (!identifier || !amount) {
       toast({
-        title: "Insufficient KES Balance",
-        description: "Please convert USD to KES in the Exchange page to pay bills",
+        title: "Missing Information",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
     }
 
-    billPaymentMutation.mutate(data);
+    const kesBalance = parseFloat(user?.kesBalance || "0");
+    const paymentAmount = parseFloat(amount);
+
+    if (kesBalance < paymentAmount) {
+      toast({
+        title: "Insufficient KES Balance",
+        description: `You need KSh ${paymentAmount.toFixed(2)}, but only have KSh ${kesBalance.toFixed(2)}. Please convert USD to KES in the Exchange page.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setStep(3);
   };
 
-  const selectedProviderObj = BILL_PROVIDERS.find(p => p.value === selectedProvider);
-  const isLoadingSubmit = billPaymentMutation.isPending;
+  const handleConfirmPayment = () => {
+    billPaymentMutation.mutate();
+  };
+
+  const kesBalance = parseFloat(user?.kesBalance || "0");
+  const paymentAmount = parseFloat(amount) || 0;
+  const selectedProviderObj = BILL_PROVIDERS.find(p => p.id === selectedProvider?.id);
+  const idLabel = selectedProvider?.needsId === "meterNumber" ? "Meter Number" : "Account Number";
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -155,7 +158,7 @@ export default function BillsPage() {
 
         <div className="relative z-10">
           {/* Back Button and Title */}
-          <div className="flex items-center mb-2">
+          <div className="flex items-center mb-6">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setLocation("/dashboard")}
@@ -163,152 +166,108 @@ export default function BillsPage() {
             >
               <span className="material-icons">arrow_back</span>
             </motion.button>
-            <h1 className="text-2xl font-bold">Pay Bills</h1>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold flex items-center">
+                Pay Bills
+              </h1>
+              <p className="text-sm text-white/80">Pay utility and service bills instantly</p>
+            </div>
           </div>
-          <p className="text-green-50 text-sm ml-12">Pay your utility and service bills instantly</p>
+
+          {/* Balance and Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            {/* Main Balance Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-br from-white/15 to-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl hover:bg-white/20 transition-all"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-white/80 font-medium mb-2 flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5" />
+                    Available KES Balance
+                  </p>
+                  <motion.p
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-4xl font-bold"
+                  >
+                    KSh {kesBalance.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </motion.p>
+                  <p className="text-xs text-white/70 mt-2">Ready to pay bills</p>
+                </div>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  className="p-3 bg-white/10 rounded-full"
+                >
+                  <Receipt className="w-6 h-6 text-white/80" />
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Quick Info Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="bg-gradient-to-br from-white/15 to-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70">Processing</p>
+                    <p className="text-sm font-bold">Instant</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <Receipt className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70">Providers</p>
+                    <p className="text-sm font-bold">6+ Services</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </motion.div>
 
       <div className="p-6 space-y-6">
-        {/* Current Balance */}
+        {/* Start Payment Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-xl border border-green-200 dark:border-green-800"
         >
-          <p className="text-xs text-green-700 dark:text-green-300 mb-1">Available KES Balance</p>
-          <p className="text-3xl font-bold text-green-900 dark:text-green-100">KSh {parseFloat(user?.kesBalance || "0").toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-        </motion.div>
-
-        {/* Payment Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-6"
-        >
-          <h2 className="text-lg font-semibold mb-6">New Bill Payment</h2>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              {/* Provider Selection */}
-              <FormField
-                control={form.control}
-                name="provider"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-semibold">Bill Provider</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setSelectedProvider(value);
-                        form.clearErrors("meterNumber");
-                        form.clearErrors("accountNumber");
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Select a provider" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {BILL_PROVIDERS.map((provider) => (
-                          <SelectItem key={provider.value} value={provider.value}>
-                            {provider.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Meter Number (for utilities) */}
-              {selectedProviderObj?.needsId === "meterNumber" && (
-                <FormField
-                  control={form.control}
-                  name="meterNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-semibold">Meter Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter meter number"
-                          {...field}
-                          className="h-12"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {/* Account Number (for cable/internet) */}
-              {selectedProviderObj?.needsId === "accountNumber" && (
-                <FormField
-                  control={form.control}
-                  name="accountNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-semibold">Account Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter account number"
-                          {...field}
-                          className="h-12"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {/* Amount */}
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-semibold">Amount (KES)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter amount"
-                        {...field}
-                        className="h-12"
-                        step="0.01"
-                        min="0"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                disabled={isLoadingSubmit}
-                className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold text-base rounded-lg"
-              >
-                {isLoadingSubmit ? "Processing..." : "Pay Bill"}
-              </Button>
-            </form>
-          </Form>
+          <Button
+            onClick={() => setShowModal(true)}
+            className="w-full h-14 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold text-lg rounded-xl shadow-lg"
+          >
+            <span className="material-icons mr-2">add_circle</span>
+            Start New Payment
+          </Button>
         </motion.div>
 
         {/* Recent Payments */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.2 }}
           className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-6"
         >
-          <h2 className="text-lg font-semibold mb-4">Recent Payments</h2>
+          <h2 className="text-lg font-semibold mb-4 flex items-center">
+            <Clock className="w-5 h-5 mr-2 text-green-600" />
+            Recent Payments
+          </h2>
 
           {loadingHistory ? (
             <div className="text-center py-8 text-gray-600 dark:text-gray-400">
@@ -322,12 +281,12 @@ export default function BillsPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {billHistory.map((payment) => (
+              {billHistory.slice(0, 5).map((payment) => (
                 <motion.div
                   key={payment.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700"
                 >
                   <div className="flex items-center gap-3 flex-1">
                     {payment.status === "completed" ? (
@@ -337,7 +296,7 @@ export default function BillsPage() {
                     )}
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-900 dark:text-white truncate">
-                        {BILL_PROVIDERS.find(p => p.value === payment.provider)?.label || payment.provider}
+                        {BILL_PROVIDERS.find(p => p.id === payment.provider)?.label || payment.provider}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                         {payment.meterNumber || payment.accountNumber || "Bill"}
@@ -346,10 +305,10 @@ export default function BillsPage() {
                   </div>
                   <div className="text-right ml-2 flex-shrink-0">
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      KSh {parseFloat(payment.amount).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      KSh {parseFloat(payment.amount).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {new Date(payment.createdAt).toLocaleDateString('en-KE')}
+                      {new Date(payment.createdAt).toLocaleDateString("en-KE")}
                     </p>
                   </div>
                 </motion.div>
@@ -358,6 +317,206 @@ export default function BillsPage() {
           )}
         </motion.div>
       </div>
+
+      {/* Multi-Step Payment Modal */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="max-w-md">
+          {/* Step 1: Provider Selection */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>Select Bill Provider</DialogTitle>
+                <DialogDescription>Choose the service provider you want to pay</DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                {BILL_PROVIDERS.map((provider) => (
+                  <motion.button
+                    key={provider.id}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleProviderSelect(provider)}
+                    className="p-4 rounded-xl border-2 border-border bg-card hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-950/20 transition-all text-center"
+                  >
+                    <div className="text-3xl mb-2">{provider.icon}</div>
+                    <p className="text-xs font-semibold">{provider.name}</p>
+                  </motion.button>
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={resetModal}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          {/* Step 2: Enter Details */}
+          {step === 2 && selectedProvider && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>Payment Details</DialogTitle>
+                <DialogDescription>{selectedProvider.label}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                {/* Provider Info Card */}
+                <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl">{selectedProvider.icon}</div>
+                    <div>
+                      <p className="text-sm font-semibold">{selectedProvider.label}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Enter your details below</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Identifier Input */}
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">{idLabel}</label>
+                  <Input
+                    placeholder={`Enter ${idLabel.toLowerCase()}`}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    className="h-12"
+                  />
+                </div>
+
+                {/* Amount Input */}
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">Amount (KES)</label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="h-12 pr-12"
+                      step="0.01"
+                      min="0"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-600">KSh</span>
+                  </div>
+                </div>
+
+                {/* Balance Check */}
+                <div className={`p-3 rounded-lg text-sm ${
+                  kesBalance >= paymentAmount
+                    ? "bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
+                    : "bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+                }`}>
+                  <p className="font-semibold">Balance: KSh {kesBalance.toFixed(2)}</p>
+                  {paymentAmount > 0 && (
+                    <p className="text-xs mt-1">
+                      {kesBalance >= paymentAmount
+                        ? `✓ You can afford this payment`
+                        : `✗ Insufficient balance. Need KSh ${(paymentAmount - kesBalance).toFixed(2)} more`}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(1)}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleContinue}
+                  disabled={!identifier || !amount}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Confirmation */}
+          {step === 3 && selectedProvider && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>Confirm Payment</DialogTitle>
+                <DialogDescription>Review your payment details</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 bg-gray-50 dark:bg-slate-800 p-4 rounded-lg">
+                <div className="flex justify-between pb-2 border-b border-gray-200 dark:border-slate-700">
+                  <span className="text-gray-600 dark:text-gray-400">Provider:</span>
+                  <span className="font-semibold">{selectedProvider.label}</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-gray-200 dark:border-slate-700">
+                  <span className="text-gray-600 dark:text-gray-400">{idLabel}:</span>
+                  <span className="font-semibold">{identifier}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Amount:</span>
+                  <span className="font-bold text-lg">KSh {parseFloat(amount).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+                <p className="font-semibold mb-1">Processing Details</p>
+                <p className="text-xs">Your payment will be deducted from your KES balance and processed instantly.</p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(2)}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleConfirmPayment}
+                  disabled={billPaymentMutation.isPending}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  {billPaymentMutation.isPending ? "Processing..." : "Pay Now"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Success */}
+          {step === 4 && (
+            <div className="space-y-4 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              >
+                <div className="w-16 h-16 bg-green-100 dark:bg-green-950 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+              </motion.div>
+              
+              <div>
+                <DialogTitle className="text-center text-xl">Payment Successful!</DialogTitle>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Your bill payment has been processed.</p>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-lg text-sm">
+                <p className="text-gray-600 dark:text-gray-400 mb-1">Amount Paid</p>
+                <p className="font-bold text-lg">KSh {parseFloat(amount).toFixed(2)}</p>
+              </div>
+
+              <Button
+                onClick={resetModal}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Done
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
