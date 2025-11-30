@@ -29,6 +29,7 @@ import WithdrawPage from "@/pages/withdraw";
 import ExchangePage from "@/pages/exchange";
 import KycPage from "@/pages/kyc";
 import AirtimePage from "@/pages/airtime";
+import BillsPage from "@/pages/bills";
 import StatusPage from "@/pages/status";
 import LoadingScreen from "@/components/loading-screen";
 import BottomNavigation from "@/components/bottom-navigation";
@@ -130,6 +131,7 @@ function Router() {
       <Route path="/exchange" component={ExchangePage} />
       <Route path="/kyc" component={KycPage} />
       <Route path="/airtime" component={AirtimePage} />
+      <Route path="/bills" component={BillsPage} />
       <Route path="/status" component={StatusPage} />
       <Route path="/payment-callback" component={PaymentCallbackPage} />
       <Route path="/payment-success" component={PaymentSuccessPage} />
