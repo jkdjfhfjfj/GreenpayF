@@ -15,6 +15,11 @@ interface Backup {
   recordsCount: number;
 }
 
+interface FileValidation {
+  valid: boolean;
+  message: string;
+}
+
 export default function DatabaseManagement() {
   const [backups, setBackups] = useState<Backup[]>([]);
   const [isExporting, setIsExporting] = useState(false);
@@ -25,6 +30,7 @@ export default function DatabaseManagement() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [fileValidation, setFileValidation] = useState<FileValidation>({ valid: false, message: "" });
 
   useEffect(() => {
     checkDatabaseConnection();
@@ -84,14 +90,97 @@ export default function DatabaseManagement() {
     }
   };
 
+  const validateFile = async (file: File): Promise<FileValidation> => {
+    // Check file size (max 100MB)
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return {
+        valid: false,
+        message: `File is too large. Maximum size is ${formatBytes(maxSize)}`,
+      };
+    }
+
+    // Check file type
+    const validExtensions = [".json", ".sql", ".gz", ".gzip"];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = validExtensions.some((ext) => fileName.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      return {
+        valid: false,
+        message: `Invalid file type. Allowed types: ${validExtensions.join(", ")}`,
+      };
+    }
+
+    // Try to parse JSON if .json file
+    if (fileName.endsWith(".json")) {
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        
+        // Check if it looks like a valid backup
+        if (!parsed.tables && !parsed.backup) {
+          return {
+            valid: false,
+            message: "JSON file does not appear to be a valid database backup",
+          };
+        }
+      } catch (error) {
+        return {
+          valid: false,
+          message: "Invalid JSON format in backup file",
+        };
+      }
+    }
+
+    return {
+      valid: true,
+      message: "File validated successfully",
+    };
+  };
+
   const previewFile = async (file: File) => {
     try {
       const text = await file.text();
-      const preview = text.substring(0, 500) + (text.length > 500 ? "\n...[truncated]" : "");
+      let preview = "";
+      
+      // Format preview based on file type
+      if (file.name.toLowerCase().endsWith(".json")) {
+        try {
+          const parsed = JSON.parse(text);
+          preview = JSON.stringify(parsed, null, 2).substring(0, 1000);
+        } catch {
+          preview = text.substring(0, 1000);
+        }
+      } else {
+        preview = text.substring(0, 1000);
+      }
+      
+      preview += text.length > 1000 ? "\n\n...[truncated - full file will be restored]" : "";
       setFilePreview(preview);
       setShowPreview(true);
     } catch (error) {
       setMessage({ type: "error", text: "Failed to read file preview" });
+    }
+  };
+
+  const handleFileSelect = async (file: File | null) => {
+    setSelectedFile(file);
+    setFilePreview(null);
+    setShowPreview(false);
+    
+    if (!file) {
+      setFileValidation({ valid: false, message: "" });
+      return;
+    }
+
+    // Validate file
+    const validation = await validateFile(file);
+    setFileValidation(validation);
+
+    if (validation.valid) {
+      // Auto-preview valid files
+      await previewFile(file);
     }
   };
 
@@ -228,27 +317,74 @@ export default function DatabaseManagement() {
             </AlertDescription>
           </Alert>
           
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Select Backup File
             </label>
             <input
               type="file"
               accept=".json,.sql,.gz"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
               disabled={isRestoring}
             />
+            
             {selectedFile && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Selected: {selectedFile.name} ({formatBytes(selectedFile.size)})
-              </p>
+              <div className="space-y-2">
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedFile.name}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{formatBytes(selectedFile.size)}</p>
+                    </div>
+                    {fileValidation.valid ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-600" />
+                    )}
+                  </div>
+                  <p className={`text-xs ${fileValidation.valid ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
+                    {fileValidation.message}
+                  </p>
+                </div>
+
+                {showPreview && filePreview && (
+                  <div className="p-3 bg-gray-900 rounded-lg border border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-white">File Preview</p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowPreview(false)}
+                        className="text-gray-400 hover:text-gray-300"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                    <pre className="text-xs text-gray-300 overflow-auto max-h-40 font-mono">
+                      {filePreview}
+                    </pre>
+                  </div>
+                )}
+
+                {selectedFile && !showPreview && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowPreview(true)}
+                    className="w-full"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View File Preview
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 
           <Button 
             onClick={handleRestoreDatabase} 
-            disabled={isRestoring || !selectedFile}
+            disabled={isRestoring || !selectedFile || !fileValidation.valid || !connectionStatus?.connected}
             className="w-full"
             variant="destructive"
           >
