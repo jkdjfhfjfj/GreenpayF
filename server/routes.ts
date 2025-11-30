@@ -2069,8 +2069,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { secret, qrCodeUrl, backupCodes } = twoFactorService.generateSecret(user.email);
       
-      // Store secret temporarily (user needs to verify before enabling)
-      await storage.updateUser(userId, { twoFactorSecret: secret });
+      // Store secret and backup codes temporarily (user needs to verify before enabling)
+      await storage.updateUser(userId, { 
+        twoFactorSecret: secret,
+        twoFactorBackupCodes: JSON.stringify(backupCodes)
+      });
       
       res.json({ qrCodeUrl, backupCodes, secret });
     } catch (error) {
@@ -2091,7 +2094,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isValid = twoFactorService.verifyToken(user.twoFactorSecret, token);
       
       if (isValid) {
-        await storage.updateUser(userId, { twoFactorEnabled: true });
+        await storage.updateUser(userId, { 
+          twoFactorEnabled: true,
+          twoFactorBackupCodes: user.twoFactorBackupCodes || JSON.stringify([])
+        });
         res.json({ success: true, message: "2FA enabled successfully" });
       } else {
         res.status(400).json({ message: "Invalid 2FA token" });
@@ -2121,7 +2127,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateUser(userId, { 
         twoFactorEnabled: false,
-        twoFactorSecret: null
+        twoFactorSecret: null,
+        twoFactorBackupCodes: null
       });
       
       const updatedUser = await storage.getUser(userId);
