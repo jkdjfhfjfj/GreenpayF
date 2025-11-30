@@ -6,7 +6,7 @@ export interface AuthenticatedRequest extends Request {
   scope?: string[];
 }
 
-export async function validateApiKey(requiredScope: string = 'read') {
+export function validateApiKey(requiredScope: string = 'read') {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const authHeader = req.headers.authorization;
