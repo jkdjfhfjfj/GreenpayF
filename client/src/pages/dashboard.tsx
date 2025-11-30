@@ -69,6 +69,16 @@ export default function DashboardPage() {
     document.documentElement.classList.toggle('dark');
   };
 
+  // Get country flag emoji
+  const getCountryFlag = (countryCode?: string) => {
+    if (!countryCode || countryCode.length !== 2) return '';
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
+
   const quickActions = [
     { 
       id: "send", 
@@ -155,8 +165,8 @@ export default function DashboardPage() {
               </div>
             )}
             <div>
-              <h1 className="font-bold text-lg text-white">💚 Welcome back, {user?.fullName?.split(' ')[0]}</h1>
-              <p className="text-xs text-white/80">{isKYCVerified ? '✓ Verified' : 'Verify your account'}</p>
+              <h1 className="font-bold text-lg text-white">{user?.fullName?.split(' ')[0]}👋 {user?.country ? `${user.country}` : ''}</h1>
+              <p className="text-xs text-white/80">{isKYCVerified ? '✓ Verified Account' : 'Verify your account'}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -187,7 +197,7 @@ export default function DashboardPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 rounded-3xl shadow-2xl overflow-hidden"
+          className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl shadow-2xl overflow-hidden"
         >
           <div className="p-8 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20"></div>
