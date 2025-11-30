@@ -7492,18 +7492,19 @@ Sitemap: https://greenpay.world/sitemap.xml`;
 
   app.get("/api/admin/api-keys", requireAdminAuth, async (req, res) => {
     try {
-      const settings = await storage.getSystemSettings();
-      const apiKeys = settings
-        .filter(s => s.key.startsWith('api_keys_'))
-        .map(s => ({
-          id: s.key.replace('api_keys_', ''),
-          name: (s.value as any).name,
-          isActive: (s.value as any).isActive,
-          scope: (s.value as any).scope,
-          rateLimit: (s.value as any).rateLimit,
-          createdAt: (s.value as any).createdAt,
-          lastUsedAt: (s.value as any).lastUsedAt
-        }));
+      const settings = await storage.getSystemSettingsByCategory('api_keys');
+      const apiKeys = settings.map(s => {
+        const keyData = JSON.parse(typeof s.value === 'string' ? s.value : JSON.stringify(s.value));
+        return {
+          id: s.key,
+          name: keyData.name,
+          isActive: keyData.isActive,
+          scope: keyData.scope,
+          rateLimit: keyData.rateLimit,
+          createdAt: keyData.createdAt,
+          lastUsedAt: keyData.lastUsedAt
+        };
+      });
       
       res.json({ keys: apiKeys });
     } catch (error) {
