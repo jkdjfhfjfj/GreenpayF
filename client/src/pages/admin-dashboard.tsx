@@ -119,20 +119,20 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <header className="bg-gradient-to-r from-green-500 to-emerald-600 dark:from-green-700 dark:to-emerald-800 border-b border-green-600 dark:border-green-900 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-green-600" />
+              <Shield className="w-8 h-8 text-white" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">GreenPay Admin</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Administrative Panel</p>
+                <h1 className="text-xl font-bold text-white">GreenPay Admin</h1>
+                <p className="text-sm text-white/80">Administrative Panel</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{adminData.fullName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{adminData.email}</p>
+                <p className="text-sm font-medium text-white">{adminData.fullName}</p>
+                <p className="text-xs text-white/80">{adminData.email}</p>
               </div>
               <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-admin-logout">
                 <LogOut className="w-4 h-4" />
