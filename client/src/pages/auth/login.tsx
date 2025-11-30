@@ -98,11 +98,19 @@ export default function LoginPage() {
           challenge,
           timeout: 60000,
           userVerification: "preferred",
-          allowCredentials: credentials.map(c => ({
-            id: new Uint8Array(Buffer.from(c.credentialId, 'base64')),
-            type: "public-key" as const,
-            transports: c.transports as any,
-          })),
+          allowCredentials: credentials.map(c => {
+            // Convert base64 string to Uint8Array
+            const binaryString = atob(c.credentialId);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            return {
+              id: bytes,
+              type: "public-key" as const,
+              transports: c.transports as any,
+            };
+          }),
         };
 
         const assertion = await navigator.credentials.get({
