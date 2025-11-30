@@ -45,33 +45,47 @@ export default function UserActivityLogs() {
   }, []);
 
   useEffect(() => {
-    let filtered = logs;
+    try {
+      let filtered = logs || [];
 
-    // Extract unique users for filter dropdown
-    const users = Array.from(new Set(logs.map((log) => log.userId))).sort();
-    setUniqueUsers(users);
+      // Extract unique users for filter dropdown - filter out empty/undefined
+      const users = Array.from(
+        new Set(
+          logs
+            .map((log) => log?.userId)
+            .filter((id) => id && id.trim() && id !== "system")
+        )
+      ).sort();
+      setUniqueUsers(users);
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (log) =>
-          log.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          log.source.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      // Filter by search term
+      if (searchTerm && searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase();
+        filtered = filtered.filter(
+          (log) =>
+            (log?.userId?.toLowerCase()?.includes(searchLower) || false) ||
+            (log?.message?.toLowerCase()?.includes(searchLower) || false) ||
+            (log?.source?.toLowerCase()?.includes(searchLower) || false)
+        );
+      }
+
+      // Filter by user
+      if (userFilter && userFilter !== "all") {
+        filtered = filtered.filter((log) => {
+          return log?.userId === userFilter;
+        });
+      }
+
+      // Filter by level
+      if (levelFilter && levelFilter !== "all") {
+        filtered = filtered.filter((log) => log?.level === levelFilter);
+      }
+
+      setFilteredLogs(filtered);
+    } catch (error) {
+      console.error("Error filtering logs:", error);
+      setFilteredLogs(logs || []);
     }
-
-    // Filter by user
-    if (userFilter !== "all") {
-      filtered = filtered.filter((log) => log.userId === userFilter);
-    }
-
-    // Filter by level
-    if (levelFilter !== "all") {
-      filtered = filtered.filter((log) => log.level === levelFilter);
-    }
-
-    setFilteredLogs(filtered);
   }, [logs, searchTerm, userFilter, levelFilter]);
 
   const fetchLogs = async () => {
@@ -237,53 +251,65 @@ export default function UserActivityLogs() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {filteredLogs.map((log) => {
-            const config = levelConfig[log.level as keyof typeof levelConfig];
-            const Icon = config?.icon || Info;
+          {filteredLogs && filteredLogs.length > 0 ? (
+            filteredLogs.map((log) => {
+              if (!log || !log.id) return null;
+              
+              const config = levelConfig[log.level as keyof typeof levelConfig] || levelConfig.info;
+              const Icon = config?.icon || Info;
 
-            return (
-              <Card key={log.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex gap-4 flex-1">
-                      <div className={`p-2 rounded-lg ${config?.color}`}>
-                        <Icon className="w-5 h-5" />
+              return (
+                <Card key={log.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex gap-4 flex-1">
+                        <div className={`p-2 rounded-lg ${config?.color || "bg-gray-100 text-gray-800"}`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-gray-900 dark:text-white">
+                              User: {log.userId || "unknown"}
+                            </h4>
+                            <Badge variant="outline" className="text-xs">
+                              {log.source || "system"}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 break-words">
+                            {log.message || "No message"}
+                          </p>
+                          <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-500">
+                            <span>{log.timestamp?.toLocaleString?.() || "No timestamp"}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">
-                            User: {log.userId}
-                          </h4>
-                          <Badge variant="outline" className="text-xs">
-                            {log.source}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 break-words">
-                          {log.message}
-                        </p>
-                        <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-500">
-                          <span>{log.timestamp.toLocaleString()}</span>
-                        </div>
+                      <div className="flex gap-2">
+                        <Badge className={config?.color || "bg-gray-100 text-gray-800"}>
+                          {config?.label || "Unknown"}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedLog(log);
+                            setShowDetail(true);
+                          }}
+                        >
+                          View
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Badge className={config?.color}>{config?.label}</Badge>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setSelectedLog(log);
-                          setShowDetail(true);
-                        }}
-                      >
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })
+          ) : (
+            <Card>
+              <CardContent className="flex justify-center py-8 text-gray-500">
+                No logs match your filters
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
