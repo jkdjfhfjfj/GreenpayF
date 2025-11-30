@@ -7148,6 +7148,110 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
+  // Database management endpoints
+  app.get("/api/admin/database/status", requireAdminAuth, async (req, res) => {
+    try {
+      const result = await storage.db.query(`
+        SELECT 
+          (SELECT COUNT(DISTINCT table_name) FROM information_schema.tables WHERE table_schema = 'public') as table_count,
+          (SELECT SUM(n_live_tup) FROM pg_stat_user_tables) as record_count
+      `);
+      
+      const stats = result.rows[0];
+      res.json({
+        connected: true,
+        status: "connected",
+        message: "Database connected successfully",
+        tableCount: parseInt(stats.table_count) || 0,
+        recordCount: parseInt(stats.record_count) || 0,
+        lastBackup: null
+      });
+    } catch (error) {
+      console.error("[Database] Status check error:", error);
+      res.json({
+        connected: false,
+        status: "error",
+        message: "Failed to connect to database",
+        error: String(error)
+      });
+    }
+  });
+
+  app.post("/api/admin/database/export", requireAdminAuth, async (req, res) => {
+    try {
+      const tables = ['users', 'admins', 'kyc_documents', 'virtual_cards', 'recipients', 'transactions', 'payment_requests', 'chat_messages', 'notifications', 'support_tickets', 'conversations', 'messages', 'admin_logs', 'system_logs', 'system_settings', 'api_configurations'];
+      
+      let sqlContent = `-- GreenPay Database Export\n-- Generated: ${new Date().toISOString()}\n\n`;
+      
+      for (const table of tables) {
+        const result = await storage.db.query(`SELECT * FROM ${table}`);
+        
+        if (result.rows.length > 0) {
+          const columns = Object.keys(result.rows[0]);
+          sqlContent += `\nINSERT INTO ${table} (${columns.join(', ')}) VALUES\n`;
+          
+          const values = result.rows.map(row => {
+            const vals = columns.map(col => {
+              const val = row[col];
+              if (val === null) return 'NULL';
+              if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
+              if (typeof val === 'boolean') return val ? 'true' : 'false';
+              if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
+              return val;
+            });
+            return `(${vals.join(', ')})`;
+          });
+          
+          sqlContent += values.join(',\n') + ';\n';
+        }
+      }
+      
+      res.setHeader('Content-Type', 'application/sql');
+      res.setHeader('Content-Disposition', `attachment; filename="greenpay_backup_${new Date().toISOString().split('T')[0]}.sql"`);
+      res.send(sqlContent);
+    } catch (error) {
+      console.error("[Database] Export error:", error);
+      res.status(500).json({ message: "Export failed", error: String(error) });
+    }
+  });
+
+  app.post("/api/admin/database/import", requireAdminAuth, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const sqlContent = req.file.buffer.toString('utf-8');
+      const statements = sqlContent.split(';').filter(stmt => stmt.trim().length > 0);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const statement of statements) {
+        const trimmedStmt = statement.trim();
+        if (trimmedStmt.length === 0) continue;
+        
+        try {
+          await storage.db.query(trimmedStmt);
+          successCount++;
+        } catch (err: any) {
+          console.error("[Database] SQL Error:", err.message);
+          errorCount++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Import completed: ${successCount} statements executed, ${errorCount} errors`,
+        executed: successCount,
+        errors: errorCount
+      });
+    } catch (error) {
+      console.error("[Database] Import error:", error);
+      res.status(500).json({ message: "Import failed", error: String(error) });
+    }
+  });
+
   // Send initial system info
   setTimeout(() => {
     LogStreamService.broadcast(
