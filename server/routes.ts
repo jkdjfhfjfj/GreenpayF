@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertUserSchema, insertKycDocumentSchema, insertTransactionSchema, insertPaymentRequestSchema, insertRecipientSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, users, systemLogs } from "@shared/schema";
+import { insertUserSchema, insertKycDocumentSchema, insertTransactionSchema, insertPaymentRequestSchema, insertRecipientSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, users, systemLogs, admins, kycDocuments, virtualCards, recipients, transactions, paymentRequests, chatMessages, notifications, supportTickets, conversations, messages, adminLogs, systemSettings, apiConfigurations } from "@shared/schema";
 import { desc } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcrypt";
