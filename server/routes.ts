@@ -773,7 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Conversation endpoints
-  app.get("/api/conversations/user-conversation", async (req, res) => {
+  app.get("/api/conversations/user-conversation", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any)?.userId;
       
@@ -810,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/messages/:conversationId", async (req, res) => {
+  app.get("/api/messages/:conversationId", requireAuth, async (req, res) => {
     try {
       const { conversationId } = req.params;
       const userId = (req.session as any)?.userId;
@@ -1328,7 +1328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Profile photo upload endpoint
-  app.post("/api/users/:id/profile-photo", upload.single('photo'), async (req, res) => {
+  app.post("/api/users/:id/profile-photo", requireAuth, upload.single('photo'), async (req, res) => {
     try {
       const { id } = req.params;
       const file = req.file;
@@ -1370,7 +1370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Password change endpoint
-  app.post("/api/users/:id/change-password", async (req, res) => {
+  app.post("/api/users/:id/change-password", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { currentPassword, newPassword } = req.body;
@@ -1826,7 +1826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/virtual-card/:userId", async (req, res) => {
+  app.get("/api/virtual-card/:userId", requireAuth, async (req, res) => {
     try {
       const card = await storage.getVirtualCardByUserId(req.params.userId);
       res.json({ card });
@@ -1986,7 +1986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/transactions/:userId", async (req, res) => {
+  app.get("/api/transactions/:userId", requireAuth, async (req, res) => {
     try {
       const transactions = await storage.getTransactionsByUserId(req.params.userId);
       res.json({ transactions });
@@ -2158,7 +2158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/users/:userId/disable-2fa", async (req, res) => {
+  app.post("/api/users/:userId/disable-2fa", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const { password } = req.body;
@@ -4180,7 +4180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user by ID (for refreshing user data)
-  app.get("/api/users/:id", async (req, res) => {
+  app.get("/api/users/:id", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -4194,7 +4194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get login history for a user
-  app.get("/api/users/:id/login-history", async (req, res) => {
+  app.get("/api/users/:id/login-history", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
@@ -4208,7 +4208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Transaction Analytics API
-  app.get("/api/analytics/:userId/spending", async (req, res) => {
+  app.get("/api/analytics/:userId/spending", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const { period = "month" } = req.query;
