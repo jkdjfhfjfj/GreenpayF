@@ -1966,11 +1966,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send notification
       await notificationService.sendTransactionNotification(userId, transaction);
       
-      // Send fund receipt notification via SMS and WhatsApp
+      // Send fund receipt notification via SMS, WhatsApp, and Email
       if (user) {
         const { messagingService } = await import('./services/messaging');
+        const { mailtrapService } = await import('./services/mailtrap');
         messagingService.sendFundReceipt(user.phone, amount, currency, senderDetails.name)
           .catch(err => console.error('Fund receipt notification error:', err));
+        if (user.email) {
+          mailtrapService.sendFundReceipt(user.email, user.fullName?.split(' ')[0] || 'User', user.fullName?.split(' ')[1] || '', amount, currency, senderDetails.name)
+            .catch(err => console.error('Fund receipt email error:', err));
+        }
       }
       
       res.json({ transaction, message: "Payment received successfully" });
@@ -3760,11 +3765,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Update user to reflect they have a card
           await storage.updateUser(id, { hasVirtualCard: true });
           
-          // Send card activation notification via SMS and WhatsApp
+          // Send card activation notification via SMS, WhatsApp, and Email
           const { messagingService: issueMessaging } = await import('./services/messaging');
+          const { mailtrapService: issueMailtrap } = await import('./services/mailtrap');
           const cardLastFour = result.cardNumber.slice(-4);
           issueMessaging.sendCardActivation(user.phone, cardLastFour)
             .catch(err => console.error('Card activation notification error:', err));
+          if (user.email) {
+            issueMailtrap.sendCardActivation(user.email, user.fullName?.split(' ')[0] || 'User', user.fullName?.split(' ')[1] || '', cardLastFour)
+              .catch(err => console.error('Card activation email error:', err));
+          }
           break;
           
         case "activate":
@@ -3789,9 +3799,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Send card activation notification if activating
           if (action === "activate") {
             const { messagingService: activateMessaging } = await import('./services/messaging');
+            const { mailtrapService: activateMailtrap } = await import('./services/mailtrap');
             const activateCardLastFour = card.cardNumber.slice(-4);
             activateMessaging.sendCardActivation(user.phone, activateCardLastFour)
               .catch(err => console.error('Card activation notification error:', err));
+            if (user.email) {
+              activateMailtrap.sendCardActivation(user.email, user.fullName?.split(' ')[0] || 'User', user.fullName?.split(' ')[1] || '', activateCardLastFour)
+                .catch(err => console.error('Card activation email error:', err));
+            }
           }
           
           // Log admin action
