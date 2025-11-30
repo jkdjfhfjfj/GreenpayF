@@ -2211,6 +2211,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available biometric credentials for login
+  app.get("/api/auth/biometric/credentials", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers({ limit: 1000 });
+      const credentials = users.users
+        .filter(u => u.biometricEnabled && u.biometricCredentialId)
+        .map(u => {
+          try {
+            const stored = JSON.parse(u.biometricCredentialId);
+            return {
+              credentialId: stored.credentialId,
+              type: "public-key" as const,
+              transports: ["internal", "usb", "ble"] as any
+            };
+          } catch {
+            return null;
+          }
+        })
+        .filter(c => c !== null);
+      
+      res.json({ credentials });
+    } catch (error) {
+      console.error('Get biometric credentials error:', error);
+      res.status(500).json({ message: "Error retrieving credentials" });
+    }
+  });
+
   app.post("/api/auth/biometric/login", async (req, res) => {
     try {
       const { credentialId } = req.body;

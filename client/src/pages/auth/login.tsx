@@ -85,11 +85,24 @@ export default function LoginPage() {
       }
 
       try {
+        // Fetch available biometric credentials from server
+        const credResponse = await apiRequest("GET", "/api/auth/biometric/credentials");
+        const { credentials } = await credResponse.json();
+
+        if (!credentials || credentials.length === 0) {
+          throw new Error("No biometric credentials registered. Please set up biometric login in settings first.");
+        }
+
         const challenge = crypto.getRandomValues(new Uint8Array(32));
         const assertionOptions: PublicKeyCredentialRequestOptions = {
           challenge,
           timeout: 60000,
           userVerification: "preferred",
+          allowCredentials: credentials.map(c => ({
+            id: new Uint8Array(Buffer.from(c.credentialId, 'base64')),
+            type: "public-key" as const,
+            transports: c.transports as any,
+          })),
         };
 
         const assertion = await navigator.credentials.get({
