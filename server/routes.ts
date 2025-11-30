@@ -5623,6 +5623,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public settings endpoint - frontend can fetch settings without auth
+  app.get("/api/settings/public", async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      const publicSettings: any = {};
+      
+      if (Array.isArray(settings)) {
+        settings.forEach((setting: any) => {
+          if (setting.key && setting.value) {
+            try {
+              publicSettings[setting.key] = typeof setting.value === 'string' 
+                ? JSON.parse(setting.value) 
+                : setting.value;
+            } catch {
+              publicSettings[setting.key] = setting.value;
+            }
+          }
+        });
+      }
+      
+      res.json({ 
+        settings: publicSettings,
+        defaults: {
+          withdrawal_fee: 1.00,
+          exchange_rate_margin: 0.05,
+          transfer_fee: 2.50,
+          virtual_card_fee: 60.00,
+          two_factor_required: true,
+          kyc_auto_approval: false,
+          max_daily_limit: 10000,
+          min_transaction_amount: 1.00
+        }
+      });
+    } catch (error) {
+      console.error('Public settings fetch error:', error);
+      res.json({ 
+        settings: {},
+        defaults: {
+          withdrawal_fee: 1.00,
+          exchange_rate_margin: 0.05,
+          transfer_fee: 2.50,
+          virtual_card_fee: 60.00,
+          two_factor_required: true,
+          kyc_auto_approval: false,
+          max_daily_limit: 10000,
+          min_transaction_amount: 1.00
+        }
+      });
+    }
+  });
+
   // Convert USD to KES endpoint
   app.post("/api/convert-to-kes", async (req, res) => {
     try {
