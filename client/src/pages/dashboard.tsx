@@ -202,11 +202,11 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="flex items-center gap-2 mb-3 justify-end"
+            className="flex items-center gap-2 mb-3 justify-start"
           >
+            <MapPin className="w-3.5 h-3.5 text-white/70" />
             <span className="text-white/70 text-xs">Logged in</span>
             <span className="text-white/70 text-xs font-medium">{user.country}</span>
-            <MapPin className="w-3.5 h-3.5 text-white/70" />
           </motion.div>
         )}
 
