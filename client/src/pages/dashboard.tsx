@@ -152,7 +152,7 @@ export default function DashboardPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white border-b border-border p-4"
+        className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center flex-1">
@@ -160,18 +160,18 @@ export default function DashboardPage() {
               <img 
                 src={user.profilePhotoUrl} 
                 alt="Profile" 
-                className="w-10 h-10 rounded-full object-cover mr-3 border border-border"
+                className="w-10 h-10 rounded-full object-cover mr-3 border-2 border-white/30"
               />
             ) : (
-              <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mr-3">
-                <span className="text-foreground font-semibold text-sm">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3 border-2 border-white/30">
+                <span className="text-white font-semibold text-sm">
                   {user?.fullName?.split(' ').map(n => n[0]).join('') || 'JD'}
                 </span>
               </div>
             )}
             <div>
-              <h1 className="font-semibold text-base text-foreground">Welcome back</h1>
-              <p className="text-xs text-muted-foreground">{user?.fullName?.split(' ')[0] || 'John'}</p>
+              <h1 className="font-semibold text-base text-white">Welcome back</h1>
+              <p className="text-xs text-white/80">{user?.fullName?.split(' ')[0] || 'John'}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -179,7 +179,7 @@ export default function DashboardPage() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setLocation('/live-chat')}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
               title="Contact Support"
               data-testid="button-support"
             >
@@ -188,7 +188,7 @@ export default function DashboardPage() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={toggleDarkMode}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
               data-testid="button-dark-mode"
             >
               <span className="material-icons text-white text-xl">brightness_6</span>
@@ -465,7 +465,7 @@ export default function DashboardPage() {
                     action.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 shadow-md`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="text-left">
@@ -494,7 +494,7 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
               data-testid="button-virtual-card"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">credit_card</span>
               </div>
               <div className="text-left">
@@ -511,7 +511,7 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
               data-testid="button-transactions"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">receipt_long</span>
               </div>
               <div className="text-left">
@@ -525,7 +525,7 @@ export default function DashboardPage() {
               onClick={() => setLocation("/exchange")}
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">currency_exchange</span>
               </div>
               <div className="text-left">
@@ -540,7 +540,7 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
               data-testid="button-support"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">support_agent</span>
               </div>
               <div className="text-left">
@@ -554,7 +554,7 @@ export default function DashboardPage() {
               onClick={() => setLocation("/status")}
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">health_and_safety</span>
               </div>
               <div className="text-left">
@@ -569,7 +569,7 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
               data-testid="button-settings"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">settings</span>
               </div>
               <div className="text-left">
@@ -583,7 +583,7 @@ export default function DashboardPage() {
               onClick={() => setLocation("/loans")}
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center mb-3 shadow-md">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <div className="text-left">
@@ -597,7 +597,7 @@ export default function DashboardPage() {
               onClick={() => setLocation("/api-service")}
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-3 shadow-md">
                 <Zap className="w-6 h-6 text-white" />
               </div>
               <div className="text-left">
