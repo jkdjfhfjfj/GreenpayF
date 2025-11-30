@@ -2203,6 +2203,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/biometric/login", async (req, res) => {
+    try {
+      const { credentialId } = req.body;
+      
+      if (!credentialId) {
+        return res.status(400).json({ message: "Invalid credential" });
+      }
+
+      // Find user with matching biometric credential
+      const users = await storage.getAllUsers({ limit: 1000 });
+      const user = users.users.find(u => u.biometricCredentialId === credentialId && u.biometricEnabled);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Biometric credential not found" });
+      }
+
+      // Create session
+      const tokenData = { userId: user.id };
+      const token = Buffer.from(JSON.stringify(tokenData)).toString("base64");
+      
+      res.json({ success: true, user, token });
+    } catch (error) {
+      console.error('Biometric login error:', error);
+      res.status(500).json({ message: "Error during biometric login" });
+    }
+  });
+
   // Middleware to verify biometric for crucial activities
   async function verifyBiometricForActivity(req: any, res: any, next: any) {
     try {

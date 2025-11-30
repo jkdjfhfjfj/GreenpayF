@@ -861,6 +861,34 @@ export default function SettingsPage() {
               {(setupFingerprintMutation.isPending || disableBiometricMutation.isPending) && <span className="text-xs">Processing...</span>}
             </div>
           </motion.div>
+
+          {/* Dark Mode Toggle */}
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            className="bg-card p-4 rounded-xl border border-border flex items-center justify-between elevation-1"
+          >
+            <div className="flex items-center">
+              <span className="material-icons text-accent mr-3">dark_mode</span>
+              <div>
+                <p className="font-medium">Dark Mode</p>
+                <p className="text-sm text-muted-foreground">Use dark theme</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={settings.darkMode || false}
+                onCheckedChange={(checked) => {
+                  handleSettingUpdate('darkMode', checked);
+                  if (checked) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                }}
+                data-testid="switch-dark-mode"
+              />
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* 2FA Setup Dialog */}
@@ -932,9 +960,26 @@ export default function SettingsPage() {
                         maxLength={1}
                         value={verificationCode[i] || ''}
                         onChange={(e) => {
+                          let value = e.target.value.replace(/[^0-9]/g, '');
                           const newCode = verificationCode.split('');
-                          newCode[i] = e.target.value.replace(/[^0-9]/g, '');
-                          setVerificationCode(newCode.join('').slice(0, 6));
+                          newCode[i] = value;
+                          const fullCode = newCode.join('').slice(0, 6);
+                          setVerificationCode(fullCode);
+                          
+                          if (fullCode.length === 6 && i < 5) {
+                            (e.target.parentElement?.children[i + 1] as HTMLInputElement)?.focus();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const paste = (e.clipboardData || (window as any).clipboardData).getData('text');
+                          const digits = paste.replace(/[^0-9]/g, '').slice(0, 6);
+                          setVerificationCode(digits);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Backspace' && !e.currentTarget.value && i > 0) {
+                            (e.currentTarget.parentElement?.children[i - 1] as HTMLInputElement)?.focus();
+                          }
                         }}
                         className="w-12 h-12 text-center text-xl font-bold border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       />

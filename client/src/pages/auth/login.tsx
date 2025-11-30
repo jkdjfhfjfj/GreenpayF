@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +22,15 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [biometricSupported, setBiometricSupported] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
+
+  useEffect(() => {
+    if (window.PublicKeyCredential) {
+      setBiometricSupported(true);
+    }
+  }, []);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -66,6 +73,53 @@ export default function LoginPage() {
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const biometricLoginMutation = useMutation({
+    mutationFn: async () => {
+      if (!biometricSupported) {
+        throw new Error("Your device doesn't support biometric authentication");
+      }
+
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const assertionOptions: PublicKeyCredentialRequestOptions = {
+        challenge,
+        timeout: 60000,
+        userVerification: "preferred",
+      };
+
+      const assertion = await navigator.credentials.get({
+        publicKey: assertionOptions,
+      }) as PublicKeyCredential | null;
+
+      if (!assertion) {
+        throw new Error("Biometric authentication cancelled");
+      }
+
+      const response = await apiRequest("POST", "/api/auth/biometric/login", {
+        credentialId: assertion.id,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.user) {
+        login(data.user);
+        toast({
+          title: "Biometric Login Success",
+          description: "Welcome back!",
+        });
+        setTimeout(() => {
+          setLocation("/dashboard");
+        }, 100);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Biometric Login Failed",
+        description: error.message || "Failed to authenticate with biometric",
         variant: "destructive",
       });
     },
@@ -222,24 +276,29 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className="flex items-center justify-center"
-                data-testid="button-biometric"
-              >
-                <span className="material-icons text-muted-foreground mr-2">fingerprint</span>
-                <span className="text-sm font-medium">Biometric</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="flex items-center justify-center"
-                data-testid="button-face-id"
-              >
-                <span className="material-icons text-muted-foreground mr-2">face</span>
-                <span className="text-sm font-medium">Face ID</span>
-              </Button>
-            </div>
+            {biometricSupported && (
+              <div className="mt-6">
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center justify-center"
+                  onClick={() => biometricLoginMutation.mutate()}
+                  disabled={biometricLoginMutation.isPending}
+                  data-testid="button-biometric"
+                >
+                  <span className="material-icons text-muted-foreground mr-2">fingerprint</span>
+                  <span className="text-sm font-medium">
+                    {biometricLoginMutation.isPending ? "Authenticating..." : "Biometric Login"}
+                  </span>
+                </Button>
+              </div>
+            )}
+            {!biometricSupported && (
+              <div className="mt-6 p-3 bg-muted rounded-lg text-center">
+                <p className="text-xs text-muted-foreground">
+                  Biometric login is not supported on this device
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
