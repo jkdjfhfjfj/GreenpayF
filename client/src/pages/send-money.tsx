@@ -191,7 +191,7 @@ export default function SendMoneyPage() {
           </div>
           <h2 className="text-xl font-semibold mb-2">Virtual Card Required</h2>
           <p className="text-muted-foreground mb-4">You need to purchase a virtual card before you can send money.</p>
-          <Button onClick={() => setLocation("/virtual-card-purchase")}>
+          <Button onClick={() => setLocation("/virtual-card")}>
             Get Virtual Card
           </Button>
         </div>
