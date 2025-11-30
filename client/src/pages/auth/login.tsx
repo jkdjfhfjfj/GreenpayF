@@ -272,6 +272,18 @@ export default function LoginPage() {
             </p>
           </div>
 
+          <div className="mt-4 text-center">
+            <p className="text-xs text-muted-foreground">
+              By signing in, you agree to our{" "}
+              <button
+                onClick={() => setLocation("/terms")}
+                className="text-primary hover:underline font-medium"
+              >
+                Terms and Conditions
+              </button>
+            </p>
+          </div>
+
           <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
