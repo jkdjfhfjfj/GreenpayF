@@ -58,16 +58,31 @@ export default function APIServicePage() {
       if (response.ok) {
         const data = await response.json();
         setApiKeys(data.keys || []);
-      } else if (response.status === 401) {
-        toast({
-          description: "Please log in to view API keys",
-          variant: "destructive",
-        });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`API Error ${response.status}:`, errorData);
+        
+        if (response.status === 401) {
+          toast({
+            description: "Please log in to view API keys",
+            variant: "destructive",
+          });
+        } else if (response.status === 403) {
+          toast({
+            description: "You need admin privileges to manage API keys",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            description: errorData.message || errorData.error || "Failed to load API keys",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to fetch API keys:", error);
       toast({
-        description: "Failed to load API keys",
+        description: "Network error loading API keys",
         variant: "destructive",
       });
     } finally {

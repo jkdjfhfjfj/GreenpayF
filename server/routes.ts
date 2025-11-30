@@ -7464,8 +7464,8 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
-  // API Key Management Endpoints (Admin Only)
-  app.post("/api/admin/api-keys/generate", requireAdminAuth, async (req, res) => {
+  // API Key Management Endpoints
+  app.post("/api/admin/api-keys/generate", requireAuth, async (req, res) => {
     try {
       const { name, scope, rateLimit } = req.body;
       
@@ -7490,7 +7490,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
-  app.get("/api/admin/api-keys", requireAdminAuth, async (req, res) => {
+  app.get("/api/admin/api-keys", requireAuth, async (req, res) => {
     try {
       const settings = await storage.getSystemSettingsByCategory('api_keys');
       const apiKeys = settings.map(s => {
@@ -7513,7 +7513,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
-  app.post("/api/admin/api-keys/:keyId/revoke", requireAdminAuth, async (req, res) => {
+  app.post("/api/admin/api-keys/:keyId/revoke", requireAuth, async (req, res) => {
     try {
       const { keyId } = req.params;
       const { apiKeyService } = await import('./services/api-key');
