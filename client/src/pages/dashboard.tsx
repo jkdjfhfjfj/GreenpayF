@@ -202,10 +202,10 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="flex items-center gap-2 mb-3"
+            className="flex items-center gap-2 mb-3 justify-end"
           >
-            <span className="material-icons text-white/70 text-sm">location_on</span>
             <span className="text-white/70 text-xs font-medium">{user.country}</span>
+            <span className="material-icons text-white/70 text-sm">location_on</span>
           </motion.div>
         )}
 
