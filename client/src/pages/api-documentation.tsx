@@ -2,10 +2,11 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Download, Copy, Play, Check, Globe, Zap, Shield, Code2, Eye, EyeOff } from "lucide-react";
+import { Download, Copy, Play, Check, Globe, Zap, Shield, Code2, Eye, EyeOff, MapPin } from "lucide-react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Example {
   language: string;
@@ -359,6 +360,7 @@ export default function ApiDocumentationPage() {
   const [testResponse, setTestResponse] = useState<string | null>(null);
   const [selectedExample, setSelectedExample] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const categories = Array.from(new Set(ENDPOINTS.map(e => e.category)));
 
@@ -528,7 +530,20 @@ export default function ApiDocumentationPage() {
         className="bg-gradient-to-r from-green-600 to-green-700 shadow-lg p-6 sticky top-0 z-50"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          {/* Left - User Location */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-white">
+              <MapPin className="w-5 h-5" />
+              <div>
+                <p className="text-xs text-green-100">Logged in</p>
+                <p className="text-sm font-semibold">{user?.country || "Country"}</p>
+              </div>
+            </div>
+            <div className="w-px h-8 bg-green-500 opacity-50"></div>
+          </div>
+
+          {/* Center - Title */}
+          <div className="flex items-center gap-3 flex-1 ml-4">
             <button
               onClick={() => setLocation("/api-service")}
               className="text-white hover:bg-green-700 p-2 rounded-lg transition-colors"
@@ -540,6 +555,8 @@ export default function ApiDocumentationPage() {
               <p className="text-green-100 text-sm">Complete API Reference & Examples</p>
             </div>
           </div>
+
+          {/* Right - Download Button */}
           <button
             onClick={generatePDF}
             className="bg-white text-green-600 hover:bg-green-50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all"
