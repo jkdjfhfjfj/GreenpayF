@@ -7148,57 +7148,6 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
-  // Database management endpoints
-  app.get("/api/admin/database/status", requireAdminAuth, async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      res.json({
-        connected: true,
-        status: "connected",
-        message: "Database connected successfully",
-        tableCount: 16,
-        recordCount: users?.length || 0,
-        lastBackup: null
-      });
-    } catch (error) {
-      console.error("[Database] Status check error:", error);
-      res.json({
-        connected: false,
-        status: "error",
-        message: "Failed to connect to database",
-        error: String(error)
-      });
-    }
-  });
-
-  app.post("/api/admin/database/export", requireAdminAuth, async (req, res) => {
-    try {
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="greenpay_backup_${new Date().toISOString().split('T')[0]}.sql"`);
-      res.send(`-- GreenPay Database Backup\n-- Generated: ${new Date().toISOString()}\n-- Contact your database administrator to restore\n\nSELECT 'Backup file created successfully' as status;`);
-    } catch (error) {
-      console.error("[Database] Export error:", error);
-      res.status(500).json({ message: "Export failed", error: String(error) });
-    }
-  });
-
-  app.post("/api/admin/database/import", requireAdminAuth, upload.single('file'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-      res.json({
-        success: true,
-        message: `Backup file received successfully. Contact your database administrator to execute.`,
-        fileName: req.file.originalname,
-        fileSize: req.file.size
-      });
-    } catch (error) {
-      console.error("[Database] Import error:", error);
-      res.status(500).json({ message: "Import failed", error: String(error) });
-    }
-  });
-
   // Send initial system info
   setTimeout(() => {
     LogStreamService.broadcast(

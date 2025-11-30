@@ -23,9 +23,7 @@ import {
   BarChart3,
   Menu,
   X,
-  MessageCircle,
-  Database,
-  Mail
+  MessageCircle
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -39,7 +37,6 @@ import AdminSettings from "@/components/admin/admin-settings";
 import MessagingSettings from "@/components/admin/messaging-settings";
 import WhatsAppTemplates from "@/components/admin/whatsapp-templates";
 import WhatsAppMessaging from "@/components/admin/whatsapp-messaging";
-import DatabaseManagement from "@/components/admin/database-management";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -147,33 +144,25 @@ export default function AdminDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navigation Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <div className="flex gap-4 flex-col sm:flex-row sm:items-center sm:justify-between">
-            <ScrollArea className="w-full whitespace-nowrap rounded-lg border">
-              <TabsList className="inline-flex h-12 w-full justify-start rounded-none bg-transparent p-1">
-                <TabsTrigger value="overview" className="rounded-md px-3 py-1.5 flex items-center gap-1">
-                  <LayoutDashboard className="w-4 h-4" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="users" className="rounded-md px-3 py-1.5">Users</TabsTrigger>
-                <TabsTrigger value="kyc" className="rounded-md px-3 py-1.5">KYC</TabsTrigger>
-                <TabsTrigger value="transactions" className="rounded-md px-3 py-1.5">Transactions</TabsTrigger>
-                <TabsTrigger value="cards" className="rounded-md px-3 py-1.5">Virtual Cards</TabsTrigger>
-                <TabsTrigger value="whatsapp" className="rounded-md px-3 py-1.5 flex items-center gap-1">
-                  <MessageCircle className="w-4 h-4" />
-                  WhatsApp
-                </TabsTrigger>
-                <TabsTrigger value="messaging" className="rounded-md px-3 py-1.5">Messaging</TabsTrigger>
-                <TabsTrigger value="templates" className="rounded-md px-3 py-1.5">Templates</TabsTrigger>
-                <TabsTrigger value="logs" className="rounded-md px-3 py-1.5">Security Logs</TabsTrigger>
-                <TabsTrigger value="database" className="rounded-md px-3 py-1.5 flex items-center gap-1">
-                  <Database className="w-4 h-4" />
-                  Database
-                </TabsTrigger>
-                <TabsTrigger value="settings" className="rounded-md px-3 py-1.5">Settings</TabsTrigger>
-              </TabsList>
-            </ScrollArea>
-          </div>
+          <ScrollArea className="w-full whitespace-nowrap rounded-lg border">
+            <TabsList className="inline-flex h-12 w-full justify-start rounded-none bg-transparent p-1">
+              <TabsTrigger value="overview" className="rounded-md px-3 py-1.5">Overview</TabsTrigger>
+              <TabsTrigger value="users" className="rounded-md px-3 py-1.5">Users</TabsTrigger>
+              <TabsTrigger value="kyc" className="rounded-md px-3 py-1.5">KYC</TabsTrigger>
+              <TabsTrigger value="transactions" className="rounded-md px-3 py-1.5">Transactions</TabsTrigger>
+              <TabsTrigger value="cards" className="rounded-md px-3 py-1.5">Virtual Cards</TabsTrigger>
+              <TabsTrigger value="whatsapp" className="rounded-md px-3 py-1.5 flex items-center gap-1">
+                <MessageCircle className="w-4 h-4" />
+                WhatsApp
+              </TabsTrigger>
+              <TabsTrigger value="messaging" className="rounded-md px-3 py-1.5">Messaging</TabsTrigger>
+              <TabsTrigger value="templates" className="rounded-md px-3 py-1.5">Templates</TabsTrigger>
+              <TabsTrigger value="logs" className="rounded-md px-3 py-1.5">Security Logs</TabsTrigger>
+              <TabsTrigger value="settings" className="rounded-md px-3 py-1.5">Settings</TabsTrigger>
+            </TabsList>
+          </ScrollArea>
 
           <TabsContent value="overview" className="space-y-6">
             {/* Key Metrics */}
@@ -348,10 +337,6 @@ export default function AdminDashboard() {
 
           <TabsContent value="logs">
             <AdminLogsTab />
-          </TabsContent>
-
-          <TabsContent value="database">
-            <DatabaseManagement />
           </TabsContent>
 
           <TabsContent value="settings">
