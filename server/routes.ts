@@ -2153,10 +2153,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Store biometric credential
+      // Store biometric credential as JSON string
       await storage.updateUser(userId, { 
         biometricEnabled: true,
-        biometricCredentialId: credentialId
+        biometricCredentialId: JSON.stringify({ credentialId })
       });
       
       res.json({ success: true, message: "Biometric authentication enabled" });
@@ -2176,7 +2176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify the credential matches
-      if (user.biometricCredentialId === credentialId) {
+      const storedCred = user.biometricCredentialId ? JSON.parse(user.biometricCredentialId) : null;
+      if (storedCred && storedCred.credentialId === credentialId) {
         res.json({ success: true, verified: true });
       } else {
         res.status(401).json({ success: false, verified: false });
@@ -2202,7 +2203,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const updatedUser = await storage.getUser(userId);
-      res.json({ success: true, message: "Biometric disabled", user: updatedUser });
+      const { password, ...userResponse } = updatedUser || {};
+      res.json({ success: true, message: "Biometric disabled", user: userResponse });
     } catch (error) {
       console.error('Disable biometric error:', error);
       res.status(500).json({ message: "Error disabling biometric" });
@@ -2219,7 +2221,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Find user with matching biometric credential
       const users = await storage.getAllUsers({ limit: 1000 });
-      const user = users.users.find(u => u.biometricCredentialId === credentialId && u.biometricEnabled);
+      const user = users.users.find(u => {
+        try {
+          const stored = u.biometricCredentialId ? JSON.parse(u.biometricCredentialId) : null;
+          return stored && stored.credentialId === credentialId && u.biometricEnabled;
+        } catch {
+          return false;
+        }
+      });
       
       if (!user) {
         return res.status(401).json({ message: "Biometric credential not found" });
@@ -2229,7 +2238,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tokenData = { userId: user.id };
       const token = Buffer.from(JSON.stringify(tokenData)).toString("base64");
       
-      res.json({ success: true, user, token });
+      const { password, ...userResponse } = user;
+      res.json({ success: true, user: userResponse, token });
     } catch (error) {
       console.error('Biometric login error:', error);
       res.status(500).json({ message: "Error during biometric login" });
