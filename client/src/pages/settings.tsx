@@ -893,9 +893,10 @@ export default function SettingsPage() {
 
         {/* 2FA Setup Dialog */}
         <Dialog open={is2FASetup} onOpenChange={(open) => {
-          if (!open && twoFAStep !== 'backup') {
+          if (!open) {
             setIs2FASetup(false);
             setTwoFAStep('qr');
+            setVerificationCode('');
           }
         }}>
           <DialogContent className="sm:max-w-md">
@@ -1038,11 +1039,12 @@ export default function SettingsPage() {
                   onClick={() => {
                     setIs2FASetup(false);
                     setTwoFAStep('qr');
+                    setVerificationCode('');
                     handleSettingUpdate('twoFactorEnabled', true);
                   }}
                   className="w-full"
                 >
-                  Complete Setup
+                  Done
                 </Button>
               </div>
             )}
