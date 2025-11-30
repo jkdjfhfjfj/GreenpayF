@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Lock, Key, Upload, CheckCircle2, AlertCircle, Zap } from "lucide-react";
+import { Shield, Lock, Key, Upload, CheckCircle2, AlertCircle, Zap, Database, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
@@ -30,6 +30,8 @@ export default function AdminLogin() {
   const [tablesExist, setTablesExist] = useState(true);
   const [checkingTables, setCheckingTables] = useState(true);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [tableStatus, setTableStatus] = useState<any>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +84,24 @@ export default function AdminLogin() {
       });
     } finally {
       setIsInitializing(false);
+    }
+  };
+
+  const handleCheckTableStatus = async () => {
+    setCheckingStatus(true);
+    try {
+      const response = await fetch("/api/admin/database/tables-status");
+      const result = await response.json();
+      setTableStatus(result);
+    } catch (error) {
+      console.error("Error checking table status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to check database table status",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingStatus(false);
     }
   };
 
@@ -282,8 +302,9 @@ export default function AdminLogin() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="login">Sign In</TabsTrigger>
+              <TabsTrigger value="status">Table Status</TabsTrigger>
               <TabsTrigger value="restore">Restore Database</TabsTrigger>
             </TabsList>
 
@@ -383,6 +404,93 @@ export default function AdminLogin() {
                   Email: admin@greenpay.com<br />
                   Password: Admin123!@#
                 </p>
+              </div>
+            </TabsContent>
+
+            {/* Table Status Tab */}
+            <TabsContent value="status" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <Button
+                  onClick={handleCheckTableStatus}
+                  disabled={checkingStatus}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  size="lg"
+                >
+                  {checkingStatus ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Checking Tables...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4" />
+                      Check Database Tables
+                    </div>
+                  )}
+                </Button>
+
+                {tableStatus && (
+                  <div className="space-y-4">
+                    <div className={`p-4 rounded-lg border ${
+                      tableStatus.allTablesReady
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                        : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                    }`}>
+                      <div className="flex gap-3">
+                        {tableStatus.allTablesReady ? (
+                          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <p className={`text-sm font-medium ${
+                            tableStatus.allTablesReady
+                              ? 'text-green-800 dark:text-green-300'
+                              : 'text-yellow-800 dark:text-yellow-300'
+                          }`}>
+                            {tableStatus.allTablesReady ? 'All Tables Ready' : 'Some Tables Missing'}
+                          </p>
+                          <p className={`text-xs mt-1 ${
+                            tableStatus.allTablesReady
+                              ? 'text-green-700 dark:text-green-400'
+                              : 'text-yellow-700 dark:text-yellow-400'
+                          }`}>
+                            {tableStatus.totalExisting} of {tableStatus.totalExpected} tables ({tableStatus.readyPercentage}%)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+                      <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Existing Tables ({tableStatus.tables.length})</h4>
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        {tableStatus.tables.map((table: any) => (
+                          <div key={table.table_name} className="text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                            <p className="font-mono text-gray-700 dark:text-gray-300">{table.table_name}</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs">{table.column_count} columns</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {tableStatus.missingTables.length > 0 && (
+                      <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <h4 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Missing Tables ({tableStatus.missingTables.length})</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {tableStatus.missingTables.map((table: string) => (
+                            <span key={table} className="text-xs bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 px-2 py-1 rounded font-mono">
+                              {table}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                      Last checked: {new Date().toLocaleTimeString()}
+                    </p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

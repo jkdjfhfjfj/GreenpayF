@@ -6547,6 +6547,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get detailed table status (UNAUTHENTICATED - login page)
+  app.get("/api/admin/database/tables-status", async (req, res) => {
+    try {
+      const query = `
+        SELECT 
+          table_name,
+          (SELECT count(*) FROM information_schema.columns WHERE table_name = t.table_name) as column_count,
+          (SELECT count(*) FROM information_schema.table_constraints WHERE table_name = t.table_name AND constraint_type = 'PRIMARY KEY') as has_pk
+        FROM information_schema.tables t
+        WHERE table_schema = 'public'
+        ORDER BY table_name ASC
+      `;
+      const result = await db.execute(query as any);
+      const tables = result as any[];
+      
+      const systemTables = [
+        'users', 'admins', 'transactions', 'virtual_cards', 'recipients', 
+        'kyc_documents', 'payment_requests', 'chat_messages', 'notifications',
+        'support_tickets', 'conversations', 'messages', 'admin_logs', 
+        'system_logs', 'system_settings', 'api_configurations', 'savings_goals',
+        'qr_payments', 'scheduled_payments', 'budgets', 'user_preferences',
+        'login_history', 'user_sessions', 'whatsapp_conversations', 'payhero_details'
+      ];
+
+      const existingTables = tables.map((t: any) => t.table_name);
+      const missingTables = systemTables.filter(t => !existingTables.includes(t));
+      const totalExpected = systemTables.length;
+      const totalExisting = existingTables.length;
+      
+      res.json({
+        success: true,
+        totalExpected,
+        totalExisting,
+        missingTables,
+        tables: tables,
+        allTablesReady: missingTables.length === 0,
+        readyPercentage: Math.round((totalExisting / totalExpected) * 100)
+      });
+    } catch (error) {
+      console.error("Table status check error:", error);
+      res.json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get table status"
+      });
+    }
+  });
+
   // Initialize database tables (UNAUTHENTICATED - login page only)
   app.post("/api/admin/database/init-tables", async (req, res) => {
     try {
