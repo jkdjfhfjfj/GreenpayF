@@ -609,7 +609,7 @@ export default function DashboardPage() {
               </div>
               <div className="text-left">
                 <p className="font-semibold text-sm mb-1">API Services</p>
-                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Coming soon</p>
+                <p className="text-xs text-muted-foreground">Generate & manage keys</p>
               </div>
             </motion.button>
           </div>
