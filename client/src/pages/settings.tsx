@@ -324,21 +324,77 @@ export default function SettingsPage() {
 
   const setupFingerprintMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/auth/setup-biometric`, { userId: user?.id });
+      // Check if WebAuthn is supported
+      if (!window.PublicKeyCredential) {
+        throw new Error("Your device doesn't support biometric authentication");
+      }
+
+      // Request biometric from device
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const publicKeyCreationOptions: PublicKeyCredentialCreationOptions = {
+        challenge,
+        rp: { name: "GreenPay", id: window.location.hostname },
+        user: {
+          id: crypto.getRandomValues(new Uint8Array(16)),
+          name: user?.email || "user",
+          displayName: user?.fullName || "User",
+        },
+        pubKeyCredParams: [
+          { alg: -7, type: "public-key" as const },
+          { alg: -257, type: "public-key" as const },
+        ],
+        timeout: 60000,
+        userVerification: "preferred" as const,
+      };
+
+      const credential = await navigator.credentials.create({
+        publicKey: publicKeyCreationOptions,
+      }) as PublicKeyCredential | null;
+
+      if (!credential) {
+        throw new Error("Biometric enrollment was cancelled or failed");
+      }
+
+      // Send to server for storage
+      const response = await apiRequest("POST", `/api/auth/biometric/setup`, {
+        userId: user?.id,
+        credentialId: credential.id,
+      });
       return response.json();
     },
     onSuccess: () => {
-      setFingerprintSetup(true);
       handleSettingUpdate('biometricEnabled', true);
       toast({
-        title: "Fingerprint Setup Complete",
-        description: "You can now use fingerprint to authenticate",
+        title: "Biometric Setup Complete",
+        description: "You can now use your fingerprint or face to authenticate",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Setup Failed",
-        description: error.message || "Unable to setup fingerprint",
+        description: error.message || "Unable to setup biometric authentication",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const disableBiometricMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/users/${user?.id}/disable-biometric`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      login(data.user);
+      setSettings({ ...settings, biometricEnabled: false });
+      toast({
+        title: "Biometric Disabled",
+        description: "Biometric authentication has been disabled",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Disable Failed",
+        description: error.message || "Unable to disable biometric",
         variant: "destructive",
       });
     },
@@ -785,8 +841,8 @@ export default function SettingsPage() {
             <div className="flex items-center">
               <span className="material-icons text-accent mr-3">fingerprint</span>
               <div>
-                <p className="font-medium">Biometric Login</p>
-                <p className="text-sm text-muted-foreground">Use fingerprint or face ID</p>
+                <p className="font-medium">Biometric Authentication</p>
+                <p className="text-sm text-muted-foreground">Fingerprint, face, or device unlock</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -795,13 +851,14 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => {
                   if (checked && !settings.biometricEnabled) {
                     setupFingerprintMutation.mutate();
-                  } else {
-                    handleSettingUpdate('biometricEnabled', checked);
+                  } else if (!checked && settings.biometricEnabled) {
+                    disableBiometricMutation.mutate();
                   }
                 }}
+                disabled={setupFingerprintMutation.isPending || disableBiometricMutation.isPending}
                 data-testid="switch-biometric"
               />
-              {setupFingerprintMutation.isPending && <span className="text-xs">Setting up...</span>}
+              {(setupFingerprintMutation.isPending || disableBiometricMutation.isPending) && <span className="text-xs">Processing...</span>}
             </div>
           </motion.div>
         </motion.div>

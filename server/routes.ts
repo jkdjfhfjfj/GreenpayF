@@ -2136,50 +2136,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Biometric authentication routes
   app.post("/api/auth/biometric/setup", async (req, res) => {
     try {
-      const { userId } = req.body;
-      const challenge = await biometricService.generateChallenge(userId);
+      const { userId, credentialId } = req.body;
       
-      res.json({ challenge });
+      if (!credentialId) {
+        return res.status(400).json({ message: "Invalid credential" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Store biometric credential
+      await storage.updateUser(userId, { 
+        biometricEnabled: true,
+        biometricCredentialId: credentialId
+      });
+      
+      res.json({ success: true, message: "Biometric authentication enabled" });
     } catch (error) {
       console.error('Biometric setup error:', error);
       res.status(500).json({ message: "Error setting up biometric authentication" });
     }
   });
 
-  app.post("/api/auth/biometric/register", async (req, res) => {
-    try {
-      const { userId, credential, challenge } = req.body;
-      
-      const success = await biometricService.registerBiometric(userId, credential);
-      
-      if (success) {
-        await storage.updateUser(userId, { biometricEnabled: true });
-        res.json({ success: true, message: "Biometric authentication enabled" });
-      } else {
-        res.status(400).json({ message: "Failed to register biometric" });
-      }
-    } catch (error) {
-      console.error('Biometric registration error:', error);
-      res.status(500).json({ message: "Error registering biometric" });
-    }
-  });
-
   app.post("/api/auth/biometric/verify", async (req, res) => {
     try {
-      const { userId, challenge, response } = req.body;
+      const { userId, credentialId } = req.body;
       
-      const isValid = await biometricService.verifyBiometric(userId, challenge, response);
-      
-      if (isValid) {
-        res.json({ success: true, message: "Biometric verification successful" });
+      const user = await storage.getUser(userId);
+      if (!user || !user.biometricEnabled) {
+        return res.status(400).json({ message: "Biometric not enabled" });
+      }
+
+      // Verify the credential matches
+      if (user.biometricCredentialId === credentialId) {
+        res.json({ success: true, verified: true });
       } else {
-        res.status(400).json({ message: "Biometric verification failed" });
+        res.status(401).json({ success: false, verified: false });
       }
     } catch (error) {
       console.error('Biometric verification error:', error);
       res.status(500).json({ message: "Error verifying biometric" });
     }
   });
+
+  app.post("/api/users/:userId/disable-biometric", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.updateUser(userId, { 
+        biometricEnabled: false,
+        biometricCredentialId: null
+      });
+      
+      const updatedUser = await storage.getUser(userId);
+      res.json({ success: true, message: "Biometric disabled", user: updatedUser });
+    } catch (error) {
+      console.error('Disable biometric error:', error);
+      res.status(500).json({ message: "Error disabling biometric" });
+    }
+  });
+
+  // Middleware to verify biometric for crucial activities
+  async function verifyBiometricForActivity(req: any, res: any, next: any) {
+    try {
+      const userId = req.user?.id || req.body?.userId;
+      if (!userId) return next();
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.biometricEnabled) return next(); // Skip if not enabled
+
+      // For crucial activities when biometric is enabled, require verification
+      if (req.headers['x-require-biometric'] === 'true') {
+        const { biometricVerified } = req.body;
+        if (!biometricVerified) {
+          return res.status(401).json({ message: "Biometric verification required" });
+        }
+      }
+      
+      next();
+    } catch (error) {
+      next();
+    }
+  }
+
+  app.use(verifyBiometricForActivity);
 
   // Push notifications
   app.post("/api/notifications/register", async (req, res) => {
