@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign } from "lucide-react";
+import { TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign, Calendar, Zap, Lock } from "lucide-react";
 import { formatNumber } from "@/lib/formatters";
 
 export default function LoansPage() {
@@ -15,6 +15,13 @@ export default function LoansPage() {
   const { toast } = useToast();
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [loanAmount, setLoanAmount] = useState("");
+
+  // Calculate account age in days
+  const accountAgeDays = user?.createdAt 
+    ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+  const isAccountOldEnough = accountAgeDays >= 30;
+  const isKYCVerified = user?.kycStatus === "verified";
 
   // Fetch user's account performance for loan eligibility
   const { data: performanceData, isLoading: performanceLoading } = useQuery({
@@ -64,10 +71,19 @@ export default function LoansPage() {
   const loans = (loansData as any)?.loans || [];
   const activeLoan = loans.find((l: any) => l.status === "active");
 
-  // Performance scoring
+  // Performance scoring with eligibility criteria
   const performanceScore = performance.score || 0;
   const maxLoanEligible = Math.min(performance.maxLoanAmount || 0, 50000);
-  const eligible = performanceScore >= 50 && !activeLoan;
+  
+  // Eligibility requires: 1 month old account, KYC verified, 60+ performance score, no active loan
+  const eligible = isAccountOldEnough && isKYCVerified && performanceScore >= 60 && !activeLoan;
+  
+  // Reasons for ineligibility
+  const ineligibilityReasons = [];
+  if (!isAccountOldEnough) ineligibilityReasons.push(`Account must be 30+ days old (${accountAgeDays} days)`);
+  if (!isKYCVerified) ineligibilityReasons.push("KYC verification required");
+  if (performanceScore < 60) ineligibilityReasons.push(`Performance score too low (${performanceScore}/100)`);
+  if (activeLoan) ineligibilityReasons.push("Active loan exists");
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
@@ -83,23 +99,71 @@ export default function LoansPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
+      {/* Header - Match main app color */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white"
+        className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
       >
-        <button
-          onClick={() => setLocation("/dashboard")}
-          className="material-icons mb-4 p-2 hover:bg-white/10 rounded-full transition-colors"
-        >
-          arrow_back
-        </button>
-        <h1 className="text-2xl font-bold">Loans</h1>
-        <p className="text-white/80 text-sm mt-1">Get funds based on your account performance</p>
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setLocation("/dashboard")}
+            className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+          >
+            <span className="material-icons text-white">arrow_back</span>
+          </button>
+          <DollarSign className="w-6 h-6" />
+        </div>
+        <h1 className="text-3xl font-bold mb-1">Loans</h1>
+        <p className="text-white/80 text-sm">Get funds based on your account performance</p>
       </motion.div>
 
       <div className="p-6 space-y-6">
+        {/* Eligibility Rules Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-2xl border border-blue-200 dark:border-blue-800 p-6"
+        >
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <Lock className="w-5 h-5 text-blue-600" />
+            Eligibility Requirements
+          </h2>
+          <div className="space-y-3">
+            <div className={`flex items-start gap-3 p-3 rounded-lg ${isAccountOldEnough ? 'bg-green-50 dark:bg-green-950/20' : 'bg-red-50 dark:bg-red-950/20'}`}>
+              {isAccountOldEnough ? (
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                <p className={`font-semibold text-sm ${isAccountOldEnough ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
+                  Account Age: {accountAgeDays} days
+                </p>
+                <p className={`text-xs ${isAccountOldEnough ? 'text-green-700 dark:text-green-200' : 'text-red-700 dark:text-red-200'}`}>
+                  {isAccountOldEnough ? '✓ Meets 30-day requirement' : '✗ Needs 30+ days (remaining: ' + (30 - accountAgeDays) + ' days)'}
+                </p>
+              </div>
+            </div>
+            
+            <div className={`flex items-start gap-3 p-3 rounded-lg ${isKYCVerified ? 'bg-green-50 dark:bg-green-950/20' : 'bg-amber-50 dark:bg-amber-950/20'}`}>
+              {isKYCVerified ? (
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                <p className={`font-semibold text-sm ${isKYCVerified ? 'text-green-900 dark:text-green-100' : 'text-amber-900 dark:text-amber-100'}`}>
+                  KYC Verification
+                </p>
+                <p className={`text-xs ${isKYCVerified ? 'text-green-700 dark:text-green-200' : 'text-amber-700 dark:text-amber-200'}`}>
+                  {isKYCVerified ? '✓ Verified' : '✗ Complete KYC to qualify'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Account Performance */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -107,7 +171,7 @@ export default function LoansPage() {
           className="bg-card rounded-2xl border border-border p-6"
         >
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-emerald-600" />
+            <TrendingUp className="w-5 h-5 text-primary" />
             Account Performance
           </h2>
 
@@ -162,21 +226,23 @@ export default function LoansPage() {
 
               {/* Loan Eligibility */}
               <div className={`rounded-lg p-4 flex items-start gap-3 ${
-                eligibleDerived ? "bg-green-50 dark:bg-green-950/20" : "bg-amber-50 dark:bg-amber-950/20"
+                eligible ? "bg-green-50 dark:bg-green-950/20" : "bg-amber-50 dark:bg-amber-950/20"
               }`}>
-                {eligibleDerived ? (
+                {eligible ? (
                   <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                 ) : (
                   <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 )}
                 <div>
-                  <p className={`font-semibold ${eligibleDerived ? "text-green-900 dark:text-green-100" : "text-amber-900 dark:text-amber-100"}`}>
-                    {eligibleDerived ? "You're Eligible for Loans" : "Build Your Account History"}
+                  <p className={`font-semibold ${eligible ? "text-green-900 dark:text-green-100" : "text-amber-900 dark:text-amber-100"}`}>
+                    {eligible ? `You're Eligible! Limit: $${formatNumber(maxLoanEligible)}` : "Not Eligible Yet"}
                   </p>
-                  <p className={`text-sm ${eligibleDerived ? "text-green-700 dark:text-green-200" : "text-amber-700 dark:text-amber-200"}`}>
-                    {eligibleDerived
-                      ? `You can borrow up to $${formatNumber(maxLoanEligible)}`
-                      : "Keep using GreenPay to become eligible. You need 50+ performance score."}
+                  <p className={`text-sm ${eligible ? "text-green-700 dark:text-green-200" : "text-amber-700 dark:text-amber-200"}`}>
+                    {eligible
+                      ? "You meet all requirements. Apply now!"
+                      : ineligibilityReasons.length > 0
+                      ? ineligibilityReasons[0]
+                      : "Build your account history"}
                   </p>
                 </div>
               </div>
@@ -189,10 +255,10 @@ export default function LoansPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-card rounded-2xl border border-emerald-200 dark:border-emerald-800 p-6"
+            className="bg-card rounded-2xl border border-primary/20 p-6"
           >
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
+              <DollarSign className="w-5 h-5 text-primary" />
               Active Loan
             </h2>
             <div className="space-y-3">
@@ -232,10 +298,10 @@ export default function LoansPage() {
             {!showApplicationForm ? (
               <Button
                 onClick={() => setShowApplicationForm(true)}
-                disabled={!eligibleDerived}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+                disabled={!eligible}
+                className="w-full bg-gradient-to-r from-primary via-primary to-secondary hover:opacity-90 text-white disabled:opacity-50"
               >
-                {eligibleDerived ? "Apply for a Loan" : "Build Account History to Apply"}
+                {eligible ? "Apply for a Loan" : "Complete Requirements to Apply"}
               </Button>
             ) : (
               <div className="space-y-4">
@@ -266,7 +332,7 @@ export default function LoansPage() {
                   <Button
                     onClick={() => applyForLoanMutation.mutate()}
                     disabled={!loanAmount || parseFloat(loanAmount) <= 0 || applyForLoanMutation.isPending}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    className="flex-1 bg-primary hover:bg-primary/90"
                   >
                     {applyForLoanMutation.isPending ? "Submitting..." : "Submit Application"}
                   </Button>
@@ -306,4 +372,4 @@ export default function LoansPage() {
 }
 
 // Helper: determine eligibility
-const eligibleDerived = true;
+const const eligibleDerived = eligible;
