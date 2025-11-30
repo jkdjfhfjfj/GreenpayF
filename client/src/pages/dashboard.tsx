@@ -170,7 +170,7 @@ export default function DashboardPage() {
               </div>
             )}
             <div>
-              <h1 className="font-semibold text-base text-white">Welcome back</h1>
+              <h1 className="font-semibold text-base text-white">💚 Welcome back</h1>
               <p className="text-xs text-white/80">{user?.fullName?.split(' ')[0] || 'John'}</p>
             </div>
           </div>

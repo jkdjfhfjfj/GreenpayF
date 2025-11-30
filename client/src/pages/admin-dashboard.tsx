@@ -145,7 +145,8 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-10">
+          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <TabsList className="grid grid-cols-10 w-full md:w-auto inline-grid md:inline-flex">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="kyc">KYC</TabsTrigger>
@@ -159,7 +160,8 @@ export default function AdminDashboard() {
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="logs">Security Logs</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-6">
             {/* Key Metrics */}
