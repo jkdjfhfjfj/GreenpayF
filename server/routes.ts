@@ -3,7 +3,9 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import path from "path";
 import { storage } from "./storage";
-import { insertUserSchema, insertKycDocumentSchema, insertTransactionSchema, insertPaymentRequestSchema, insertRecipientSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema } from "@shared/schema";
+import { db } from "./db";
+import { insertUserSchema, insertKycDocumentSchema, insertTransactionSchema, insertPaymentRequestSchema, insertRecipientSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, users, systemLogs } from "@shared/schema";
+import { desc } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -6236,29 +6238,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User Activities Endpoint - Get all user activities from system logs
+  // Database Connection Check
+  app.get("/api/admin/database/check", requireAdminAuth, async (req, res) => {
+    try {
+      const result = await db.select().from(users).limit(1);
+      res.json({ connected: true, message: "Database connection successful" });
+    } catch (error) {
+      console.error("Database connection check failed:", error);
+      res.status(500).json({ 
+        connected: false, 
+        error: "Failed to connect to database",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // User Console Logs Endpoint - Get system logs tied to specific users
   app.get("/api/admin/user-activities", requireAdminAuth, async (req, res) => {
     try {
-      const activities = await db
-        .select()
-        .from(systemLogs)
-        .where((logs) => logs.source.like("user_activity:%"))
+      const { userId } = req.query;
+      
+      let query = db.select().from(systemLogs);
+      
+      // If userId provided, filter by that user's logs
+      if (userId && typeof userId === "string") {
+        query = query.where((logs) => logs.source.like(`%:${userId}%`));
+      }
+      
+      const activities = await query
         .orderBy(desc(systemLogs.timestamp))
         .limit(500);
 
       const formattedActivities = activities.map((log) => {
         const data = log.data as any;
+        const source = log.source || "";
+        const userId = source.split(":")[1] || "system";
+        
         return {
           id: log.id,
-          userId: data?.userId || "unknown",
-          userName: data?.userName || "Unknown User",
-          userEmail: data?.userEmail || "unknown@example.com",
-          action: data?.action || log.message,
-          description: data?.description || log.message,
-          type: data?.type || "account",
+          userId,
+          level: log.level,
+          message: log.message,
+          source: log.source,
           timestamp: log.timestamp,
-          ipAddress: data?.ipAddress,
-          metadata: data?.metadata,
+          data,
         };
       });
 

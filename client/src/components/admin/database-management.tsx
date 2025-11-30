@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Download, Upload, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { AlertCircle, Download, Upload, Loader2, CheckCircle, XCircle, Eye, FileJson } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface Backup {
@@ -19,22 +19,60 @@ export default function DatabaseManagement() {
   const [backups, setBackups] = useState<Backup[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; message: string } | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    checkDatabaseConnection();
+  }, []);
+
+  const checkDatabaseConnection = async () => {
+    setIsCheckingConnection(true);
+    try {
+      const response = await fetch("/api/admin/database/check");
+      const data = await response.json();
+      setConnectionStatus(data);
+    } catch (error) {
+      setConnectionStatus({
+        connected: false,
+        message: error instanceof Error ? error.message : "Connection check failed",
+      });
+    } finally {
+      setIsCheckingConnection(false);
+    }
+  };
 
   const handleExportDatabase = async () => {
+    if (!connectionStatus?.connected) {
+      setMessage({ type: "error", text: "Database connection failed. Please check your connection." });
+      return;
+    }
+
     setIsExporting(true);
     setMessage(null);
     try {
-      const response = await apiRequest("POST", "/api/admin/database/backup");
-      if (response.success) {
+      const response = await fetch("/api/admin/database/backup", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Export failed");
+      }
+
+      const data = await response.json();
+      if (data.success) {
         setMessage({ type: "success", text: "Database exported successfully!" });
-        // Add to list
-        setBackups([response.backup, ...backups]);
         // Trigger download
         const element = document.createElement("a");
-        element.href = `/api/admin/database/backup/${response.backup.id}/download`;
-        element.download = response.backup.filename;
+        element.href = `/api/admin/database/backup/${data.backup.id}/download`;
+        element.download = data.backup.filename;
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
@@ -46,9 +84,25 @@ export default function DatabaseManagement() {
     }
   };
 
+  const previewFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const preview = text.substring(0, 500) + (text.length > 500 ? "\n...[truncated]" : "");
+      setFilePreview(preview);
+      setShowPreview(true);
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to read file preview" });
+    }
+  };
+
   const handleRestoreDatabase = async () => {
     if (!selectedFile) {
       setMessage({ type: "error", text: "Please select a backup file" });
+      return;
+    }
+
+    if (!connectionStatus?.connected) {
+      setMessage({ type: "error", text: "Database connection failed. Please check your connection." });
       return;
     }
 
@@ -71,6 +125,8 @@ export default function DatabaseManagement() {
           text: `Database restored successfully! Restored ${Object.values(data.recordsRestored).reduce((a: number, b: number) => a + b, 0)} records.` 
         });
         setSelectedFile(null);
+        setShowPreview(false);
+        setFilePreview(null);
       } else {
         setMessage({ type: "error", text: `Restore failed: ${data.error || "Unknown error"}` });
       }
@@ -95,6 +151,30 @@ export default function DatabaseManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Connection Status */}
+      <Card className={connectionStatus?.connected ? "border-green-200" : "border-red-200"}>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {isCheckingConnection ? (
+                <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
+              ) : connectionStatus?.connected ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-600" />
+              )}
+              <div>
+                <p className="font-semibold">{connectionStatus?.connected ? "Connected" : "Disconnected"}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{connectionStatus?.message}</p>
+              </div>
+            </div>
+            <Button onClick={checkDatabaseConnection} variant="outline" size="sm">
+              Check Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Export Section */}
       <Card>
         <CardHeader>

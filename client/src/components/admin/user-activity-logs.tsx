@@ -4,104 +4,96 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  Lock, 
-  Unlock,
-  FileCheck,
-  CreditCard,
-  LogOut,
-  LogIn,
-  Trash2,
   Search,
-  Download
+  Download,
+  AlertCircle,
+  Info,
+  AlertTriangle,
+  Eye
 } from "lucide-react";
 
-interface UserActivity {
+interface SystemLog {
   id: string;
   userId: string;
-  userName: string;
-  userEmail: string;
-  action: string;
-  description: string;
-  type: "login" | "transaction" | "kyc" | "card" | "security" | "account" | "logout";
+  level: "info" | "warn" | "error" | "debug";
+  message: string;
+  source: string;
   timestamp: Date;
-  ipAddress?: string;
-  metadata?: any;
+  data?: any;
 }
 
-const activityTypeConfig = {
-  login: { icon: LogIn, color: "bg-blue-100 text-blue-800", label: "Login" },
-  logout: { icon: LogOut, color: "bg-gray-100 text-gray-800", label: "Logout" },
-  transaction: { icon: ArrowUpRight, color: "bg-green-100 text-green-800", label: "Transaction" },
-  kyc: { icon: FileCheck, color: "bg-purple-100 text-purple-800", label: "KYC" },
-  card: { icon: CreditCard, color: "bg-orange-100 text-orange-800", label: "Card" },
-  security: { icon: Lock, color: "bg-red-100 text-red-800", label: "Security" },
-  account: { icon: Unlock, color: "bg-yellow-100 text-yellow-800", label: "Account" },
+const levelConfig = {
+  info: { icon: Info, color: "bg-blue-100 text-blue-800", label: "Info" },
+  warn: { icon: AlertTriangle, color: "bg-yellow-100 text-yellow-800", label: "Warning" },
+  error: { icon: AlertCircle, color: "bg-red-100 text-red-800", label: "Error" },
+  debug: { icon: Eye, color: "bg-gray-100 text-gray-800", label: "Debug" },
 };
 
 export default function UserActivityLogs() {
-  const [activities, setActivities] = useState<UserActivity[]>([]);
-  const [filteredActivities, setFilteredActivities] = useState<UserActivity[]>([]);
+  const [logs, setLogs] = useState<SystemLog[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<SystemLog[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
-    fetchActivities();
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 5000); // Auto-refresh every 5 seconds
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    let filtered = activities;
+    let filtered = logs;
 
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(
-        (a) =>
-          a.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (log) =>
+          log.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          log.source.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Filter by type
-    if (typeFilter !== "all") {
-      filtered = filtered.filter((a) => a.type === typeFilter);
+    // Filter by level
+    if (levelFilter !== "all") {
+      filtered = filtered.filter((log) => log.level === levelFilter);
     }
 
-    setFilteredActivities(filtered);
-  }, [activities, searchTerm, typeFilter]);
+    setFilteredLogs(filtered);
+  }, [logs, searchTerm, levelFilter]);
 
-  const fetchActivities = async () => {
+  const fetchLogs = async () => {
     try {
       setIsLoading(true);
       const response = await fetch("/api/admin/user-activities");
       if (response.ok) {
         const data = await response.json();
-        setActivities(
-          data.map((a: any) => ({
-            ...a,
-            timestamp: new Date(a.timestamp),
+        setLogs(
+          data.map((log: any) => ({
+            ...log,
+            timestamp: new Date(log.timestamp),
           }))
         );
       }
     } catch (error) {
-      console.error("Failed to fetch activities:", error);
+      console.error("Failed to fetch logs:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const exportActivities = () => {
+  const exportLogs = () => {
     const csv = [
-      ["User Name", "Email", "Action", "Type", "Timestamp", "IP Address"],
-      ...filteredActivities.map((a) => [
-        a.userName,
-        a.userEmail,
-        a.description,
-        a.type,
-        a.timestamp.toISOString(),
-        a.ipAddress || "N/A",
+      ["User ID", "Level", "Message", "Source", "Timestamp"],
+      ...filteredLogs.map((log) => [
+        log.userId,
+        log.level,
+        log.message,
+        log.source,
+        log.timestamp.toISOString(),
       ]),
     ]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
@@ -111,7 +103,7 @@ export default function UserActivityLogs() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `user-activities-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `console-logs-${new Date().toISOString().split("T")[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
@@ -125,53 +117,91 @@ export default function UserActivityLogs() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
           <Input
-            placeholder="Search by user name, email, or action..."
+            placeholder="Search by user ID, message, or source..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
         </div>
         <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
+          value={levelFilter}
+          onChange={(e) => setLevelFilter(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-600"
         >
-          <option value="all">All Types</option>
-          <option value="login">Login</option>
-          <option value="logout">Logout</option>
-          <option value="transaction">Transaction</option>
-          <option value="kyc">KYC</option>
-          <option value="card">Card</option>
-          <option value="security">Security</option>
-          <option value="account">Account</option>
+          <option value="all">All Levels</option>
+          <option value="info">Info</option>
+          <option value="warn">Warning</option>
+          <option value="error">Error</option>
+          <option value="debug">Debug</option>
         </select>
-        <Button onClick={exportActivities} variant="outline">
+        <Button onClick={exportLogs} variant="outline">
           <Download className="w-4 h-4 mr-2" />
           Export
         </Button>
+        <Button onClick={fetchLogs} variant="outline">
+          Refresh
+        </Button>
       </div>
 
-      {/* Activity List */}
+      {/* Detail View */}
+      {showDetail && selectedLog && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Log Details</span>
+              <Button variant="ghost" onClick={() => setShowDetail(false)}>✕</Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">User ID</p>
+              <p className="text-sm text-gray-900 dark:text-white">{selectedLog.userId}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Message</p>
+              <p className="text-sm text-gray-900 dark:text-white break-words">{selectedLog.message}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Source</p>
+              <p className="text-sm text-gray-900 dark:text-white">{selectedLog.source}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Timestamp</p>
+              <p className="text-sm text-gray-900 dark:text-white">{selectedLog.timestamp.toLocaleString()}</p>
+            </div>
+            {selectedLog.data && Object.keys(selectedLog.data).length > 0 && (
+              <div>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Additional Data</p>
+                <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-auto max-h-40">
+                  {JSON.stringify(selectedLog.data, null, 2)}
+                </pre>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Logs List */}
       {isLoading ? (
         <Card>
           <CardContent className="flex justify-center py-8">
-            <div className="animate-spin">Loading...</div>
+            <div className="animate-spin">Loading logs...</div>
           </CardContent>
         </Card>
-      ) : filteredActivities.length === 0 ? (
+      ) : filteredLogs.length === 0 ? (
         <Card>
           <CardContent className="flex justify-center py-8 text-gray-500">
-            No activities found
+            No console logs found
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {filteredActivities.map((activity) => {
-            const config = activityTypeConfig[activity.type as keyof typeof activityTypeConfig];
-            const Icon = config?.icon || Trash2;
+          {filteredLogs.map((log) => {
+            const config = levelConfig[log.level as keyof typeof levelConfig];
+            const Icon = config?.icon || Info;
 
             return (
-              <Card key={activity.id}>
+              <Card key={log.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex gap-4 flex-1">
@@ -181,22 +211,33 @@ export default function UserActivityLogs() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-semibold text-gray-900 dark:text-white">
-                            {activity.userName}
+                            User: {log.userId}
                           </h4>
                           <Badge variant="outline" className="text-xs">
-                            {activity.userEmail}
+                            {log.source}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          {activity.description}
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 break-words">
+                          {log.message}
                         </p>
                         <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-500">
-                          <span>{activity.timestamp.toLocaleString()}</span>
-                          {activity.ipAddress && <span>IP: {activity.ipAddress}</span>}
+                          <span>{log.timestamp.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
-                    <Badge className={config?.color}>{config?.label}</Badge>
+                    <div className="flex gap-2">
+                      <Badge className={config?.color}>{config?.label}</Badge>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedLog(log);
+                          setShowDetail(true);
+                        }}
+                      >
+                        View
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -206,20 +247,20 @@ export default function UserActivityLogs() {
       )}
 
       {/* Summary */}
-      {activities.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2">
-          {Object.entries(activityTypeConfig).map(([type, config]) => {
-            const count = activities.filter((a) => a.type === type).length;
+      {logs.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {Object.entries(levelConfig).map(([level, config]) => {
+            const count = logs.filter((log) => log.level === level).length;
             const Label = config.icon;
             return (
-              <Card key={type}>
+              <Card key={level}>
                 <CardContent className="p-3">
                   <div className="text-center">
                     <div className={`inline-block p-2 rounded mb-1 ${config.color}`}>
                       <Label className="w-4 h-4" />
                     </div>
                     <p className="text-xs font-medium">{count}</p>
-                    <p className="text-xs text-gray-500 capitalize">{type}</p>
+                    <p className="text-xs text-gray-500 capitalize">{level}</p>
                   </div>
                 </CardContent>
               </Card>
