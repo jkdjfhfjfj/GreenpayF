@@ -43,7 +43,19 @@ export default function TransactionsPage() {
   const transactions = (transactionData as any)?.transactions || [];
 
   const handleRefresh = () => {
+    toast({
+      title: "Refreshing...",
+      description: "Fetching your latest transactions",
+    });
     queryClient.invalidateQueries({ queryKey: ["/api/transactions", user?.id] });
+    
+    // Show success message after a brief delay
+    setTimeout(() => {
+      toast({
+        title: "Refreshed",
+        description: "Your transactions are up to date",
+      });
+    }, 800);
   };
 
   const filteredTransactions = transactions.filter((transaction: any) => {
