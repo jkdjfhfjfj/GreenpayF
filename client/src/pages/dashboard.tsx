@@ -183,7 +183,6 @@ export default function DashboardPage() {
           >
             <Settings className="w-6 h-6" />
           </Button>
-          </div>
           <div className="flex items-center space-x-2">
             <Notifications />
             <motion.button
