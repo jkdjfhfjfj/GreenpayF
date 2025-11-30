@@ -103,15 +103,16 @@ export default function LoansPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
+        className="bg-card shadow-sm p-4 flex items-center elevation-1"
       >
-        <button
+        <motion.button
+          whileTap={{ scale: 0.95 }}
           onClick={() => setLocation("/dashboard")}
-          className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors mb-4"
+          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
         >
-          <span className="material-icons text-white">arrow_back</span>
-        </button>
-        <h1 className="text-3xl font-bold">Loans</h1>
+          arrow_back
+        </motion.button>
+        <h1 className="text-lg font-semibold">Loans</h1>
       </motion.div>
 
       <div className="p-6 space-y-6">
