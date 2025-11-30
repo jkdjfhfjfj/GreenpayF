@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   CreditCard, 
@@ -68,7 +67,7 @@ interface DashboardData {
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const [adminData, setAdminData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -153,9 +152,6 @@ export default function AdminDashboard() {
         </header>
 
         <div className="flex-1 overflow-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tab Content */}
-        <div className="space-y-6">
-
           {activeTab === "overview" && <div className="space-y-6">
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -311,7 +307,7 @@ export default function AdminDashboard() {
           {activeTab === "logs" && <AdminLogsTab />}
           {activeTab === "settings" && <AdminSettingsTab />}
         </div>
-        </div>
+      </div>
     </div>
   );
 }

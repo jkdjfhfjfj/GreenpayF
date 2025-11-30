@@ -19,6 +19,7 @@ import { biometricService } from "./services/biometric";
 import { notificationService } from "./services/notifications";
 import { CloudinaryStorageService, ObjectNotFoundError } from "./cloudinaryStorage";
 import { statumService } from "./statumService";
+import { ActivityLogger } from "./services/activity-logger";
 
 const cloudinaryStorage = new CloudinaryStorageService();
 
@@ -6232,6 +6233,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to perform status check',
         timestamp: new Date().toISOString()
       });
+    }
+  });
+
+  // User Activities Endpoint - Get all user activities from system logs
+  app.get("/api/admin/user-activities", requireAdminAuth, async (req, res) => {
+    try {
+      const activities = await db
+        .select()
+        .from(systemLogs)
+        .where((logs) => logs.source.like("user_activity:%"))
+        .orderBy(desc(systemLogs.timestamp))
+        .limit(500);
+
+      const formattedActivities = activities.map((log) => {
+        const data = log.data as any;
+        return {
+          id: log.id,
+          userId: data?.userId || "unknown",
+          userName: data?.userName || "Unknown User",
+          userEmail: data?.userEmail || "unknown@example.com",
+          action: data?.action || log.message,
+          description: data?.description || log.message,
+          type: data?.type || "account",
+          timestamp: log.timestamp,
+          ipAddress: data?.ipAddress,
+          metadata: data?.metadata,
+        };
+      });
+
+      res.json(formattedActivities);
+    } catch (error) {
+      console.error("Failed to fetch user activities:", error);
+      res.status(500).json({ error: "Failed to fetch activities" });
     }
   });
 
