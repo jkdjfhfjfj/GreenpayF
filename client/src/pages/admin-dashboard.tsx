@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   CreditCard, 
@@ -145,21 +146,23 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-10">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="kyc">KYC</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="cards">Virtual Cards</TabsTrigger>
-            <TabsTrigger value="whatsapp" className="flex items-center gap-1">
-              <MessageCircle className="w-4 h-4" />
-              WhatsApp
-            </TabsTrigger>
-            <TabsTrigger value="messaging">Messaging</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="logs">Security Logs</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+          <ScrollArea className="w-full whitespace-nowrap rounded-lg border">
+            <TabsList className="inline-flex h-12 w-full justify-start rounded-none bg-transparent p-1">
+              <TabsTrigger value="overview" className="rounded-md px-3 py-1.5">Overview</TabsTrigger>
+              <TabsTrigger value="users" className="rounded-md px-3 py-1.5">Users</TabsTrigger>
+              <TabsTrigger value="kyc" className="rounded-md px-3 py-1.5">KYC</TabsTrigger>
+              <TabsTrigger value="transactions" className="rounded-md px-3 py-1.5">Transactions</TabsTrigger>
+              <TabsTrigger value="cards" className="rounded-md px-3 py-1.5">Virtual Cards</TabsTrigger>
+              <TabsTrigger value="whatsapp" className="rounded-md px-3 py-1.5 flex items-center gap-1">
+                <MessageCircle className="w-4 h-4" />
+                WhatsApp
+              </TabsTrigger>
+              <TabsTrigger value="messaging" className="rounded-md px-3 py-1.5">Messaging</TabsTrigger>
+              <TabsTrigger value="templates" className="rounded-md px-3 py-1.5">Templates</TabsTrigger>
+              <TabsTrigger value="logs" className="rounded-md px-3 py-1.5">Security Logs</TabsTrigger>
+              <TabsTrigger value="settings" className="rounded-md px-3 py-1.5">Settings</TabsTrigger>
+            </TabsList>
+          </ScrollArea>
 
           <TabsContent value="overview" className="space-y-6">
             {/* Key Metrics */}
