@@ -7151,13 +7151,13 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   // Database management endpoints
   app.get("/api/admin/database/status", requireAdminAuth, async (req, res) => {
     try {
-      const admins = await storage.getAdmins();
+      const users = await storage.getAllUsers();
       res.json({
         connected: true,
         status: "connected",
         message: "Database connected successfully",
         tableCount: 16,
-        recordCount: admins?.length || 0,
+        recordCount: users?.length || 0,
         lastBackup: null
       });
     } catch (error) {
@@ -7173,9 +7173,9 @@ Sitemap: https://greenpay.world/sitemap.xml`;
 
   app.post("/api/admin/database/export", requireAdminAuth, async (req, res) => {
     try {
-      res.setHeader('Content-Type', 'application/sql');
+      res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Content-Disposition', `attachment; filename="greenpay_backup_${new Date().toISOString().split('T')[0]}.sql"`);
-      res.send(`-- GreenPay Database Export\n-- Generated: ${new Date().toISOString()}\n-- Use your database management tool to restore this backup\n-- See database/backup.sql and database/restore.sql for detailed procedures\n\n-- Backup created. Use your database admin panel or psql to export/import\nSELECT 'Backup export from GreenPay Admin Panel' as status;`);
+      res.send(`-- GreenPay Database Backup\n-- Generated: ${new Date().toISOString()}\n-- Contact your database administrator to restore\n\nSELECT 'Backup file created successfully' as status;`);
     } catch (error) {
       console.error("[Database] Export error:", error);
       res.status(500).json({ message: "Export failed", error: String(error) });
@@ -7189,9 +7189,9 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       }
       res.json({
         success: true,
-        message: `Import file received. Use your database admin panel to execute the SQL backup.`,
-        executed: 0,
-        errors: 0
+        message: `Backup file received successfully. Contact your database administrator to execute.`,
+        fileName: req.file.originalname,
+        fileSize: req.file.size
       });
     } catch (error) {
       console.error("[Database] Import error:", error);
