@@ -23,7 +23,8 @@ import {
   BarChart3,
   Menu,
   X,
-  MessageCircle
+  MessageCircle,
+  Database
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -37,6 +38,7 @@ import AdminSettings from "@/components/admin/admin-settings";
 import MessagingSettings from "@/components/admin/messaging-settings";
 import WhatsAppTemplates from "@/components/admin/whatsapp-templates";
 import WhatsAppMessaging from "@/components/admin/whatsapp-messaging";
+import DatabaseManagement from "@/components/admin/database-management";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -160,6 +162,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="messaging" className="rounded-md px-3 py-1.5">Messaging</TabsTrigger>
               <TabsTrigger value="templates" className="rounded-md px-3 py-1.5">Templates</TabsTrigger>
               <TabsTrigger value="logs" className="rounded-md px-3 py-1.5">Security Logs</TabsTrigger>
+              <TabsTrigger value="database" className="rounded-md px-3 py-1.5 flex items-center gap-1">
+                <Database className="w-4 h-4" />
+                Database
+              </TabsTrigger>
               <TabsTrigger value="settings" className="rounded-md px-3 py-1.5">Settings</TabsTrigger>
             </TabsList>
           </ScrollArea>
@@ -337,6 +343,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="logs">
             <AdminLogsTab />
+          </TabsContent>
+
+          <TabsContent value="database">
+            <DatabaseManagement />
           </TabsContent>
 
           <TabsContent value="settings">
