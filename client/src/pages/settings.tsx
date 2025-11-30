@@ -282,16 +282,22 @@ export default function SettingsPage() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Update user context with new 2FA setting
+      if (data.user) {
+        login(data.user);
+      }
+      
       // Show backup codes if they exist in state
       if (backupCodes.length > 0) {
         setTwoFAStep('backup');
       } else {
-        // If no codes in state, close and enable 2FA
+        // If no codes in state, close the dialog
         setIs2FASetup(false);
         setTwoFAStep('qr');
         setVerificationCode('');
         setBackupCodes([]);
-        handleSettingUpdate('twoFactorEnabled', true);
+        // Update local settings state
+        setSettings({ ...settings, twoFactorEnabled: true });
       }
       setVerificationCode('');
       toast({
@@ -374,8 +380,13 @@ export default function SettingsPage() {
       });
       return response.json();
     },
-    onSuccess: () => {
-      handleSettingUpdate('biometricEnabled', true);
+    onSuccess: (data) => {
+      // Update user context with biometric setting enabled
+      if (data.user) {
+        login(data.user);
+      }
+      // Update local settings state
+      setSettings({ ...settings, biometricEnabled: true });
       toast({
         title: "Biometric Setup Complete",
         description: "You can now use your fingerprint or face to authenticate",
