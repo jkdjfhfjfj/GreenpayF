@@ -152,26 +152,26 @@ export default function DashboardPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
+        className="bg-white border-b border-border p-4"
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center flex-1">
             {user?.profilePhotoUrl ? (
               <img 
                 src={user.profilePhotoUrl} 
                 alt="Profile" 
-                className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-white/30 shadow-lg"
+                className="w-10 h-10 rounded-full object-cover mr-3 border border-border"
               />
             ) : (
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mr-3 border-2 border-white/30 shadow-lg">
-                <span className="text-white font-bold text-lg">
+              <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mr-3">
+                <span className="text-foreground font-semibold text-sm">
                   {user?.fullName?.split(' ').map(n => n[0]).join('') || 'JD'}
                 </span>
               </div>
             )}
             <div>
-              <h1 className="font-bold text-lg">Hi, {user?.fullName?.split(' ')[0] || 'John'}!</h1>
-              <p className="text-xs text-white/80">Welcome back 👋</p>
+              <h1 className="font-semibold text-base text-foreground">Welcome back</h1>
+              <p className="text-xs text-muted-foreground">{user?.fullName?.split(' ')[0] || 'John'}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
