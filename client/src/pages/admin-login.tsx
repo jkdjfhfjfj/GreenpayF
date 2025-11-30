@@ -21,6 +21,7 @@ const adminLoginSchema = z.object({
 type AdminLoginForm = z.infer<typeof adminLoginSchema>;
 
 export default function AdminLogin() {
+  console.log("🔵 AdminLogin component rendered");
   const [, setLocation] = useLocation();
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +30,7 @@ export default function AdminLogin() {
   const [restoreStatus, setRestoreStatus] = useState<{ success?: boolean; message?: string; recordsRestored?: any } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AdminLoginForm>({
     resolver: zodResolver(adminLoginSchema),
@@ -80,9 +82,11 @@ export default function AdminLogin() {
   };
 
   const handleRestoreSubmit = async (e: React.FormEvent) => {
+    console.log("🟡 Restore submit handler called", { hasFile: !!restoreFile });
     e.preventDefault();
     
     if (!restoreFile) {
+      console.log("🔴 No restore file selected");
       toast({
         title: "No File Selected",
         description: "Please select a backup file to restore",
@@ -95,6 +99,7 @@ export default function AdminLogin() {
     setRestoreStatus(null);
 
     try {
+      console.log("📤 Starting restore with file:", restoreFile.name);
       const formData = new FormData();
       formData.append("file", restoreFile);
 
@@ -103,9 +108,12 @@ export default function AdminLogin() {
         body: formData,
       });
 
+      console.log("📥 Restore response status:", response.status);
       const result = await response.json();
+      console.log("📊 Restore result:", result);
 
       if (response.ok) {
+        console.log("✅ Restore successful");
         setRestoreStatus({
           success: true,
           message: "Database restored successfully",
@@ -120,6 +128,7 @@ export default function AdminLogin() {
           fileInputRef.current.value = "";
         }
       } else {
+        console.log("❌ Restore failed:", result.error);
         setRestoreStatus({
           success: false,
           message: result.error || "Failed to restore database",
@@ -131,13 +140,15 @@ export default function AdminLogin() {
         });
       }
     } catch (error) {
+      console.error("💥 Restore error:", error);
+      setError(error instanceof Error ? error.message : "Unknown error");
       setRestoreStatus({
         success: false,
-        message: "An error occurred during restore",
+        message: error instanceof Error ? error.message : "An error occurred during restore",
       });
       toast({
         title: "Restore Error",
-        description: "An error occurred during database restore",
+        description: error instanceof Error ? error.message : "An error occurred during database restore",
         variant: "destructive",
       });
     } finally {
@@ -265,6 +276,19 @@ export default function AdminLogin() {
 
             {/* Restore Database Tab */}
             <TabsContent value="restore" className="space-y-4 mt-4">
+              {error && (
+                <div className="p-4 rounded-lg flex gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                      Render Error
+                    </p>
+                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                      {error}
+                    </p>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleRestoreSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <FormLabel>Select Backup File</FormLabel>
