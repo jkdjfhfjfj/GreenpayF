@@ -99,70 +99,84 @@ export default function LoansPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header - Match main app color */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
       >
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => setLocation("/dashboard")}
-            className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
-          >
-            <span className="material-icons text-white">arrow_back</span>
-          </button>
-          <DollarSign className="w-6 h-6" />
-        </div>
-        <h1 className="text-3xl font-bold mb-1">Loans</h1>
-        <p className="text-white/80 text-sm">Get funds based on your account performance</p>
+        <button
+          onClick={() => setLocation("/dashboard")}
+          className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors mb-4"
+        >
+          <span className="material-icons text-white">arrow_back</span>
+        </button>
+        <h1 className="text-3xl font-bold">Loans</h1>
       </motion.div>
 
       <div className="p-6 space-y-6">
-        {/* Eligibility Rules Card */}
+        {/* Check Limit Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-2xl border border-blue-200 dark:border-blue-800 p-6"
         >
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <Lock className="w-5 h-5 text-blue-600" />
-            Eligibility Requirements
-          </h2>
-          <div className="space-y-3">
-            <div className={`flex items-start gap-3 p-3 rounded-lg ${isAccountOldEnough ? 'bg-green-50 dark:bg-green-950/20' : 'bg-red-50 dark:bg-red-950/20'}`}>
-              {isAccountOldEnough ? (
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              )}
-              <div>
-                <p className={`font-semibold text-sm ${isAccountOldEnough ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
-                  Account Age: {accountAgeDays} days
-                </p>
-                <p className={`text-xs ${isAccountOldEnough ? 'text-green-700 dark:text-green-200' : 'text-red-700 dark:text-red-200'}`}>
-                  {isAccountOldEnough ? '✓ Meets 30-day requirement' : '✗ Needs 30+ days (remaining: ' + (30 - accountAgeDays) + ' days)'}
-                </p>
-              </div>
-            </div>
-            
-            <div className={`flex items-start gap-3 p-3 rounded-lg ${isKYCVerified ? 'bg-green-50 dark:bg-green-950/20' : 'bg-amber-50 dark:bg-amber-950/20'}`}>
-              {isKYCVerified ? (
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              )}
-              <div>
-                <p className={`font-semibold text-sm ${isKYCVerified ? 'text-green-900 dark:text-green-100' : 'text-amber-900 dark:text-amber-100'}`}>
-                  KYC Verification
-                </p>
-                <p className={`text-xs ${isKYCVerified ? 'text-green-700 dark:text-green-200' : 'text-amber-700 dark:text-amber-200'}`}>
-                  {isKYCVerified ? '✓ Verified' : '✗ Complete KYC to qualify'}
-                </p>
-              </div>
-            </div>
-          </div>
+          <Button
+            onClick={() => {
+              if (!isAccountOldEnough) {
+                toast({
+                  title: "Account Too New",
+                  description: `Your account needs to be 30 days old. Current age: ${accountAgeDays} days. Wait ${30 - accountAgeDays} more days.`,
+                  variant: "destructive",
+                });
+              } else if (!isKYCVerified) {
+                toast({
+                  title: "KYC Required",
+                  description: "Complete identity verification in settings to check your loan limit.",
+                  variant: "destructive",
+                });
+              } else if (performanceScore < 60) {
+                toast({
+                  title: "Score Too Low",
+                  description: `Your performance score is ${performanceScore}/100. Need 60+ to qualify.`,
+                  variant: "destructive",
+                });
+              } else if (activeLoan) {
+                toast({
+                  title: "Active Loan Exists",
+                  description: "Pay off your current loan before applying for a new one.",
+                  variant: "destructive",
+                });
+              } else {
+                toast({
+                  title: "Eligible! ✓",
+                  description: `You can borrow up to $${formatNumber(maxLoanEligible)}.`,
+                });
+              }
+            }}
+            className="w-full bg-gradient-to-r from-primary via-primary to-secondary hover:opacity-90 text-white"
+          >
+            Check Your Loan Limit
+          </Button>
         </motion.div>
+
+        {/* Error Messages */}
+        {!eligible && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4"
+          >
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">Not Eligible Yet</p>
+            <ul className="space-y-1">
+              {ineligibilityReasons.map((reason, idx) => (
+                <li key={idx} className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
 
         {/* Account Performance */}
         <motion.div

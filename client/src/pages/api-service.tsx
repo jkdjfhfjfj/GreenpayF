@@ -11,23 +11,19 @@ export default function APIServicePage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header - Match main app color */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
       >
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => setLocation("/dashboard")}
-            className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
-          >
-            <span className="material-icons text-white">arrow_back</span>
-          </button>
-          <ZapIcon className="w-6 h-6" />
-        </div>
-        <h1 className="text-3xl font-bold mb-1">API Services</h1>
-        <p className="text-white/80 text-sm">Integrate GreenPay with your applications</p>
+        <button
+          onClick={() => setLocation("/dashboard")}
+          className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors mb-4"
+        >
+          <span className="material-icons text-white">arrow_back</span>
+        </button>
+        <h1 className="text-3xl font-bold">API Services</h1>
       </motion.div>
 
       {/* Coming Soon Modal */}
