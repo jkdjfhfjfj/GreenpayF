@@ -168,8 +168,17 @@ export default function TransactionsPage() {
         className="bg-card shadow-sm p-3 md:p-4 elevation-1"
       >
         <div className="flex items-center justify-between mb-4 gap-2">
-          <h1 className="text-lg font-semibold">Transactions</h1>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/dashboard")}
+              className="material-icons text-muted-foreground p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              arrow_back
+            </motion.button>
+            <h1 className="text-lg font-semibold">Transactions</h1>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
