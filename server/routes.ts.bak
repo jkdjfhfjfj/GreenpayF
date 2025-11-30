@@ -198,7 +198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error("Failed to create default admin:", error);
   }
   // Authentication routes with real WhatsApp integration
-  app.post("/api/auth/signup", validateApiKey("write"), async (req, res) => {
+  app.post("/api/auth/signup", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
       
@@ -257,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login", validateApiKey("read"), async (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
       
@@ -413,7 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/verify-otp", validateApiKey("read"), async (req, res) => {
+  app.post("/api/auth/verify-otp", async (req, res) => {
     try {
       const { code } = otpSchema.parse(req.body);
       const { userId } = req.body;
@@ -498,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resend OTP
-  app.post("/api/auth/resend-otp", validateApiKey("read"), async (req, res) => {
+  app.post("/api/auth/resend-otp", async (req, res) => {
     try {
       const { userId } = req.body;
       const user = await storage.getUser(userId);
@@ -607,7 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Forgot password - Send reset code (by email)
-  app.post("/api/auth/forgot-password-email", validateApiKey("read"), async (req, res) => {
+  app.post("/api/auth/forgot-password-email", async (req, res) => {
     try {
       const { email } = req.body;
       
@@ -658,7 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset password - Verify code and update password (works with both phone and email)
-  app.post("/api/auth/reset-password-email", validateApiKey("write"), async (req, res) => {
+  app.post("/api/auth/reset-password-email", async (req, res) => {
     try {
       const { email, code, newPassword } = req.body;
       
@@ -974,7 +974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Note: Chat files are now served via /objects/ endpoint (using object storage)
 
   // KYC routes with file upload
-  app.post("/api/kyc/submit", validateApiKey("write"), upload.fields([
+  app.post("/api/kyc/submit", upload.fields([
     { name: 'frontImage', maxCount: 1 },
     { name: 'backImage', maxCount: 1 },
     { name: 'selfie', maxCount: 1 }
@@ -1422,7 +1422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // 2FA setup endpoint
-  app.post("/api/auth/setup-2fa", validateApiKey("write"), async (req, res) => {
+  app.post("/api/auth/setup-2fa", async (req, res) => {
     try {
       const { userId } = req.body;
       
@@ -1454,7 +1454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Biometric setup endpoint
-  app.post("/api/auth/setup-biometric", validateApiKey("write"), async (req, res) => {
+  app.post("/api/auth/setup-biometric", async (req, res) => {
     try {
       const { userId } = req.body;
       
@@ -1469,7 +1469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Push notification registration endpoint
-  app.post("/api/notifications/register", validateApiKey("write"), async (req, res) => {
+  app.post("/api/notifications/register", async (req, res) => {
     try {
       const { userId, endpoint } = req.body;
       
@@ -1576,7 +1576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Deposit payment initialization
-  app.post("/api/deposit/initialize-payment", validateApiKey("write"), async (req, res) => {
+  app.post("/api/deposit/initialize-payment", async (req, res) => {
     try {
       const { userId, amount, currency } = req.body;
       console.log('Deposit payment request - userId:', userId, 'amount:', amount, 'currency:', currency);
@@ -1683,7 +1683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Airtime purchase endpoint - uses KES balance and Statum API
-  app.post("/api/airtime/purchase", validateApiKey("write"), async (req, res) => {
+  app.post("/api/airtime/purchase", async (req, res) => {
     try {
       const { userId, phoneNumber, amount, currency, provider } = req.body;
 
@@ -1839,7 +1839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create exchange rate service with storage for database-backed configuration
   const exchangeRateService = createExchangeRateService(storage);
   
-  app.get("/api/exchange-rates/:from/:to", validateApiKey("read"), async (req, res) => {
+  app.get("/api/exchange-rates/:from/:to", async (req, res) => {
     try {
       const { from, to } = req.params;
       const rate = await exchangeRateService.getExchangeRate(from.toUpperCase(), to.toUpperCase());
@@ -1856,7 +1856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/exchange-rates/:base", validateApiKey("read"), async (req, res) => {
+  app.get("/api/exchange-rates/:base", async (req, res) => {
     try {
       const { base } = req.params;
       // Support bidirectional USD ↔ KES conversions
@@ -1876,7 +1876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Real-time Transaction routes
-  app.post("/api/transactions/send", validateApiKey("write"), async (req, res) => {
+  app.post("/api/transactions/send", async (req, res) => {
     try {
       const { userId, amount, currency, recipientDetails, targetCurrency } = req.body;
       
@@ -2328,7 +2328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(verifyBiometricForActivity);
 
   // Push notifications
-  app.post("/api/notifications/register", validateApiKey("write"), async (req, res) => {
+  app.post("/api/notifications/register", async (req, res) => {
     try {
       const { userId, token } = req.body;
       
@@ -2419,7 +2419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Real-time exchange and currency conversion - supports dual wallet (USD/KES)
-  app.post("/api/exchange/convert", validateApiKey("read"), async (req, res) => {
+  app.post("/api/exchange/convert", async (req, res) => {
     try {
       const { amount, fromCurrency, toCurrency, userId } = req.body;
       
@@ -2509,7 +2509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment Request routes with working payment links
-  app.post("/api/payment-requests", validateApiKey("write"), async (req, res) => {
+  app.post("/api/payment-requests", async (req, res) => {
     try {
       const requestData = insertPaymentRequestSchema.parse(req.body);
       
@@ -3211,7 +3211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Support Ticket API endpoints
   
   // Submit support ticket (user facing)
-  app.post("/api/support/tickets", validateApiKey("write"), async (req, res) => {
+  app.post("/api/support/tickets", async (req, res) => {
     try {
       const ticketData = insertSupportTicketSchema.parse(req.body);
       const userId = (req.session as any)?.user?.id;
@@ -3242,7 +3242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's support tickets
-  app.get("/api/support/tickets", validateApiKey("read"), async (req, res) => {
+  app.get("/api/support/tickets", async (req, res) => {
     try {
       const userId = (req.session as any)?.user?.id;
       
@@ -4279,7 +4279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment Requests API
-  app.post("/api/payment-requests", validateApiKey("write"), async (req, res) => {
+  app.post("/api/payment-requests", async (req, res) => {
     try {
       const { fromUserId, toUserId, amount, currency, description, dueDate } = req.body;
       
@@ -4413,7 +4413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Savings Goals API
-  app.post("/api/savings-goals", validateApiKey("write"), async (req, res) => {
+  app.post("/api/savings-goals", async (req, res) => {
     try {
       const { userId, title, targetAmount, targetDate, description } = req.body;
       
@@ -4501,7 +4501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // QR Code Payment API  
-  app.post("/api/qr-payments/generate", validateApiKey("read"), async (req, res) => {
+  app.post("/api/qr-payments/generate", async (req, res) => {
     try {
       const { userId, amount, currency, description } = req.body;
       
@@ -4524,7 +4524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/qr-payments/process", validateApiKey("write"), async (req, res) => {
+  app.post("/api/qr-payments/process", async (req, res) => {
     try {
       const { paymentCode, payerUserId } = req.body;
       
@@ -5684,7 +5684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Convert USD to KES endpoint
-  app.post("/api/convert-to-kes", validateApiKey("read"), async (req, res) => {
+  app.post("/api/convert-to-kes", async (req, res) => {
     try {
       const { usdAmount } = req.body;
       
@@ -6136,7 +6136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // System status endpoint - checks app features health
-  app.get("/api/system/status", validateApiKey("read"), async (req, res) => {
+  app.get("/api/system/status", async (req, res) => {
     try {
       console.log('🔍 System status check initiated');
       
