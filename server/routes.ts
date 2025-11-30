@@ -48,6 +48,32 @@ const upload = multer({
   }
 });
 
+// Configure multer for database backup files
+const backupUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit for backups
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = [
+      'application/json',
+      'application/sql',
+      'application/gzip',
+      'application/x-gzip',
+      'text/plain', // Some systems send .json as text/plain
+    ];
+    
+    const allowedExtensions = ['.json', '.sql', '.gz', '.gzip'];
+    const hasValidExtension = allowedExtensions.some((ext) => file.originalname.toLowerCase().endsWith(ext));
+    
+    if (allowedMimeTypes.includes(file.mimetype) || hasValidExtension) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JSON, SQL, and GZ backup files are allowed.'));
+    }
+  }
+});
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -6391,7 +6417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Restore database from backup
-  app.post("/api/admin/database/restore", requireAdminAuth, upload.single("file"), async (req, res) => {
+  app.post("/api/admin/database/restore", requireAdminAuth, backupUpload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file provided" });
