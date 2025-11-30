@@ -196,6 +196,19 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Country Badge */}
+        {user?.country && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="flex items-center gap-2 mb-3"
+          >
+            <span className="material-icons text-white/70 text-sm">location_on</span>
+            <span className="text-white/70 text-xs font-medium">{user.country}</span>
+          </motion.div>
+        )}
+
         {/* Wallet Balance Card - Dual Wallet */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -249,12 +262,6 @@ export default function DashboardPage() {
                     <span className="material-icons text-green-300 ml-1 text-sm">verified</span>
                   )}
                 </p>
-                {user?.country && (
-                  <p className="text-white/60 text-xs flex items-center">
-                    <span className="material-icons text-xs mr-0.5">location_on</span>
-                    {user.country}
-                  </p>
-                )}
               </div>
               <p className="text-3xl font-bold mb-2" data-testid="text-balance">
                 {showBalance 
