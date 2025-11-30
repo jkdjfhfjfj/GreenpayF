@@ -536,6 +536,44 @@ export class WhatsAppService {
   }
 
   /**
+   * Send account creation welcome notification via template
+   */
+  async sendAccountCreation(phoneNumber: string, userName: string): Promise<boolean> {
+    await this.refreshCredentials();
+    if (!this.checkCredentials()) return false;
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: 'create_acc',
+          language: { code: 'en_US' },
+          components: [{ type: 'body', parameters: [{ type: 'text', text: userName }] }]
+        }
+      };
+
+      const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.messages) {
+        console.log(`[WhatsApp] ✓ Account creation notification sent to ${phoneNumber}`);
+        return true;
+      } else {
+        console.error(`[WhatsApp] ✗ Account creation notification failed: ${responseData.error?.message || 'Unknown error'}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Error sending account creation notification:', error);
+      return false;
+    }
+  }
+
+  /**
    * Check if WhatsApp is properly configured
    */
   isConfigured(): boolean {
@@ -676,6 +714,16 @@ export class WhatsAppService {
     ]);
     if (loginSuccess) results.success.push('login_alert');
     else results.failed.push('login_alert');
+
+    // Account Creation template (MARKETING category for new users)
+    const createAccSuccess = await this.createTemplate('create_acc', 'MARKETING', [
+      {
+        type: 'BODY',
+        text: 'Welcome {{1}} to GreenPay! Your account has been successfully created. Start sending money, get virtual cards, and enjoy seamless payments today.'
+      }
+    ]);
+    if (createAccSuccess) results.success.push('create_acc');
+    else results.failed.push('create_acc');
 
     return results;
   }
