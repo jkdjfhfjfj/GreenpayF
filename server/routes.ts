@@ -22,6 +22,7 @@ import { notificationService } from "./services/notifications";
 import { CloudinaryStorageService, ObjectNotFoundError } from "./cloudinaryStorage";
 import { statumService } from "./statumService";
 import { ActivityLogger } from "./services/activity-logger";
+import { validateApiKey } from "./middleware/api-key";
 
 const cloudinaryStorage = new CloudinaryStorageService();
 
