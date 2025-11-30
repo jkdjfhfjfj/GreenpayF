@@ -123,6 +123,15 @@ export default function BillsPage() {
     const kesBalance = parseFloat(user?.kesBalance || "0");
     const paymentAmount = parseFloat(amount);
 
+    if (paymentAmount < 100) {
+      toast({
+        title: "Minimum Amount Required",
+        description: "Minimum bill payment amount is KSh 100",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (kesBalance < paymentAmount) {
       toast({
         title: "Insufficient KES Balance",
@@ -335,14 +344,16 @@ export default function BillsPage() {
 
                 {/* Balance Check */}
                 <div className={`p-3 rounded-lg text-sm ${
-                  kesBalance >= paymentAmount
+                  paymentAmount >= 100 && kesBalance >= paymentAmount
                     ? "bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
                     : "bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
                 }`}>
                   <p className="font-semibold">Balance: KSh {kesBalance.toFixed(2)}</p>
                   {paymentAmount > 0 && (
                     <p className="text-xs mt-1">
-                      {kesBalance >= paymentAmount
+                      {paymentAmount < 100 
+                        ? `✗ Minimum amount is KSh 100` 
+                        : kesBalance >= paymentAmount
                         ? `✓ You can afford this payment`
                         : `✗ Insufficient balance. Need KSh ${(paymentAmount - kesBalance).toFixed(2)} more`}
                     </p>
