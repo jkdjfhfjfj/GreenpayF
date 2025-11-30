@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle, CheckCircle, Clock } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 
 const BILL_PROVIDERS = [
   { value: "KPLC", label: "KPLC (Electricity)" },
@@ -28,7 +28,7 @@ interface BillPayment {
 
 export default function BillsPage() {
   const { user } = useAuth();
-  const [navigate] = useNavigate();
+  const [, setLocation] = useLocation();
   const [provider, setProvider] = useState("");
   const [meterNumber, setMeterNumber] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -41,7 +41,7 @@ export default function BillsPage() {
 
   useEffect(() => {
     if (!user) {
-      navigate("/login");
+      setLocation("/login");
     } else {
       fetchBillHistory();
     }
@@ -72,7 +72,7 @@ export default function BillsPage() {
     }
 
     if (!user) {
-      navigate("/login");
+      setLocation("/login");
       return;
     }
 
