@@ -176,6 +176,12 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center space-x-2">
             <Notifications />
+            {user?.country && (
+              <div className="flex items-center gap-1 pl-2 border-l border-white/20">
+                <span className="text-white/70 text-xs font-medium">{user.country}</span>
+                <span className="material-icons text-white/70 text-sm">location_on</span>
+              </div>
+            )}
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setLocation('/live-chat')}
@@ -195,19 +201,6 @@ export default function DashboardPage() {
             </motion.button>
           </div>
         </div>
-
-        {/* Country Badge */}
-        {user?.country && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="flex items-center gap-2 mb-3 justify-end"
-          >
-            <span className="text-white/70 text-xs font-medium">{user.country}</span>
-            <span className="material-icons text-white/70 text-sm">location_on</span>
-          </motion.div>
-        )}
 
         {/* Wallet Balance Card - Dual Wallet */}
         <motion.div
