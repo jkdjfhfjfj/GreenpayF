@@ -99,6 +99,12 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+// Enable WebAuthn in iframe for biometric authentication
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'publickey-credentials-get=*, publickey-credentials-create=*');
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

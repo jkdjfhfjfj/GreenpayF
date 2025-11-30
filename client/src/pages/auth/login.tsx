@@ -84,25 +84,33 @@ export default function LoginPage() {
         throw new Error("Your device doesn't support biometric authentication");
       }
 
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const assertionOptions: PublicKeyCredentialRequestOptions = {
-        challenge,
-        timeout: 60000,
-        userVerification: "preferred",
-      };
+      try {
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+        const assertionOptions: PublicKeyCredentialRequestOptions = {
+          challenge,
+          timeout: 60000,
+          userVerification: "preferred",
+        };
 
-      const assertion = await navigator.credentials.get({
-        publicKey: assertionOptions,
-      }) as PublicKeyCredential | null;
+        const assertion = await navigator.credentials.get({
+          publicKey: assertionOptions,
+        }) as PublicKeyCredential | null;
 
-      if (!assertion) {
-        throw new Error("Biometric authentication cancelled");
+        if (!assertion) {
+          throw new Error("Biometric authentication cancelled");
+        }
+
+        const response = await apiRequest("POST", "/api/auth/biometric/login", {
+          credentialId: assertion.id,
+        });
+        return response.json();
+      } catch (error: any) {
+        // Handle Permissions Policy error
+        if (error.message?.includes("publickey-credentials-get")) {
+          throw new Error("WebAuthn not enabled in this context. Please try again or use password login.");
+        }
+        throw error;
       }
-
-      const response = await apiRequest("POST", "/api/auth/biometric/login", {
-        credentialId: assertion.id,
-      });
-      return response.json();
     },
     onSuccess: (data) => {
       if (data.user) {
