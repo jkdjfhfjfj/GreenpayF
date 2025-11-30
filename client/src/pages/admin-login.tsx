@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Lock, Key, Upload, CheckCircle2, AlertCircle } from "lucide-react";
+import { Shield, Lock, Key, Upload, CheckCircle2, AlertCircle, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
@@ -27,9 +27,63 @@ export default function AdminLogin() {
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreStatus, setRestoreStatus] = useState<{ success?: boolean; message?: string; recordsRestored?: any } | null>(null);
+  const [tablesExist, setTablesExist] = useState(true);
+  const [checkingTables, setCheckingTables] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
+
+  // Check if database tables exist on component mount
+  useEffect(() => {
+    checkDatabaseTables();
+  }, []);
+
+  const checkDatabaseTables = async () => {
+    try {
+      setCheckingTables(true);
+      const response = await fetch("/api/admin/database/tables-exist");
+      const result = await response.json();
+      setTablesExist(result.tablesExist || false);
+    } catch (error) {
+      console.error("Error checking tables:", error);
+      setTablesExist(false);
+    } finally {
+      setCheckingTables(false);
+    }
+  };
+
+  const handleInitializeTables = async () => {
+    setIsInitializing(true);
+    try {
+      const response = await fetch("/api/admin/database/init-tables", {
+        method: "POST",
+      });
+      const result = await response.json();
+
+      if (response.ok && result.tablesInitialized) {
+        toast({
+          title: "Success",
+          description: "Database tables created successfully",
+        });
+        setTablesExist(true);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to initialize database tables",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while initializing database tables",
+        variant: "destructive",
+      });
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   const form = useForm<AdminLoginForm>({
     resolver: zodResolver(adminLoginSchema),
@@ -146,6 +200,73 @@ export default function AdminLogin() {
       setIsRestoring(false);
     }
   };
+
+  if (checkingTables) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+              <Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <CardTitle className="text-2xl font-bold">GreenPay Admin</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center py-8">
+            <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Checking system status...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!tablesExist) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mb-4">
+              <Zap className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Database Setup Required</CardTitle>
+            <CardDescription>
+              Initialize the database to get started
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                The database tables need to be created. This will set up all necessary tables for the GreenPay system to function properly.
+              </p>
+            </div>
+
+            <Button
+              onClick={handleInitializeTables}
+              disabled={isInitializing}
+              className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+              size="lg"
+            >
+              {isInitializing ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Initializing Database...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  Initialize Database Tables
+                </div>
+              )}
+            </Button>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              This process may take a few moments. Do not close this page.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
