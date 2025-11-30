@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Notifications from "@/components/notifications";
-import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard, Zap, DollarSign, MapPin } from "lucide-react";
+import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard, Zap, DollarSign, MapPin, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber } from "@/lib/formatters";
 
@@ -117,6 +117,17 @@ export default function DashboardPage() {
       color: "from-purple-500 to-purple-600",
       iconColor: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950/20",
+      disabled: false,
+      requiresCard: false
+    },
+    { 
+      id: "bills", 
+      icon: Receipt, 
+      label: "Pay Bills", 
+      path: "/bills", 
+      color: "from-red-500 to-red-600",
+      iconColor: "text-red-600",
+      bgColor: "bg-red-50 dark:bg-red-950/20",
       disabled: false,
       requiresCard: false
     },
