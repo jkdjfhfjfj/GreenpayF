@@ -49,6 +49,11 @@ export default function SettingsPage() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [is2FASetup, setIs2FASetup] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [twoFAStep, setTwoFAStep] = useState<'qr' | 'verify' | 'backup'>('qr');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [twoFASecret, setTwoFASecret] = useState<string | null>(null);
+  const [disablePasswordConfirm, setDisablePasswordConfirm] = useState('');
   const [fingerprintSetup, setFingerprintSetup] = useState(false);
   
   // Photo upload states
@@ -252,12 +257,66 @@ export default function SettingsPage() {
     },
     onSuccess: (data) => {
       setQrCodeUrl(data.qrCodeUrl);
+      setTwoFASecret(data.secret);
+      setBackupCodes(data.backupCodes || []);
+      setTwoFAStep('qr');
       setIs2FASetup(true);
     },
     onError: (error: any) => {
       toast({
         title: "Setup Failed",
         description: error.message || "Unable to setup 2FA",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const verify2FAMutation = useMutation({
+    mutationFn: async (token: string) => {
+      const response = await apiRequest("POST", `/api/auth/2fa/verify`, { 
+        userId: user?.id,
+        token
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setTwoFAStep('backup');
+      setVerificationCode('');
+      toast({
+        title: "2FA Enabled",
+        description: "Your authenticator has been successfully set up",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Invalid authenticator code",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const disable2FAMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const response = await apiRequest("POST", `/api/users/${user?.id}/disable-2fa`, { 
+        password
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      login(data.user);
+      setSettings({ ...settings, twoFactorEnabled: false });
+      setIs2FASetup(false);
+      setDisablePasswordConfirm('');
+      toast({
+        title: "2FA Disabled",
+        description: "Two-factor authentication has been disabled",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Disable Failed",
+        description: error.message || "Unable to disable 2FA",
         variant: "destructive",
       });
     },
@@ -705,9 +764,11 @@ export default function SettingsPage() {
                 checked={settings.twoFactorEnabled}
                 onCheckedChange={(checked) => {
                   if (checked && !settings.twoFactorEnabled) {
+                    setTwoFAStep('qr');
                     setup2FAMutation.mutate();
-                  } else {
-                    handleSettingUpdate('twoFactorEnabled', checked);
+                  } else if (!checked && settings.twoFactorEnabled) {
+                    // Show disable dialog - for now just disable directly
+                    disable2FAMutation.mutate('');
                   }
                 }}
                 data-testid="switch-2fa"
@@ -745,32 +806,171 @@ export default function SettingsPage() {
           </motion.div>
         </motion.div>
 
-        {/* 2FA QR Code Dialog */}
-        {qrCodeUrl && (
-          <Dialog open={is2FASetup} onOpenChange={setIs2FASetup}>
+        {/* 2FA Setup Dialog */}
+        <Dialog open={is2FASetup} onOpenChange={(open) => {
+          if (!open && twoFAStep !== 'backup') {
+            setIs2FASetup(false);
+            setTwoFAStep('qr');
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {twoFAStep === 'qr' && 'Setup Two-Factor Authentication'}
+                {twoFAStep === 'verify' && 'Verify Your Authenticator'}
+                {twoFAStep === 'backup' && 'Save Your Backup Codes'}
+              </DialogTitle>
+            </DialogHeader>
+
+            {/* QR Code Step */}
+            {twoFAStep === 'qr' && qrCodeUrl && (
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg text-center">
+                  <img src={qrCodeUrl} alt="2FA QR Code" className="w-48 h-48 mx-auto" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Scan with Authenticator App</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Use Google Authenticator, Authy, Microsoft Authenticator, or any TOTP-compatible app to scan this QR code.
+                  </p>
+                </div>
+                {twoFASecret && (
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Or enter this code manually:</p>
+                    <p className="font-mono text-sm font-semibold break-all">{twoFASecret}</p>
+                  </div>
+                )}
+                <Button 
+                  onClick={() => setTwoFAStep('verify')}
+                  className="w-full"
+                >
+                  Next: Verify Code
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setIs2FASetup(false);
+                    setTwoFAStep('qr');
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+
+            {/* Verification Step */}
+            {twoFAStep === 'verify' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Enter the 6-digit code from your authenticator app to verify the setup:
+                  </p>
+                  <div className="flex gap-1 justify-center">
+                    {Array(6).fill(0).map((_, i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={verificationCode[i] || ''}
+                        onChange={(e) => {
+                          const newCode = verificationCode.split('');
+                          newCode[i] = e.target.value.replace(/[^0-9]/g, '');
+                          setVerificationCode(newCode.join('').slice(0, 6));
+                        }}
+                        className="w-12 h-12 text-center text-xl font-bold border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    ))}
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => verify2FAMutation.mutate(verificationCode)}
+                  disabled={verificationCode.length !== 6 || verify2FAMutation.isPending}
+                  className="w-full"
+                >
+                  {verify2FAMutation.isPending ? 'Verifying...' : 'Verify & Enable'}
+                </Button>
+                <Button 
+                  onClick={() => setTwoFAStep('qr')}
+                  variant="outline"
+                  className="w-full"
+                  disabled={verify2FAMutation.isPending}
+                >
+                  Back
+                </Button>
+              </div>
+            )}
+
+            {/* Backup Codes Step */}
+            {twoFAStep === 'backup' && backupCodes.length > 0 && (
+              <div className="space-y-4">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 p-3 rounded-lg">
+                  <p className="text-sm text-amber-900 dark:text-amber-200">
+                    <strong>Save these backup codes in a safe place.</strong> You can use them to access your account if you lose your authenticator device.
+                  </p>
+                </div>
+                <div className="bg-muted p-4 rounded-lg space-y-2 max-h-48 overflow-y-auto">
+                  {backupCodes.map((code, idx) => (
+                    <div key={idx} className="font-mono text-sm flex items-center justify-between">
+                      <span>{code}</span>
+                      <span className="text-xs text-muted-foreground">#{idx + 1}</span>
+                    </div>
+                  ))}
+                </div>
+                <Button 
+                  onClick={() => {
+                    const text = backupCodes.join('\n');
+                    navigator.clipboard.writeText(text);
+                    toast({
+                      title: "Copied",
+                      description: "Backup codes copied to clipboard"
+                    });
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Copy All Codes
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setIs2FASetup(false);
+                    setTwoFAStep('qr');
+                    handleSettingUpdate('twoFactorEnabled', true);
+                  }}
+                  className="w-full"
+                >
+                  Complete Setup
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Disable 2FA Dialog */}
+        {settings.twoFactorEnabled && (
+          <Dialog open={false} onOpenChange={() => {}}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Setup Authenticator</DialogTitle>
+                <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
               </DialogHeader>
-              <div className="text-center space-y-4">
-                <div className="w-48 h-48 bg-muted rounded-lg flex items-center justify-center mx-auto">
-                  <img src={qrCodeUrl} alt="2FA QR Code" className="w-full h-full" />
-                </div>
-                <div>
-                  <h3 className="font-medium mb-2">Scan with your authenticator app</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Use Google Authenticator, Authy, or any TOTP app to scan this QR code.
-                  </p>
-                  <Button 
-                    onClick={() => {
-                      setIs2FASetup(false);
-                      handleSettingUpdate('twoFactorEnabled', true);
-                    }}
-                    className="w-full"
-                  >
-                    Complete Setup
-                  </Button>
-                </div>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Enter your password to disable 2FA. This will remove the extra security from your account.
+                </p>
+                <Input
+                  type="password"
+                  placeholder="Enter your password"
+                  value={disablePasswordConfirm}
+                  onChange={(e) => setDisablePasswordConfirm(e.target.value)}
+                />
+                <Button 
+                  onClick={() => disable2FAMutation.mutate(disablePasswordConfirm)}
+                  disabled={!disablePasswordConfirm || disable2FAMutation.isPending}
+                  className="w-full bg-destructive hover:bg-destructive/90"
+                >
+                  {disable2FAMutation.isPending ? 'Disabling...' : 'Disable 2FA'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>

@@ -2103,6 +2103,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/users/:userId/disable-2fa", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { password } = req.body;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (password) {
+        const isPasswordValid = await bcrypt.compare(password, user.passwordHash || '');
+        if (!isPasswordValid) {
+          return res.status(401).json({ message: "Invalid password" });
+        }
+      }
+
+      await storage.updateUser(userId, { 
+        twoFactorEnabled: false,
+        twoFactorSecret: null
+      });
+      
+      const updatedUser = await storage.getUser(userId);
+      res.json({ success: true, message: "2FA disabled", user: updatedUser });
+    } catch (error) {
+      console.error('Disable 2FA error:', error);
+      res.status(500).json({ message: "Error disabling 2FA" });
+    }
+  });
+
   // Biometric authentication routes
   app.post("/api/auth/biometric/setup", async (req, res) => {
     try {
