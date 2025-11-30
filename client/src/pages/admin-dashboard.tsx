@@ -38,6 +38,8 @@ import MessagingSettings from "@/components/admin/messaging-settings";
 import WhatsAppTemplates from "@/components/admin/whatsapp-templates";
 import WhatsAppMessaging from "@/components/admin/whatsapp-messaging";
 import DatabaseManagement from "@/components/admin/database-management";
+import AdminSidebar from "@/components/admin/admin-sidebar";
+import UserActivityLogs from "@/components/admin/user-activity-logs";
 
 interface DashboardMetrics {
   totalUsers: number;
@@ -119,54 +121,42 @@ export default function AdminDashboard() {
   const { metrics, transactionTrends, recentTransactions } = dashboardData!;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-green-600" />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">GreenPay Admin</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Administrative Panel</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+      {/* Sidebar */}
+      <AdminSidebar 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        onLogout={handleLogout}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center gap-3">
+                <Shield className="w-8 h-8 text-green-600" />
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">GreenPay Admin</h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Administrative Panel</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{adminData.fullName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{adminData.email}</p>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{adminData.fullName}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{adminData.email}</p>
+                </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-admin-logout">
-                <LogOut className="w-4 h-4" />
-              </Button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <ScrollArea className="w-full whitespace-nowrap rounded-lg border">
-            <TabsList className="inline-flex h-12 w-full justify-start rounded-none bg-transparent p-1">
-              <TabsTrigger value="overview" className="rounded-md px-3 py-1.5">Overview</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-md px-3 py-1.5">Users</TabsTrigger>
-              <TabsTrigger value="kyc" className="rounded-md px-3 py-1.5">KYC</TabsTrigger>
-              <TabsTrigger value="transactions" className="rounded-md px-3 py-1.5">Transactions</TabsTrigger>
-              <TabsTrigger value="cards" className="rounded-md px-3 py-1.5">Virtual Cards</TabsTrigger>
-              <TabsTrigger value="whatsapp" className="rounded-md px-3 py-1.5 flex items-center gap-1">
-                <MessageCircle className="w-4 h-4" />
-                WhatsApp
-              </TabsTrigger>
-              <TabsTrigger value="messaging" className="rounded-md px-3 py-1.5">Messaging</TabsTrigger>
-              <TabsTrigger value="templates" className="rounded-md px-3 py-1.5">Templates</TabsTrigger>
-              <TabsTrigger value="database" className="rounded-md px-3 py-1.5">Database Management</TabsTrigger>
-              <TabsTrigger value="logs" className="rounded-md px-3 py-1.5">Security Logs</TabsTrigger>
-              <TabsTrigger value="settings" className="rounded-md px-3 py-1.5">Settings</TabsTrigger>
-            </TabsList>
-          </ScrollArea>
+        <div className="flex-1 overflow-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Tab Content */}
+        <div className="space-y-6">
 
-          <TabsContent value="overview" className="space-y-6">
+          {activeTab === "overview" && <div className="space-y-6">
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
@@ -307,49 +297,21 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="users">
-            <AdminUsersTab />
-          </TabsContent>
-
-          <TabsContent value="kyc">
-            <AdminKycTab />
-          </TabsContent>
-
-          <TabsContent value="transactions">
-            <AdminTransactionsTab />
-          </TabsContent>
-
-          <TabsContent value="cards">
-            <AdminCardsTab />
-          </TabsContent>
-
-          <TabsContent value="whatsapp">
-            <AdminWhatsAppTab />
-          </TabsContent>
-
-          <TabsContent value="messaging">
-            <MessagingSettings />
-          </TabsContent>
-
-          <TabsContent value="templates">
-            <WhatsAppTemplates />
-          </TabsContent>
-
-          <TabsContent value="database">
-            <DatabaseManagementTab />
-          </TabsContent>
-
-          <TabsContent value="logs">
-            <AdminLogsTab />
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <AdminSettingsTab />
-          </TabsContent>
-        </Tabs>
-      </div>
+          {activeTab === "users" && <AdminUsersTab />}
+          {activeTab === "kyc" && <AdminKycTab />}
+          {activeTab === "transactions" && <AdminTransactionsTab />}
+          {activeTab === "cards" && <AdminCardsTab />}
+          {activeTab === "whatsapp" && <AdminWhatsAppTab />}
+          {activeTab === "messaging" && <MessagingSettings />}
+          {activeTab === "templates" && <WhatsAppTemplates />}
+          {activeTab === "activity" && <UserActivityLogs />}
+          {activeTab === "database" && <DatabaseManagementTab />}
+          {activeTab === "logs" && <AdminLogsTab />}
+          {activeTab === "settings" && <AdminSettingsTab />}
+        </div>
+        </div>
     </div>
   );
 }
