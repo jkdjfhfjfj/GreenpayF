@@ -530,6 +530,28 @@ export const userActivityLog = pgTable("user_activity_log", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Loans table - Performance-based lending
+export const loans = pgTable("loans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("USD"),
+  status: text("status").default("active"), // active, completed, defaulted, cancelled
+  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).default("5.00"), // Annual percentage
+  repaymentPeriodMonths: integer("repayment_period_months").default(12),
+  monthlyPayment: decimal("monthly_payment", { precision: 10, scale: 2 }).notNull(),
+  remainingBalance: decimal("remaining_balance", { precision: 10, scale: 2 }).notNull(),
+  disbursedAt: timestamp("disbursed_at").defaultNow(),
+  dueDate: timestamp("due_date").notNull(),
+  nextPaymentDate: timestamp("next_payment_date"),
+  totalPaymentsMade: decimal("total_payments_made", { precision: 10, scale: 2 }).default("0.00"),
+  paymentsMissed: integer("payments_missed").default(0),
+  performanceScore: integer("performance_score").default(100), // 0-100 based on account activity
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas for new tables
 export const insertSavingsGoalSchema = createInsertSchema(savingsGoals).omit({
   id: true,

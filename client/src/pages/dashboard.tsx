@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Notifications from "@/components/notifications";
-import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard } from "lucide-react";
+import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard, Zap, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber } from "@/lib/formatters";
 
@@ -575,6 +575,34 @@ export default function DashboardPage() {
               <div className="text-left">
                 <p className="font-semibold text-sm mb-1">Settings</p>
                 <p className="text-xs text-muted-foreground">Preferences & security</p>
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/loans")}
+              className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-3 shadow-md">
+                <DollarSign className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-sm mb-1">Loans</p>
+                <p className="text-xs text-muted-foreground">Borrow easily</p>
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/api-service")}
+              className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-3 shadow-md">
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-sm mb-1">API Services</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Coming soon</p>
               </div>
             </motion.button>
           </div>

@@ -50,6 +50,8 @@ import SecurityLanding from "@/pages/landing/security";
 import ContactLanding from "@/pages/landing/contact";
 import TermsAndConditionsPage from "@/pages/terms-and-conditions";
 import PrivacyPolicyPage from "@/pages/privacy-policy";
+import LoansPage from "@/pages/loans";
+import APIServicePage from "@/pages/api-service";
 
 // User Route Guard Component
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -144,6 +146,8 @@ function Router() {
       <Route path="/contact" component={ContactLanding} />
       <Route path="/terms" component={TermsAndConditionsPage} />
       <Route path="/privacy" component={PrivacyPolicyPage} />
+      <Route path="/loans" component={LoansPage} />
+      <Route path="/api-service" component={APIServicePage} />
       {/* Admin routes - protected by AdminRoute guard */}
       <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin/login" component={AdminLogin} />
