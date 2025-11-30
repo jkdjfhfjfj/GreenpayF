@@ -259,7 +259,8 @@ export default function SettingsPage() {
     onSuccess: (data) => {
       setQrCodeUrl(data.qrCodeUrl);
       setTwoFASecret(data.secret);
-      setBackupCodes(data.backupCodes || []);
+      // Store backup codes in state so they persist through verification
+      setBackupCodes(Array.isArray(data.backupCodes) ? data.backupCodes : []);
       setTwoFAStep('qr');
       setIs2FASetup(true);
     },
@@ -281,6 +282,7 @@ export default function SettingsPage() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Backup codes should already be in state from setup mutation
       setTwoFAStep('backup');
       setVerificationCode('');
       toast({
@@ -1007,46 +1009,80 @@ export default function SettingsPage() {
             )}
 
             {/* Backup Codes Step */}
-            {twoFAStep === 'backup' && backupCodes.length > 0 && (
+            {twoFAStep === 'backup' && (
               <div className="space-y-4">
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 p-3 rounded-lg">
-                  <p className="text-sm text-amber-900 dark:text-amber-200">
-                    <strong>Save these backup codes in a safe place.</strong> You can use them to access your account if you lose your authenticator device.
-                  </p>
-                </div>
-                <div className="bg-muted p-4 rounded-lg space-y-2 max-h-48 overflow-y-auto">
-                  {backupCodes.map((code, idx) => (
-                    <div key={idx} className="font-mono text-sm flex items-center justify-between">
-                      <span>{code}</span>
-                      <span className="text-xs text-muted-foreground">#{idx + 1}</span>
+                {backupCodes.length > 0 ? (
+                  <>
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 p-3 rounded-lg">
+                      <p className="text-sm text-amber-900 dark:text-amber-200">
+                        <strong>✓ Save these backup codes in a safe place.</strong> You can use them to access your account if you lose your authenticator device.
+                      </p>
                     </div>
-                  ))}
-                </div>
-                <Button 
-                  onClick={() => {
-                    const text = backupCodes.join('\n');
-                    navigator.clipboard.writeText(text);
-                    toast({
-                      title: "Copied",
-                      description: "Backup codes copied to clipboard"
-                    });
-                  }}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Copy All Codes
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setIs2FASetup(false);
-                    setTwoFAStep('qr');
-                    setVerificationCode('');
-                    handleSettingUpdate('twoFactorEnabled', true);
-                  }}
-                  className="w-full"
-                >
-                  Done
-                </Button>
+                    <div className="bg-muted p-4 rounded-lg space-y-2 max-h-64 overflow-y-auto border border-border">
+                      {backupCodes.map((code, idx) => (
+                        <div key={idx} className="font-mono text-sm font-medium flex items-center justify-between bg-background/50 p-2 rounded">
+                          <span className="tracking-wider">{code}</span>
+                          <span className="text-xs text-muted-foreground ml-2">#{idx + 1}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => {
+                          const text = backupCodes.join('\n');
+                          navigator.clipboard.writeText(text);
+                          toast({
+                            title: "Copied",
+                            description: "All backup codes copied to clipboard"
+                          });
+                        }}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <span className="material-icons text-sm mr-1">content_copy</span>
+                        Copy
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          const text = backupCodes.join('\n');
+                          const element = document.createElement('a');
+                          element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+                          element.setAttribute('download', 'backup-codes.txt');
+                          element.style.display = 'none';
+                          document.body.appendChild(element);
+                          element.click();
+                          document.body.removeChild(element);
+                          toast({
+                            title: "Downloaded",
+                            description: "Backup codes downloaded as file"
+                          });
+                        }}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <span className="material-icons text-sm mr-1">download</span>
+                        Save
+                      </Button>
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        setIs2FASetup(false);
+                        setTwoFAStep('qr');
+                        setVerificationCode('');
+                        setBackupCodes([]);
+                        handleSettingUpdate('twoFactorEnabled', true);
+                      }}
+                      className="w-full"
+                    >
+                      I've Saved My Codes - Done
+                    </Button>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <span className="material-icons text-4xl text-muted-foreground mb-2">hourglass_empty</span>
+                    <p className="text-muted-foreground">Loading backup codes...</p>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
