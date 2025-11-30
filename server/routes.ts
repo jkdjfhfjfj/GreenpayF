@@ -1826,6 +1826,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bill payment endpoint - KPLC, Zuku, StartimesTV, Nairobi Water, etc
+  app.post("/api/bills/pay", async (req, res) => {
+    try {
+      const { userId, provider, meterNumber, accountNumber, amount } = req.body;
+
+      console.log(`💳 Bill payment request - User: ${userId}, Provider: ${provider}, Amount: ${amount} KES`);
+
+      if (!userId || !provider || !amount || (!meterNumber && !accountNumber)) {
+        console.warn(`⚠️ Missing required fields in bill payment request`);
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        console.error(`❌ User not found: ${userId}`);
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(`👤 User ${user.fullName} - KES Balance: ${user.kesBalance}`);
+
+      const kesBalance = parseFloat(user.kesBalance || "0");
+      const paymentAmount = parseFloat(amount);
+      
+      if (kesBalance < paymentAmount) {
+        console.warn(`⚠️ Insufficient balance - Required: ${paymentAmount}, Available: ${kesBalance}`);
+        return res.status(400).json({ 
+          message: "Insufficient KES balance. Please convert USD to KES using the Exchange feature." 
+        });
+      }
+
+      // Create bill payment record
+      const billPayment = await storage.createBillPayment({
+        userId,
+        provider,
+        meterNumber: meterNumber || null,
+        accountNumber: accountNumber || null,
+        amount: amount.toString(),
+        currency: "KES",
+        status: "completed",
+        fee: "0.00",
+        description: `Bill payment for ${provider}${meterNumber ? ` (${meterNumber})` : accountNumber ? ` (${accountNumber})` : ''}`,
+        reference: `BP-${Date.now()}`,
+        metadata: { meterNumber, accountNumber, provider }
+      });
+
+      console.log(`💾 Bill payment created: ${billPayment.id}`);
+
+      // Create transaction record
+      await storage.createTransaction({
+        userId,
+        type: "bill_payment",
+        amount: amount.toString(),
+        currency: "KES",
+        status: "completed",
+        fee: "0.00",
+        description: `Bill payment - ${provider}`,
+        reference: billPayment.reference,
+        metadata: { billPaymentId: billPayment.id, provider }
+      });
+
+      // Update user KES balance
+      const newKesBalance = kesBalance - paymentAmount;
+      await storage.updateUser(userId, { kesBalance: newKesBalance.toFixed(2) });
+      
+      console.log(`✅ Updated user balance: ${kesBalance} -> ${newKesBalance}`);
+      console.log(`🎉 Bill payment completed successfully`);
+
+      res.json({ 
+        success: true,
+        message: "Bill payment successful",
+        billPayment,
+        newBalance: newKesBalance.toFixed(2)
+      });
+    } catch (error) {
+      console.error('❌ Bill payment error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Error processing bill payment";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+
+  // Get bill payments history
+  app.get("/api/bills/history/:userId", requireAuth, async (req, res) => {
+    try {
+      const payments = await storage.getBillPaymentsByUserId(req.params.userId);
+      res.json({ payments });
+    } catch (error) {
+      console.error('Error fetching bill payments:', error);
+      res.status(500).json({ message: "Error fetching bill payments" });
+    }
+  });
+
   app.get("/api/virtual-card/:userId", requireAuth, async (req, res) => {
     try {
       const card = await storage.getVirtualCardByUserId(req.params.userId);

@@ -237,6 +237,12 @@ export interface IStorage {
   getWhatsappConfig(): Promise<WhatsappConfig | undefined>;
   updateWhatsappConfig(updates: Partial<WhatsappConfig>): Promise<WhatsappConfig | undefined>;
   initWhatsappConfig(): Promise<WhatsappConfig>;
+
+  // Bill Payment operations
+  createBillPayment(payment: InsertBillPayment): Promise<BillPayment>;
+  getBillPaymentsByUserId(userId: string): Promise<BillPayment[]>;
+  getBillPayment(id: string): Promise<BillPayment | undefined>;
+  updateBillPayment(id: string, updates: Partial<BillPayment>): Promise<BillPayment | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -2003,6 +2009,41 @@ export class DatabaseStorage implements IStorage {
     if (!config) return await this.initWhatsappConfig();
     const [updated] = await db.update(whatsappConfig).set(updates).where(eq(whatsappConfig.id, config.id)).returning();
     return updated || undefined;
+  }
+
+  // Bill Payment operations
+  async createBillPayment(payment: InsertBillPayment): Promise<BillPayment> {
+    const [billPayment] = await db
+      .insert(billPayments)
+      .values(payment)
+      .returning();
+    return billPayment;
+  }
+
+  async getBillPaymentsByUserId(userId: string): Promise<BillPayment[]> {
+    const payments = await db
+      .select()
+      .from(billPayments)
+      .where(eq(billPayments.userId, userId))
+      .orderBy(desc(billPayments.createdAt));
+    return payments;
+  }
+
+  async getBillPayment(id: string): Promise<BillPayment | undefined> {
+    const [payment] = await db
+      .select()
+      .from(billPayments)
+      .where(eq(billPayments.id, id));
+    return payment || undefined;
+  }
+
+  async updateBillPayment(id: string, updates: Partial<BillPayment>): Promise<BillPayment | undefined> {
+    const [payment] = await db
+      .update(billPayments)
+      .set(updates)
+      .where(eq(billPayments.id, id))
+      .returning();
+    return payment || undefined;
   }
 
   async initWhatsappConfig(): Promise<WhatsappConfig> {
