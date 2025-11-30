@@ -302,10 +302,9 @@ export default function AdminLogin() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Sign In</TabsTrigger>
               <TabsTrigger value="status">Table Status</TabsTrigger>
-              <TabsTrigger value="restore">Restore Database</TabsTrigger>
             </TabsList>
 
             {/* Login Tab */}
@@ -474,15 +473,36 @@ export default function AdminLogin() {
                     </div>
 
                     {tableStatus.missingTables.length > 0 && (
-                      <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                        <h4 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Missing Tables ({tableStatus.missingTables.length})</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {tableStatus.missingTables.map((table: string) => (
-                            <span key={table} className="text-xs bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 px-2 py-1 rounded font-mono">
-                              {table}
-                            </span>
-                          ))}
+                      <div className="space-y-3">
+                        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                          <h4 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Missing Tables ({tableStatus.missingTables.length})</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {tableStatus.missingTables.map((table: string) => (
+                              <span key={table} className="text-xs bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 px-2 py-1 rounded font-mono">
+                                {table}
+                              </span>
+                            ))}
+                          </div>
                         </div>
+
+                        <Button
+                          onClick={handleInitializeTables}
+                          disabled={isInitializing}
+                          className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                          size="lg"
+                        >
+                          {isInitializing ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Creating Tables...
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Zap className="w-4 h-4" />
+                              Create Missing Tables
+                            </div>
+                          )}
+                        </Button>
                       </div>
                     )}
 
@@ -494,114 +514,6 @@ export default function AdminLogin() {
               </div>
             </TabsContent>
 
-            {/* Restore Database Tab */}
-            <TabsContent value="restore" className="space-y-4 mt-4">
-              {error && (
-                <div className="p-4 rounded-lg flex gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-red-800 dark:text-red-300">
-                      Render Error
-                    </p>
-                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                      {error}
-                    </p>
-                  </div>
-                </div>
-              )}
-              <form onSubmit={handleRestoreSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <FormLabel>Select Backup File</FormLabel>
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-green-400 transition-colors">
-                      <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".json,.sql,.gz"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setRestoreFile(file);
-                            setRestoreStatus(null);
-                          }
-                        }}
-                        disabled={isRestoring}
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isRestoring}
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        Click to select backup file
-                      </button>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Supported: JSON, SQL, or GZ files
-                      </p>
-                      {restoreFile && (
-                        <p className="text-sm text-green-600 font-medium mt-2">
-                          Selected: {restoreFile.name}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {restoreStatus && (
-                    <div
-                      className={`p-4 rounded-lg flex gap-3 ${
-                        restoreStatus.success
-                          ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
-                          : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-                      }`}
-                    >
-                      {restoreStatus.success ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                      )}
-                      <div className="flex-1">
-                        <p
-                          className={`text-sm font-medium ${
-                            restoreStatus.success
-                              ? "text-green-800 dark:text-green-300"
-                              : "text-red-800 dark:text-red-300"
-                          }`}
-                        >
-                          {restoreStatus.message}
-                        </p>
-                        {restoreStatus.recordsRestored && (
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            Records restored: {JSON.stringify(restoreStatus.recordsRestored).slice(0, 100)}...
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isRestoring || !restoreFile}
-                  >
-                    {isRestoring ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Restoring...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Upload className="w-4 h-4" />
-                        Restore Database
-                      </div>
-                    )}
-                  </Button>
-
-                  <p className="text-xs text-gray-500 text-center">
-                    Restore your database from a previously exported backup file. This will replace current data with backup data.
-                  </p>
-              </form>
-            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
