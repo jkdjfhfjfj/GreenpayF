@@ -216,30 +216,6 @@ export default function APIServicePage() {
                   <Code className="w-4 h-4 mr-2" />
                   Documentation
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    window.open(
-                      "https://docs.greenpay.world/api",
-                      "_blank"
-                    )
-                  }
-                >
-                  External Docs
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    window.open(
-                      "https://docs.greenpay.world/api-keys",
-                      "_blank"
-                    )
-                  }
-                >
-                  Key Management
-                </Button>
               </div>
             </div>
             <Code className="w-16 h-16 text-primary/30" />
