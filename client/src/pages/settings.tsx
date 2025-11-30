@@ -349,7 +349,7 @@ export default function SettingsPage() {
 
       // Request biometric from device
       const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const publicKeyCreationOptions: PublicKeyCredentialCreationOptions = {
+      const publicKeyCreationOptions = {
         challenge,
         rp: { name: "GreenPay", id: window.location.hostname },
         user: {
@@ -362,8 +362,8 @@ export default function SettingsPage() {
           { alg: -257, type: "public-key" as const },
         ],
         timeout: 60000,
-        userVerification: "preferred" as const,
-      };
+        userVerification: "preferred",
+      } as PublicKeyCredentialCreationOptions;
 
       const credential = await navigator.credentials.create({
         publicKey: publicKeyCreationOptions,

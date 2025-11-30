@@ -576,7 +576,7 @@ export default function TransactionsPage() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-card w-full md:max-w-md md:rounded-xl rounded-t-2xl p-4 md:p-6 max-h-[90vh] overflow-y-auto space-y-4"
+            className="bg-card w-full md:max-w-md md:rounded-xl rounded-t-2xl p-4 md:p-6 pb-32 md:pb-6 max-h-[90vh] overflow-y-auto space-y-4"
           >
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-border">
