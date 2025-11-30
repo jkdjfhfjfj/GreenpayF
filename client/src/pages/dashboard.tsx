@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Notifications from "@/components/notifications";
-import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard } from "lucide-react";
+import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber } from "@/lib/formatters";
 
@@ -155,7 +155,7 @@ export default function DashboardPage() {
         className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
       >
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
+          <div className="flex items-center flex-1">
             {user?.profilePhotoUrl ? (
               <img 
                 src={user.profilePhotoUrl} 
@@ -173,6 +173,16 @@ export default function DashboardPage() {
               <h1 className="font-bold text-lg">Hi, {user?.fullName?.split(' ')[0] || 'John'}!</h1>
               <p className="text-xs text-white/80">Welcome back 👋</p>
             </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation('/settings')}
+            className="text-white hover:bg-white/20 transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-6 h-6" />
+          </Button>
           </div>
           <div className="flex items-center space-x-2">
             <Notifications />
