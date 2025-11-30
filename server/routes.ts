@@ -2068,12 +2068,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { secret, qrCodeUrl, backupCodes } = twoFactorService.generateSecret(user.email);
-      const qrCode = await twoFactorService.generateQRCode(secret, user.email);
       
       // Store secret temporarily (user needs to verify before enabling)
       await storage.updateUser(userId, { twoFactorSecret: secret });
       
-      res.json({ qrCode, backupCodes, secret });
+      res.json({ qrCodeUrl, backupCodes, secret });
     } catch (error) {
       console.error('2FA setup error:', error);
       res.status(500).json({ message: "Error setting up 2FA" });
@@ -2330,6 +2329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (pushNotificationsEnabled !== undefined) updateData.pushNotificationsEnabled = pushNotificationsEnabled;
       if (twoFactorEnabled !== undefined) updateData.twoFactorEnabled = twoFactorEnabled;
       if (biometricEnabled !== undefined) updateData.biometricEnabled = biometricEnabled;
+      if (darkMode !== undefined) updateData.darkMode = darkMode;
       
       const user = await storage.updateUser(userId, updateData);
       

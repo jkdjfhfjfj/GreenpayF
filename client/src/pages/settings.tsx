@@ -43,6 +43,7 @@ export default function SettingsPage() {
     pushNotificationsEnabled: user?.pushNotificationsEnabled !== false,
     twoFactorEnabled: user?.twoFactorEnabled || false,
     biometricEnabled: user?.biometricEnabled || false,
+    darkMode: user?.darkMode || false,
   });
 
   // Profile editing states
