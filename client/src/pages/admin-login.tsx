@@ -27,34 +27,8 @@ export default function AdminLogin() {
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreStatus, setRestoreStatus] = useState<{ success?: boolean; message?: string; recordsRestored?: any } | null>(null);
-  const [dbStatus, setDbStatus] = useState<{ connected: boolean; message: string } | null>(null);
-  const [checkingDb, setCheckingDb] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  // Check database connection on component mount
-  useEffect(() => {
-    checkDatabaseConnection();
-  }, []);
-
-  const checkDatabaseConnection = async () => {
-    try {
-      setCheckingDb(true);
-      const response = await fetch("/api/admin/database/check");
-      const result = await response.json();
-      setDbStatus({
-        connected: response.ok,
-        message: result.message || (response.ok ? "Database connected" : "Database disconnected"),
-      });
-    } catch (error) {
-      setDbStatus({
-        connected: false,
-        message: "Unable to reach database service",
-      });
-    } finally {
-      setCheckingDb(false);
-    }
-  };
 
   const form = useForm<AdminLoginForm>({
     resolver: zodResolver(adminLoginSchema),
@@ -184,34 +158,6 @@ export default function AdminLogin() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Database Connection Status */}
-          {dbStatus && !checkingDb && (
-            <div
-              className={`mb-4 p-3 rounded-lg flex gap-2 items-start ${
-                dbStatus.connected
-                  ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
-                  : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-              }`}
-            >
-              {dbStatus.connected ? (
-                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-              )}
-              <div>
-                <p
-                  className={`text-sm font-medium ${
-                    dbStatus.connected
-                      ? "text-green-800 dark:text-green-300"
-                      : "text-red-800 dark:text-red-300"
-                  }`}
-                >
-                  {dbStatus.message}
-                </p>
-              </div>
-            </div>
-          )}
-
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Sign In</TabsTrigger>
@@ -319,21 +265,7 @@ export default function AdminLogin() {
 
             {/* Restore Database Tab */}
             <TabsContent value="restore" className="space-y-4 mt-4">
-              {!dbStatus?.connected && !checkingDb && (
-                <div className="p-4 rounded-lg flex gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-red-800 dark:text-red-300">
-                      Database Not Connected
-                    </p>
-                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                      Cannot restore database while connection is unavailable. Please check your database connection and try again.
-                    </p>
-                  </div>
-                </div>
-              )}
-              {dbStatus?.connected && (
-                <form onSubmit={handleRestoreSubmit} className="space-y-4">
+              <form onSubmit={handleRestoreSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <FormLabel>Select Backup File</FormLabel>
                     <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-green-400 transition-colors">
@@ -424,8 +356,7 @@ export default function AdminLogin() {
                   <p className="text-xs text-gray-500 text-center">
                     Restore your database from a previously exported backup file. This will replace current data with backup data.
                   </p>
-                </form>
-              )}
+              </form>
             </TabsContent>
           </Tabs>
         </CardContent>
