@@ -136,7 +136,7 @@ export default function WithdrawPage() {
 
   const getWithdrawFee = () => {
     const method = withdrawMethods.find(m => m.id === selectedMethod);
-    return method?.fee || "$2.99";
+    return method?.fee || "KSh 2.99";
   };
 
   return (
@@ -155,7 +155,10 @@ export default function WithdrawPage() {
         >
           arrow_back
         </motion.button>
-        <h1 className="text-lg font-semibold">Withdraw Money</h1>
+        <div>
+          <h1 className="text-lg font-semibold">Withdraw Money</h1>
+          <p className="text-xs text-muted-foreground">Admin limit: Up to 100k</p>
+        </div>
       </motion.div>
 
       <div className="p-6 space-y-6">
@@ -191,7 +194,7 @@ export default function WithdrawPage() {
               <div>
                 <p className="font-medium text-blue-900 dark:text-blue-200 text-sm mb-1">Convert USD to KES First</p>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
-                  Withdrawals require KES balance. You have ${formatNumber(usdBalance)} USD available to convert.
+                  Withdrawals require KES balance. You have $USD {formatNumber(usdBalance)} available to convert.
                 </p>
                 <Button
                   type="button"
@@ -516,7 +519,7 @@ export default function WithdrawPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Withdrawal Amount</span>
-                  <span className="font-medium">${form.watch("amount") || "0.00"}</span>
+                  <span className="font-medium">KSh {form.watch("amount") || "0.00"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Processing Fee</span>
@@ -538,8 +541,8 @@ export default function WithdrawPage() {
                 <div className="flex justify-between font-bold">
                   <span>You Receive</span>
                   <span className="text-primary">
-                    ${form.watch("amount") ? 
-                      formatNumber(parseFloat(form.watch("amount")) - parseFloat(getWithdrawFee().replace('$', ''))) : 
+                    KSh {form.watch("amount") ? 
+                      formatNumber(parseFloat(form.watch("amount")) - parseFloat(getWithdrawFee().replace('KSh ', ''))) : 
                       "0.00"}
                   </span>
                 </div>
@@ -557,7 +560,7 @@ export default function WithdrawPage() {
                 disabled={withdrawMutation.isPending || !selectedMethod}
                 data-testid="button-confirm-withdrawal"
               >
-                {withdrawMutation.isPending ? "Processing..." : `Withdraw $${form.watch("amount") || "0.00"}`}
+                {withdrawMutation.isPending ? "Processing..." : `Withdraw KSh ${form.watch("amount") || "0.00"}`}
               </Button>
             </motion.div>
           </form>
