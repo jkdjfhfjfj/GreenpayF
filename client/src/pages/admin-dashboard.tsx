@@ -337,6 +337,10 @@ export default function AdminDashboard() {
             <WhatsAppTemplates />
           </TabsContent>
 
+          <TabsContent value="database">
+            <DatabaseManagementTab />
+          </TabsContent>
+
           <TabsContent value="logs">
             <AdminLogsTab />
           </TabsContent>
