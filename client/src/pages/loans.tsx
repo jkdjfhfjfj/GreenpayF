@@ -370,6 +370,3 @@ export default function LoansPage() {
     </div>
   );
 }
-
-// Helper: determine eligibility
-const const eligibleDerived = eligible;
