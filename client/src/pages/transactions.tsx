@@ -30,6 +30,7 @@ export default function TransactionsPage() {
   const [exportEmail, setExportEmail] = useState("");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({});
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -42,8 +43,31 @@ export default function TransactionsPage() {
 
   const transactions = (transactionData as any)?.transactions || [];
 
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/transactions", user?.id] });
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    toast({
+      title: "Refreshing...",
+      description: "Loading your latest transactions",
+    });
+    
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["/api/transactions", user?.id] });
+      // Wait a moment for the query to complete
+      setTimeout(() => {
+        setIsRefreshing(false);
+        toast({
+          title: "Refreshed!",
+          description: `${transactions.length} transactions loaded`,
+        });
+      }, 500);
+    } catch (error) {
+      setIsRefreshing(false);
+      toast({
+        title: "Error",
+        description: "Failed to refresh transactions",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredTransactions = transactions.filter((transaction: any) => {
@@ -189,11 +213,16 @@ export default function TransactionsPage() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleRefresh}
-              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors text-xs md:text-sm"
-              title="Refresh Transactions"
+              disabled={isRefreshing}
+              className={`flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg text-white transition-colors text-xs md:text-sm ${
+                isRefreshing 
+                  ? 'bg-green-600 cursor-not-allowed' 
+                  : 'bg-green-500 hover:bg-green-600'
+              }`}
+              title={isRefreshing ? "Refreshing..." : "Refresh Transactions"}
             >
-              <RefreshCw className="h-4 w-4" />
-              <span className="hidden sm:inline font-medium">Refresh</span>
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline font-medium">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
             </motion.button>
 
             <motion.button
