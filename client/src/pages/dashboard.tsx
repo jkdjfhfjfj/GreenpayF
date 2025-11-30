@@ -188,7 +188,7 @@ export default function DashboardPage() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={toggleDarkMode}
-              className="p-2 rounded-full hover:opacity-80 transition-opacity"
+              className="p-2 rounded-full hover:opacity-80 transition-opacity mr-2"
               data-testid="button-dark-mode"
             >
               <span className="material-icons text-white text-xl">brightness_6</span>
