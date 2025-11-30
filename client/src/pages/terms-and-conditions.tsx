@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ScrollText, BadgeCheck, AlertCircle, Lock, DollarSign, Shield, Gavel } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function TermsAndConditionsPage() {
@@ -11,8 +11,8 @@ export default function TermsAndConditionsPage() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
       },
     },
   };
@@ -27,26 +27,31 @@ export default function TermsAndConditionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 p-4">
       <motion.div
         className="max-w-4xl mx-auto"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Header */}
+        {/* Header with Hero */}
         <motion.div variants={itemVariants} className="mb-8 flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setLocation("/login")}
-            className="rounded-full"
+            className="rounded-full hover:bg-blue-100 dark:hover:bg-slate-800"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            Terms and Conditions
-          </h1>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Terms and Conditions
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Important legal information for using GreenPay
+            </p>
+          </div>
         </motion.div>
 
         {/* Last Updated */}
@@ -57,26 +62,57 @@ export default function TermsAndConditionsPage() {
           Last updated: November 30, 2025
         </motion.p>
 
+        {/* Quick Links */}
+        <motion.div
+          variants={itemVariants}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+        >
+          {[
+            { icon: Lock, label: "Your Rights", color: "from-blue-500" },
+            { icon: DollarSign, label: "Payment Terms", color: "from-indigo-500" },
+            { icon: Shield, label: "Security", color: "from-purple-500" },
+          ].map((item, idx) => (
+            <motion.div
+              key={idx}
+              whileHover={{ scale: 1.05 }}
+              className={`bg-gradient-to-br ${item.color} to-slate-100 dark:to-slate-800 rounded-lg p-4 shadow-md`}
+            >
+              <item.icon className="w-8 h-8 text-slate-900 dark:text-white mb-2" />
+              <p className="font-semibold text-slate-900 dark:text-white">{item.label}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+
         {/* Content */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8 space-y-8"
+          className="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-8 md:p-12 space-y-8 border border-blue-100 dark:border-slate-700"
         >
           <motion.section variants={itemVariants}>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-              1. Acceptance of Terms
-            </h2>
+            <div className="flex items-start gap-3 mb-4">
+              <BadgeCheck className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  1. Acceptance of Terms
+                </h2>
+              </div>
+            </div>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
               By accessing and using GreenPay ("the Application"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
           </motion.section>
 
           <motion.section variants={itemVariants}>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-              2. Use License
-            </h2>
+            <div className="flex items-start gap-3 mb-4">
+              <Lock className="w-6 h-6 text-indigo-600 flex-shrink-0 mt-1" />
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  2. Use License
+                </h2>
+              </div>
+            </div>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
               Permission is granted to temporarily download one copy of the materials (information or software) on GreenPay for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:
             </p>
@@ -282,13 +318,20 @@ export default function TermsAndConditionsPage() {
           </motion.section>
         </motion.div>
 
-        {/* Action Button */}
-        <motion.div variants={itemVariants} className="mt-8 flex justify-center">
+        {/* Action Buttons */}
+        <motion.div variants={itemVariants} className="mt-8 flex justify-center gap-4 flex-wrap">
           <Button
             onClick={() => setLocation("/login")}
-            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8"
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8"
           >
             Back to Login
+          </Button>
+          <Button
+            onClick={() => setLocation("/privacy")}
+            variant="outline"
+            className="border-blue-200 dark:border-blue-800"
+          >
+            Privacy Policy
           </Button>
         </motion.div>
       </motion.div>

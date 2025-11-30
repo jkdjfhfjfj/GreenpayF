@@ -286,13 +286,27 @@ export default function SignupPage() {
                     <div className="space-y-1 leading-none">
                       <span className="text-sm text-muted-foreground">
                         I agree to the{" "}
-                        <a href="#" className="text-primary hover:underline">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setLocation("/terms");
+                          }}
+                          className="text-primary hover:underline font-medium"
+                        >
                           Terms of Service
-                        </a>{" "}
+                        </button>{" "}
                         and{" "}
-                        <a href="#" className="text-primary hover:underline">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setLocation("/privacy");
+                          }}
+                          className="text-primary hover:underline font-medium"
+                        >
                           Privacy Policy
-                        </a>
+                        </button>
                       </span>
                       <FormMessage />
                     </div>
