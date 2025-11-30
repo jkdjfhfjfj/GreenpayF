@@ -498,34 +498,35 @@ export default function TransactionsPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-card p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors elevation-1 cursor-pointer"
+                  onClick={() => setSelectedTransaction(transaction)}
+                  className="bg-card p-3 md:p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors elevation-1 cursor-pointer"
                   data-testid={`transaction-${transaction.id}`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className={`w-10 h-10 ${iconData.bg} rounded-full flex items-center justify-center mr-3`}>
-                        <span className={`material-icons text-sm ${iconData.color}`}>{iconData.icon}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                      <div className={`w-10 h-10 md:w-12 md:h-12 ${iconData.bg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <span className={`material-icons text-sm md:text-base ${iconData.color}`}>{iconData.icon}</span>
                       </div>
-                      <div>
-                        <p className="font-medium" data-testid={`text-recipient-${transaction.id}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm md:text-base truncate" data-testid={`text-recipient-${transaction.id}`}>
                           {recipientName}
                         </p>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <span data-testid={`text-date-${transaction.id}`}>
+                        <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
+                          <span data-testid={`text-date-${transaction.id}`} className="whitespace-nowrap">
                             {transactionDate}
                           </span>
                           {transaction.description && (
                             <>
                               <span>•</span>
-                              <span>{transaction.description}</span>
+                              <span className="truncate">{transaction.description}</span>
                             </>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center justify-end space-x-2 mb-1">
-                        <p className={`font-semibold ${
+                    <div className="text-right flex-shrink-0">
+                      <div className="flex items-center justify-end gap-1 md:gap-2 mb-1">
+                        <p className={`font-semibold text-sm md:text-base ${
                           transaction.status === "failed" 
                             ? "text-muted-foreground" 
                             : transaction.type === "send" || transaction.type === "withdraw" || transaction.type === "card_purchase" || transaction.type === "exchange"
@@ -534,7 +535,7 @@ export default function TransactionsPage() {
                         }`} data-testid={`text-amount-${transaction.id}`}>
                           {prefix}{getCurrencySymbol(transaction.currency)}{formatNumber(transaction.amount)}
                         </p>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap ${
                           transaction.currency?.toUpperCase() === 'KES' 
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
@@ -542,9 +543,9 @@ export default function TransactionsPage() {
                           {transaction.currency?.toUpperCase() || 'USD'}
                         </span>
                       </div>
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end gap-1 md:gap-2">
                         {transaction.metadata?.convertedAmount && transaction.metadata?.targetCurrency && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
                             ≈ {transaction.metadata.targetCurrency} {formatNumber(transaction.metadata.convertedAmount)}
                           </span>
                         )}
@@ -560,6 +561,200 @@ export default function TransactionsPage() {
           )}
         </motion.div>
       </div>
+
+      {/* Transaction Detail Modal */}
+      {selectedTransaction && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setSelectedTransaction(null)}
+          className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center"
+        >
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card w-full md:max-w-md md:rounded-xl rounded-t-2xl p-4 md:p-6 max-h-[90vh] overflow-y-auto space-y-4"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-border">
+              <h2 className="text-xl font-bold">Transaction Details</h2>
+              <button
+                onClick={() => setSelectedTransaction(null)}
+                className="text-muted-foreground hover:text-foreground p-2"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Main Amount Display */}
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4 rounded-lg text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {selectedTransaction.type === 'send' ? 'Sent to' : selectedTransaction.type === 'receive' ? 'Received from' : 'Transaction'}
+              </p>
+              <p className="text-3xl font-bold text-primary">
+                {getAmountPrefix(selectedTransaction.type, selectedTransaction.status)}{getCurrencySymbol(selectedTransaction.currency)}{formatNumber(selectedTransaction.amount)}
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                  selectedTransaction.currency?.toUpperCase() === 'KES' 
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                }`}>
+                  {selectedTransaction.currency?.toUpperCase() || 'USD'}
+                </span>
+                <span className={`px-2 py-1 rounded text-xs font-semibold capitalize ${
+                  selectedTransaction.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                  selectedTransaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                }`}>
+                  {selectedTransaction.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Details Grid */}
+            <div className="space-y-3">
+              {/* Recipient/Description */}
+              <div className="space-y-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+                  <User className="h-4 w-4" />
+                  {selectedTransaction.type === 'send' ? 'Recipient' : selectedTransaction.type === 'receive' ? 'Sender' : 'Type'}
+                </label>
+                <p className="text-base font-medium pl-6">
+                  {selectedTransaction.recipientDetails?.name || 
+                    (selectedTransaction.type === 'deposit' ? 'Wallet Top-up' : 
+                     selectedTransaction.type === 'withdraw' ? 'Bank Withdrawal' : 
+                     selectedTransaction.type === 'card_purchase' ? 'Virtual Card Purchase' :
+                     selectedTransaction.type === 'exchange' ? 'Currency Exchange' : 'Transaction')}
+                </p>
+              </div>
+
+              {/* Date */}
+              <div className="space-y-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+                  <Calendar className="h-4 w-4" />
+                  Date & Time
+                </label>
+                <p className="text-base font-medium pl-6">
+                  {new Date(selectedTransaction.createdAt).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                  })}
+                </p>
+              </div>
+
+              {/* Transaction ID */}
+              <div className="space-y-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+                  <Tag className="h-4 w-4" />
+                  Transaction ID
+                </label>
+                <div className="flex items-center gap-2 pl-6">
+                  <p className="text-xs font-mono text-primary break-all">{selectedTransaction.id}</p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedTransaction.id);
+                      toast({
+                        title: "Copied",
+                        description: "Transaction ID copied to clipboard"
+                      });
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-1"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Type */}
+              <div className="space-y-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+                  <Tag className="h-4 w-4" />
+                  Type
+                </label>
+                <p className="text-base font-medium pl-6 capitalize">{selectedTransaction.type.replace('_', ' ')}</p>
+              </div>
+
+              {/* Description if exists */}
+              {selectedTransaction.description && (
+                <div className="space-y-1">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+                    <Mail className="h-4 w-4" />
+                    Description
+                  </label>
+                  <p className="text-base font-medium pl-6">{selectedTransaction.description}</p>
+                </div>
+              )}
+
+              {/* Converted Amount if exists */}
+              {selectedTransaction.metadata?.convertedAmount && selectedTransaction.metadata?.targetCurrency && (
+                <div className="space-y-1">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+                    <DollarSign className="h-4 w-4" />
+                    Converted Amount
+                  </label>
+                  <p className="text-base font-medium pl-6">
+                    {selectedTransaction.metadata.targetCurrency} {formatNumber(selectedTransaction.metadata.convertedAmount)}
+                  </p>
+                </div>
+              )}
+
+              {/* Fee if exists */}
+              {selectedTransaction.metadata?.fee && (
+                <div className="space-y-1">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+                    <DollarSign className="h-4 w-4" />
+                    Fee
+                  </label>
+                  <p className="text-base font-medium pl-6 text-red-600">
+                    {getCurrencySymbol(selectedTransaction.currency)}{formatNumber(selectedTransaction.metadata.fee)}
+                  </p>
+                </div>
+              )}
+
+              {/* Status Details */}
+              {selectedTransaction.status === 'failed' && selectedTransaction.metadata?.errorMessage && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 p-3 rounded-lg space-y-1">
+                  <label className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase">
+                    Error Details
+                  </label>
+                  <p className="text-sm text-red-700 dark:text-red-400">{selectedTransaction.metadata.errorMessage}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-4 border-t border-border">
+              <button
+                onClick={() => {
+                  generateTransactionPDF([selectedTransaction], {
+                    fullName: user?.fullName,
+                    email: user?.email,
+                    phone: user?.phone
+                  });
+                }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </button>
+              <button
+                onClick={() => setSelectedTransaction(null)}
+                className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }
