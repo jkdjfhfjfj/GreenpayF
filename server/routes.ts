@@ -2224,10 +2224,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const stored = typeof u.biometricCredentialId === 'string' 
               ? JSON.parse(u.biometricCredentialId)
               : u.biometricCredentialId;
+            // credentialId is already base64 encoded
             return {
               credentialId: stored.credentialId,
-              type: "public-key" as const,
-              transports: ["internal", "usb", "ble"] as any
+              type: "public-key",
+              transports: ["internal", "usb", "ble", "nfc", "smart-card", "hybrid"]
             };
           } catch {
             return null;
