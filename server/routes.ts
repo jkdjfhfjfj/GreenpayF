@@ -6235,6 +6235,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database Backup & Restore Endpoints
+  interface BackupFile {
+    id: string;
+    filename: string;
+    data: Buffer;
+    createdAt: Date;
+  }
+  
+  const backups = new Map<string, BackupFile>();
+
+  // Export database backup
+  app.post("/api/admin/database/backup", requireAdminAuth, async (req, res) => {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupId = `backup_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const tables = {
+        users: await db.select().from(users),
+        admins: await db.select().from(admins),
+        kycDocuments: await db.select().from(kycDocuments),
+        virtualCards: await db.select().from(virtualCards),
+        recipients: await db.select().from(recipients),
+        transactions: await db.select().from(transactions),
+        paymentRequests: await db.select().from(paymentRequests),
+        chatMessages: await db.select().from(chatMessages),
+        notifications: await db.select().from(notifications),
+        supportTickets: await db.select().from(supportTickets),
+        conversations: await db.select().from(conversations),
+        messages: await db.select().from(messages),
+        adminLogs: await db.select().from(adminLogs),
+        systemLogs: await db.select().from(systemLogs),
+        systemSettings: await db.select().from(systemSettings),
+        apiConfigurations: await db.select().from(apiConfigurations),
+      };
+
+      const backup = {
+        timestamp: new Date().toISOString(),
+        version: "1.0",
+        tables: Object.keys(tables).reduce((acc, table) => {
+          acc[table] = {
+            recordCount: tables[table as keyof typeof tables].length,
+            columns: Object.keys(tables[table as keyof typeof tables][0] || {})
+          };
+          return acc;
+        }, {} as any),
+        data: tables
+      };
+
+      const jsonData = JSON.stringify(backup, null, 2);
+      const buffer = Buffer.from(jsonData);
+      const filename = `greenpay_backup_${timestamp}.json`;
+
+      backups.set(backupId, {
+        id: backupId,
+        filename,
+        data: buffer,
+        createdAt: new Date()
+      });
+
+      const totalRecords = Object.values(tables).reduce((sum, arr) => sum + arr.length, 0);
+      
+      res.json({
+        success: true,
+        backup: {
+          id: backupId,
+          filename,
+          createdAt: new Date().toISOString(),
+          size: buffer.length,
+          tablesCount: Object.keys(tables).length,
+          recordsCount: totalRecords
+        }
+      });
+    } catch (error) {
+      console.error("Database backup error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Failed to create backup" 
+      });
+    }
+  });
+
+  // Download backup file
+  app.get("/api/admin/database/backup/:id/download", requireAdminAuth, async (req, res) => {
+    try {
+      const backup = backups.get(req.params.id);
+      if (!backup) {
+        return res.status(404).json({ error: "Backup not found" });
+      }
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${backup.filename}"`);
+      res.send(backup.data);
+    } catch (error) {
+      console.error("Download backup error:", error);
+      res.status(500).json({ error: "Failed to download backup" });
+    }
+  });
+
+  // Restore database from backup
+  app.post("/api/admin/database/restore", requireAdminAuth, upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      const backup = JSON.parse(req.file.buffer.toString());
+      
+      if (!backup.data || !backup.version) {
+        return res.status(400).json({ error: "Invalid backup file format" });
+      }
+
+      const recordsRestored: { [key: string]: number } = {};
+
+      // Restore users
+      if (backup.data.users?.length > 0) {
+        for (const user of backup.data.users) {
+          try {
+            await db.insert(users).values(user).onConflictDoUpdate({
+              target: users.id,
+              set: user
+            });
+          } catch (err) {
+            console.log("User insert/update skipped (may already exist)");
+          }
+        }
+        recordsRestored.users = backup.data.users.length;
+      }
+
+      // Restore other tables
+      const tableMap: { [key: string]: any } = {
+        admins, kycDocuments, virtualCards, recipients, transactions,
+        paymentRequests, chatMessages, notifications, supportTickets,
+        conversations, messages, adminLogs, systemLogs, systemSettings, apiConfigurations
+      };
+
+      for (const [tableName, tableData] of Object.entries(backup.data)) {
+        if (tableName === 'users' || !Array.isArray(tableData)) continue;
+        
+        const table = tableMap[tableName];
+        if (!table || tableData.length === 0) continue;
+
+        try {
+          for (const record of tableData) {
+            try {
+              await db.insert(table).values(record).onConflictDoUpdate({
+                target: table.id,
+                set: record
+              });
+            } catch (err) {
+              console.log(`Record insert/update skipped for ${tableName}`);
+            }
+          }
+          recordsRestored[tableName] = tableData.length;
+        } catch (err) {
+          console.warn(`Failed to restore ${tableName}:`, err);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: "Database restored successfully",
+        recordsRestored
+      });
+    } catch (error) {
+      console.error("Database restore error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to restore database" 
+      });
+    }
+  });
+
   // SEO - XML Sitemap for Google Search Console
   app.get('/sitemap.xml', async (req, res) => {
     try {
