@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Notifications from "@/components/notifications";
-import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard, Settings } from "lucide-react";
+import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber } from "@/lib/formatters";
 
@@ -174,15 +174,6 @@ export default function DashboardPage() {
               <p className="text-xs text-white/80">Welcome back 👋</p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation('/settings')}
-            className="text-white hover:bg-white/20 transition-colors"
-            title="Settings"
-          >
-            <Settings className="w-6 h-6" />
-          </Button>
           <div className="flex items-center space-x-2">
             <Notifications />
             <motion.button
@@ -569,6 +560,21 @@ export default function DashboardPage() {
               <div className="text-left">
                 <p className="font-semibold text-sm mb-1">System Status</p>
                 <p className="text-xs text-muted-foreground">Service health</p>
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation("/settings")}
+              className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
+              data-testid="button-settings"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-md">
+                <span className="material-icons text-white text-2xl leading-none">settings</span>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-sm mb-1">Settings</p>
+                <p className="text-xs text-muted-foreground">Preferences & security</p>
               </div>
             </motion.button>
           </div>
