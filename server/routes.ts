@@ -7464,6 +7464,72 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
+  // API Key Management Endpoints (Admin Only)
+  app.post("/api/admin/api-keys/generate", requireAdminAuth, async (req, res) => {
+    try {
+      const { name, scope, rateLimit } = req.body;
+      
+      if (!name || !scope || !Array.isArray(scope)) {
+        return res.status(400).json({ error: "Missing required fields: name, scope" });
+      }
+
+      const { apiKeyService } = await import('./services/api-key');
+      const key = await apiKeyService.generateApiKey(name, scope, rateLimit || 1000);
+      
+      res.json({ 
+        success: true, 
+        key,
+        name,
+        scope,
+        rateLimit: rateLimit || 1000,
+        message: "API key generated successfully. Copy it now - you won't see it again!"
+      });
+    } catch (error) {
+      console.error("[API Keys] Generate error:", error);
+      res.status(500).json({ error: "Failed to generate API key" });
+    }
+  });
+
+  app.get("/api/admin/api-keys", requireAdminAuth, async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      const apiKeys = settings
+        .filter(s => s.key.startsWith('api_keys_'))
+        .map(s => ({
+          id: s.key.replace('api_keys_', ''),
+          name: (s.value as any).name,
+          isActive: (s.value as any).isActive,
+          scope: (s.value as any).scope,
+          rateLimit: (s.value as any).rateLimit,
+          createdAt: (s.value as any).createdAt,
+          lastUsedAt: (s.value as any).lastUsedAt
+        }));
+      
+      res.json({ keys: apiKeys });
+    } catch (error) {
+      console.error("[API Keys] List error:", error);
+      res.status(500).json({ error: "Failed to fetch API keys" });
+    }
+  });
+
+  app.post("/api/admin/api-keys/:keyId/revoke", requireAdminAuth, async (req, res) => {
+    try {
+      const { keyId } = req.params;
+      const { apiKeyService } = await import('./services/api-key');
+      
+      const success = await apiKeyService.revokeApiKey(keyId);
+      
+      if (success) {
+        res.json({ success: true, message: "API key revoked successfully" });
+      } else {
+        res.status(404).json({ error: "API key not found" });
+      }
+    } catch (error) {
+      console.error("[API Keys] Revoke error:", error);
+      res.status(500).json({ error: "Failed to revoke API key" });
+    }
+  });
+
   // Send initial system info
   setTimeout(() => {
     LogStreamService.broadcast(
