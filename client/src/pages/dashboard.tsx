@@ -465,7 +465,7 @@ export default function DashboardPage() {
                     action.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 shadow-md`}>
+                  <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="text-left">
@@ -494,7 +494,7 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
               data-testid="button-virtual-card"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">credit_card</span>
               </div>
               <div className="text-left">
@@ -511,7 +511,7 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
               data-testid="button-transactions"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">receipt_long</span>
               </div>
               <div className="text-left">
@@ -525,7 +525,7 @@ export default function DashboardPage() {
               onClick={() => setLocation("/exchange")}
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">currency_exchange</span>
               </div>
               <div className="text-left">
@@ -540,7 +540,7 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
               data-testid="button-support"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">support_agent</span>
               </div>
               <div className="text-left">
@@ -554,7 +554,7 @@ export default function DashboardPage() {
               onClick={() => setLocation("/status")}
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">health_and_safety</span>
               </div>
               <div className="text-left">
@@ -569,7 +569,7 @@ export default function DashboardPage() {
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
               data-testid="button-settings"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                 <span className="material-icons text-white text-2xl leading-none">settings</span>
               </div>
               <div className="text-left">
@@ -583,7 +583,7 @@ export default function DashboardPage() {
               onClick={() => setLocation("/loans")}
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <div className="text-left">
@@ -597,7 +597,7 @@ export default function DashboardPage() {
               onClick={() => setLocation("/api-service")}
               className="bg-card p-5 rounded-2xl border border-border hover:shadow-lg transition-all hover:scale-105"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-3 shadow-md">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3 shadow-md">
                 <Zap className="w-6 h-6 text-white" />
               </div>
               <div className="text-left">

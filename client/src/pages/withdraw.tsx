@@ -268,7 +268,7 @@ export default function WithdrawPage() {
 
               {/* Quick Amount Buttons */}
               <div className="grid grid-cols-4 gap-2">
-                {["50", "100", "250", "500"].map((amount) => (
+                {["50", "500", "10000", "100000"].map((amount) => (
                   <motion.button
                     key={amount}
                     type="button"
