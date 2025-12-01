@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { mockCurrencies } from "@/lib/mock-data";
 import { formatNumber } from "@/lib/formatters";
+import { WavyHeader } from "@/components/wavy-header";
 
 const withdrawSchema = z.object({
   amount: z.string().min(1, "Amount is required").refine((val) => parseFloat(val) >= 100, "Minimum withdrawal is KSh 100"),

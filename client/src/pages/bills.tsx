@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Receipt, CheckCircle, Clock, Zap } from "lucide-react";
+import { WavyHeader } from "@/components/wavy-header";
 
 const BILL_PROVIDERS = [
   { id: "KPLC", name: "KPLC", label: "KPLC (Electricity)", icon: "⚡", color: "from-yellow-500 to-yellow-600", needsId: "meterNumber" },
@@ -155,21 +156,12 @@ export default function BillsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Top Navigation */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center elevation-1"
-      >
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setLocation("/dashboard")}
-          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-        >
-          arrow_back
-        </motion.button>
-        <h1 className="text-lg font-semibold">Pay Bills</h1>
-      </motion.div>
+      {/* Header */}
+      <WavyHeader
+        title="Pay Bills"
+        onBack={() => setLocation("/dashboard")}
+        size="sm"
+      />
 
       <div className="p-6 space-y-6">
         {/* Available Balance */}
