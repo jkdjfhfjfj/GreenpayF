@@ -12,7 +12,7 @@ interface UserUsage {
 
 const DEFAULT_CONFIG: RateLimitConfig = {
   minuteLimit: 10, // 10 requests per minute
-  dailyLimit: 100, // 100 requests per day
+  dailyLimit: 5, // 5 requests per day
 };
 
 class RateLimiter {
@@ -23,7 +23,7 @@ class RateLimiter {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  checkLimit(userId: string): { allowed: boolean; error?: string } {
+  checkLimit(userId: string): { allowed: boolean; error?: string; remainingRequests?: number } {
     const now = Date.now();
     let usage = this.userUsage.get(userId);
 
@@ -53,7 +53,8 @@ class RateLimiter {
     if (usage.minuteCount >= this.config.minuteLimit) {
       return {
         allowed: false,
-        error: `Minute limit reached (${this.config.minuteLimit} requests/minute). Please try again in a moment.`,
+        error: `Minute limit reached. Please try again in a moment.`,
+        remainingRequests: this.config.dailyLimit - usage.dailyCount,
       };
     }
 
@@ -61,7 +62,8 @@ class RateLimiter {
     if (usage.dailyCount >= this.config.dailyLimit) {
       return {
         allowed: false,
-        error: `Daily limit reached (${this.config.dailyLimit} requests/day). Please try again tomorrow.`,
+        error: `You've used all 5 daily requests. Please try again tomorrow.`,
+        remainingRequests: 0,
       };
     }
 
@@ -69,11 +71,14 @@ class RateLimiter {
     usage.minuteCount++;
     usage.dailyCount++;
 
-    return { allowed: true };
+    // Calculate remaining requests
+    const remainingRequests = this.config.dailyLimit - usage.dailyCount;
+
+    return { allowed: true, remainingRequests };
   }
 }
 
 export const rateLimiter = new RateLimiter({
   minuteLimit: 10,
-  dailyLimit: 100,
+  dailyLimit: 5,
 });

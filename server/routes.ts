@@ -7933,11 +7933,11 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       const limitCheck = rateLimiter.checkLimit(userId);
 
       if (!limitCheck.allowed) {
-        return res.status(429).json({ error: limitCheck.error });
+        return res.status(429).json({ error: limitCheck.error, remainingRequests: limitCheck.remainingRequests });
       }
 
       const response = await openaiService.generateResponse(messages);
-      res.json({ response });
+      res.json({ response, remainingRequests: limitCheck.remainingRequests });
     } catch (error: any) {
       console.error('AI chat error:', error);
       res.status(500).json({ error: error.message || "Failed to generate AI response" });
