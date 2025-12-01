@@ -55,6 +55,8 @@ export default function LoginPage() {
         // Store user ID in localStorage for OTP verification page
         localStorage.setItem("otpUserId", data.userId);
         localStorage.setItem("otpPhone", data.phone);
+        localStorage.setItem("otpSentVia", data.sentVia || "");
+        localStorage.setItem("otpEmail", data.email || "");
         setLocation("/auth/otp-verification");
       } else {
         // Direct login (when messaging not configured)
