@@ -4954,6 +4954,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         wabaId: !!whatsappBusinessAccountId
       });
       
+      // Refresh WhatsApp service credentials after update
+      if (whatsappAccessToken && whatsappPhoneNumberId) {
+        const { whatsappService } = await import('./services/whatsapp');
+        await whatsappService.refreshCredentials();
+        console.log('[WhatsApp] Credentials refreshed after admin update');
+      }
+      
       res.json({ 
         success: true, 
         message: "Messaging settings updated successfully"
