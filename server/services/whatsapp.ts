@@ -997,8 +997,8 @@ export class WhatsAppService {
   }
 
   /**
-   * Extract parameters from template components - finds {{1}}, {{2}}, etc EVERYWHERE
-   * Handles both full component structures from getTemplateDetails and list responses
+   * Extract parameters from template components - finds {{1}}, {{2}}, etc from BODY only
+   * Parameters are defined in the BODY component's text field
    */
   private extractParametersFromComponents(components: any[]): Set<number> {
     if (!components || !Array.isArray(components)) return new Set();
@@ -1006,22 +1006,20 @@ export class WhatsAppService {
     const paramNumbers = new Set<number>();
     const regex = /\{\{(\d+)\}\}/g;
     
-    // Convert entire component structure to JSON string and extract all {{n}} patterns
-    components.forEach((comp: any) => {
-      if (!comp) return;
-      
+    // Look ONLY at the BODY component which contains the actual parameters
+    const bodyComponent = components.find((comp: any) => comp?.type === 'BODY');
+    
+    if (bodyComponent?.text) {
       try {
-        // Stringify the entire component - catches {{n}} anywhere in the structure
-        const compStr = JSON.stringify(comp);
-        const matches = [...compStr.matchAll(regex)];
+        const matches = [...bodyComponent.text.matchAll(regex)];
         matches.forEach(m => {
           const num = parseInt(m[1]);
           if (!isNaN(num)) paramNumbers.add(num);
         });
       } catch (e) {
-        // Ignore stringify errors
+        // Ignore errors
       }
-    });
+    }
     
     return paramNumbers;
   }
