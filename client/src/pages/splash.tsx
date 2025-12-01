@@ -107,7 +107,7 @@ export default function SplashPage() {
         className="relative z-10 overflow-hidden"
       >
         {/* Patterned Background */}
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#4CAF50] via-[#45a049] to-[#4CAF50]">
           <svg className="w-full h-full" viewBox="0 0 1000 120" preserveAspectRatio="none">
             <defs>
               <pattern id="diagonalPattern" x="20" y="20" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
