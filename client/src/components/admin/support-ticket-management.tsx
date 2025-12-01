@@ -227,32 +227,46 @@ export default function SupportTicketManagement() {
 
   const tickets = ticketsData?.tickets || [];
 
-  if (error) {
-    return (
-      <div className="space-y-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 font-medium">Failed to load support tickets</p>
-          <p className="text-red-600 text-sm mt-1">{String(error)}</p>
-          <Button onClick={() => refetch()} className="mt-3">Retry</Button>
+  // Error boundary for component
+  try {
+    if (error) {
+      console.error('Support Tickets Error:', error);
+      return (
+        <div className="space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 font-medium">Failed to load support tickets</p>
+            <p className="text-red-600 text-sm mt-1">{String(error)}</p>
+            <Button onClick={() => refetch()} className="mt-3">Retry</Button>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Support Tickets</h2>
-          <p className="text-gray-600">Manage and respond to user support requests</p>
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-gray-500">Loading support tickets...</p>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="text-sm">
-            {tickets.filter(t => t.status === 'open').length} open tickets
-          </Badge>
-          <Badge variant="outline" className="text-sm">
-            {tickets.filter(t => t.status === 'in_progress').length} in progress
-          </Badge>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Support Tickets</h2>
+            <p className="text-gray-600">Manage and respond to user support requests</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Badge variant="outline" className="text-sm">
+              {tickets?.filter((t: any) => t?.status === 'open')?.length || 0} open tickets
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              {tickets?.filter((t: any) => t?.status === 'in_progress')?.length || 0} in progress
+            </Badge>
           <Button
             variant="outline"
             size="sm"
@@ -365,29 +379,31 @@ export default function SupportTicketManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tickets.map((ticket) => (
+                {Array.isArray(tickets) && tickets.length > 0 ? tickets.map((ticket: SupportTicket) => {
+                  if (!ticket?.id) return null;
+                  return (
                   <TableRow key={ticket.id}>
                     <TableCell className="font-mono text-sm">
-                      {ticket.id.substring(0, 8)}...
+                      {ticket.id?.substring(0, 8) || 'N/A'}...
                     </TableCell>
                     <TableCell className="font-medium">
-                      {ticket.issueType}
+                      {ticket.issueType || 'N/A'}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getStatusIcon(ticket.status)}
-                        <Badge variant={getStatusBadge(ticket.status)}>
-                          {ticket.status}
+                        {getStatusIcon(ticket.status || 'open')}
+                        <Badge variant={getStatusBadge(ticket.status || 'open')}>
+                          {ticket.status || 'open'}
                         </Badge>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getPriorityBadge(ticket.priority)}>
-                        {ticket.priority}
+                      <Badge variant={getPriorityBadge(ticket.priority || 'medium')}>
+                        {ticket.priority || 'medium'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(ticket.createdAt), 'MMM d, yyyy HH:mm')}
+                      {ticket.createdAt ? format(new Date(ticket.createdAt), 'MMM d, yyyy HH:mm') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <Dialog>
