@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Smartphone, Zap, Wifi, TrendingUp, Clock } from "lucide-react";
+import { WavyHeader } from "@/components/wavy-header";
 
 const airtimeSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits").regex(/^[0-9+]+$/, "Invalid phone number format"),
@@ -103,26 +104,11 @@ export default function AirtimePage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-green-600 via-green-500 to-emerald-500 p-8 text-white relative overflow-hidden"
-      >
-        {/* Decorative background elements */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 blur-3xl"></div>
-
-        <div className="relative z-10">
-          {/* Back Button and Title */}
-          <div className="flex items-center mb-6">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLocation("/dashboard")}
-              className="mr-3"
-            >
-              <span className="material-icons">arrow_back</span>
-            </motion.button>
-            <div className="flex-1">
+      <WavyHeader
+        title="Buy Airtime"
+        onBack={() => setLocation("/dashboard")}
+        size="sm"
+      />
               <h1 className="text-xl font-bold flex items-center">
                 Buy Airtime
               </h1>

@@ -139,10 +139,7 @@ export default function SplashPage() {
         </svg>
 
         {/* Content Overlay */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-6 h-24">
-          <div className="text-center flex-1">
-            <h1 className="text-white font-bold text-2xl drop-shadow-lg">GreenPay</h1>
-          </div>
+        <div className="absolute top-0 right-6 flex items-center justify-end px-6 py-6 h-24">
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
