@@ -647,7 +647,7 @@ export class WhatsAppService {
         type: 'template',
         template: {
           name: 'create_acc',
-          language: { code: 'en_US' },
+          language: { code: 'en' },
           components: [{ type: 'body', parameters: [{ type: 'text', text: userName }] }]
         }
       };
