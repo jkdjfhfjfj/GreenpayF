@@ -107,7 +107,7 @@ export default function SplashPage() {
         className="relative z-10"
       >
         {/* Wavy SVG Background */}
-        <svg className="w-full" viewBox="0 0 1280 200" preserveAspectRatio="none" style={{ height: '180px' }}>
+        <svg className="w-full" viewBox="0 0 1280 130" preserveAspectRatio="none" style={{ height: '140px' }}>
           <defs>
             <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" style={{ stopColor: '#4CAF50', stopOpacity: 1 }} />
@@ -135,12 +135,6 @@ export default function SplashPage() {
             strokeWidth="2"
             fill="none"
             opacity="0.5"
-          />
-          
-          {/* Bottom wave transition */}
-          <path
-            d="M0,140 Q320,110 640,140 T1280,140 L1280,200 L0,200 Z"
-            fill="rgba(30, 30, 40, 0.8)"
           />
         </svg>
 
