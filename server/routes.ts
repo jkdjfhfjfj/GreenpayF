@@ -7958,6 +7958,35 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
+  // Export Environment Variables as .env file
+  app.get("/api/admin/export-env", requireAdminAuth, async (req, res) => {
+    try {
+      const envVars = process.env;
+      let envContent = '';
+
+      // Collect all environment variables and format as KEY=VALUE
+      for (const [key, value] of Object.entries(envVars)) {
+        if (value !== undefined && value !== null) {
+          // Escape values that contain special characters
+          const escapedValue = typeof value === 'string' && value.includes('"') 
+            ? `'${value}'` 
+            : `${value}`;
+          envContent += `${key}=${escapedValue}\n`;
+        }
+      }
+
+      // Set response headers for file download
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', `attachment; filename=".env-${new Date().toISOString().split('T')[0]}"`);
+      res.send(envContent);
+      
+      console.log('[Admin] Environment variables exported by admin');
+    } catch (error: any) {
+      console.error('Export env error:', error);
+      res.status(500).json({ error: 'Failed to export environment variables' });
+    }
+  });
+
   // Send initial system info
   setTimeout(() => {
     LogStreamService.broadcast(
