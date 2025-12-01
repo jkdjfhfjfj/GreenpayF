@@ -681,7 +681,8 @@ export type InsertTicketReply = z.infer<typeof insertTicketReplySchema>;
 
 export const aiUsage = pgTable("ai_usage", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id"), // Can be null for guest users tracked by IP
+  trackingId: varchar("tracking_id").notNull(), // user_id or guest-{ip}
   dailyCount: integer("daily_count").default(0),
   lastResetDate: timestamp("last_reset_date").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),

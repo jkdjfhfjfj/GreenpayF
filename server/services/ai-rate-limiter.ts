@@ -26,7 +26,7 @@ export class AIRateLimiter {
 
       // Get or create user's AI usage record
       let usage = await db.query.aiUsage.findFirst({
-        where: eq(aiUsage.userId, finalUserId),
+        where: eq(aiUsage.trackingId, finalUserId),
       });
 
       if (!usage) {
@@ -34,7 +34,8 @@ export class AIRateLimiter {
         const newUsage = await db
           .insert(aiUsage)
           .values({
-            userId: finalUserId,
+            userId: userId || null,
+            trackingId: finalUserId,
             dailyCount: 0,
             lastResetDate: now,
           })
@@ -48,7 +49,7 @@ export class AIRateLimiter {
         await db
           .update(aiUsage)
           .set({ dailyCount: 0, lastResetDate: now })
-          .where(eq(aiUsage.userId, finalUserId));
+          .where(eq(aiUsage.trackingId, finalUserId));
         usage.dailyCount = 0;
       }
 
@@ -66,7 +67,7 @@ export class AIRateLimiter {
       await db
         .update(aiUsage)
         .set({ dailyCount: newCount, updatedAt: new Date() })
-        .where(eq(aiUsage.userId, finalUserId));
+        .where(eq(aiUsage.trackingId, finalUserId));
 
       const remainingRequests = DAILY_LIMIT - newCount;
 
@@ -89,7 +90,7 @@ export class AIRateLimiter {
       const finalUserId = userId || `guest-${ipAddress}`;
 
       let usage = await db.query.aiUsage.findFirst({
-        where: eq(aiUsage.userId, finalUserId),
+        where: eq(aiUsage.trackingId, finalUserId),
       });
 
       if (!usage) {
@@ -101,7 +102,7 @@ export class AIRateLimiter {
         await db
           .update(aiUsage)
           .set({ dailyCount: 0, lastResetDate: new Date() })
-          .where(eq(aiUsage.userId, finalUserId));
+          .where(eq(aiUsage.trackingId, finalUserId));
         return DAILY_LIMIT;
       }
 
