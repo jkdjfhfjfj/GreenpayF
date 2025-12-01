@@ -99,12 +99,12 @@ export default function SplashPage() {
         />
       </div>
 
-      {/* Top Navigation Bar */}
+      {/* Top Navigation Bar - Matches Meta Theme Color */}
       <motion.div
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="flex items-center justify-between px-6 py-5 relative z-10"
+        className="flex items-center justify-between px-6 py-5 relative z-10 bg-[#2E7D32]"
       >
         <div className="text-center flex-1">
           <h1 className="text-white font-bold text-2xl">GreenPay</h1>
