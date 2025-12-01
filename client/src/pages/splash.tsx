@@ -104,7 +104,7 @@ export default function SplashPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10 -mb-1"
+        className="relative z-10"
       >
         {/* Wavy SVG Background */}
         <svg className="w-full" viewBox="0 0 1280 200" preserveAspectRatio="none" style={{ height: '180px' }}>
@@ -161,7 +161,7 @@ export default function SplashPage() {
       </motion.div>
 
       {/* Slide Container */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 overflow-hidden pt-0 mt-0">
         <AnimatePresence mode="wait" custom={1}>
           <motion.div
             key={currentSlide}
