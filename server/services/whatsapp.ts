@@ -176,15 +176,35 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`[WhatsApp] ✓ Text message sent to ${phoneNumber}`);
+        const messageId = responseData.messages?.[0]?.id || 'unknown';
+        console.log('[WhatsApp] ✓ Text message sent successfully', {
+          to: phoneNumber,
+          messageId,
+          messageLength: message.length,
+          timestamp: new Date().toISOString(),
+          response: responseData
+        });
         return true;
       } else {
         const errorMsg = responseData.error?.message || 'Unknown error';
-        console.error(`[WhatsApp] ✗ Message failed: ${errorMsg}`, { status: response.status, data: responseData });
+        const errorCode = responseData.error?.code || 'UNKNOWN_ERROR';
+        console.error('[WhatsApp] ✗ Text message failed', {
+          to: phoneNumber,
+          error: errorMsg,
+          errorCode,
+          status: response.status,
+          fullError: responseData.error,
+          timestamp: new Date().toISOString()
+        });
         return false;
       }
-    } catch (error) {
-      console.error('[WhatsApp] Error sending text message:', error);
+    } catch (error: any) {
+      console.error('[WhatsApp] ✗ Error sending text message', {
+        to: phoneNumber,
+        error: error?.message || 'Unknown error',
+        errorType: error?.constructor?.name,
+        timestamp: new Date().toISOString()
+      });
       return false;
     }
   }
@@ -254,15 +274,36 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`[WhatsApp] ✓ OTP sent to ${phoneNumber}`);
+        const messageId = responseData.messages?.[0]?.id || 'unknown';
+        console.log('[WhatsApp] ✓ OTP sent successfully', {
+          to: phoneNumber,
+          messageId,
+          templateName: 'otp',
+          timestamp: new Date().toISOString(),
+          response: responseData
+        });
         return true;
       } else {
         const errorMsg = responseData.error?.message || 'Unknown error';
-        console.error(`[WhatsApp] ✗ OTP failed: ${errorMsg}`, { status: response.status, data: responseData });
+        const errorCode = responseData.error?.code || 'UNKNOWN_ERROR';
+        console.error('[WhatsApp] ✗ OTP send failed', {
+          to: phoneNumber,
+          templateName: 'otp',
+          error: errorMsg,
+          errorCode,
+          status: response.status,
+          fullError: responseData.error,
+          timestamp: new Date().toISOString()
+        });
         return false;
       }
-    } catch (error) {
-      console.error('[WhatsApp] Error sending OTP:', error);
+    } catch (error: any) {
+      console.error('[WhatsApp] ✗ Error sending OTP', {
+        to: phoneNumber,
+        error: error?.message || 'Unknown error',
+        errorType: error?.constructor?.name,
+        timestamp: new Date().toISOString()
+      });
       return false;
     }
   }
@@ -312,15 +353,33 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`[WhatsApp] ✓ Account verification sent to ${phoneNumber}`);
+        const messageId = responseData.messages?.[0]?.id || 'unknown';
+        console.log('[WhatsApp] ✓ Account verification sent successfully', {
+          to: phoneNumber,
+          messageId,
+          templateName: 'account_verification',
+          timestamp: new Date().toISOString(),
+          response: responseData
+        });
         return true;
       } else {
         const errorMsg = responseData.error?.message || 'Unknown error';
-        console.error(`[WhatsApp] ✗ Account verification failed: ${errorMsg}`);
+        console.error('[WhatsApp] ✗ Account verification failed', {
+          to: phoneNumber,
+          error: errorMsg,
+          status: response.status,
+          fullError: responseData.error,
+          timestamp: new Date().toISOString()
+        });
         return false;
       }
-    } catch (error) {
-      console.error('[WhatsApp] Error sending account verification:', error);
+    } catch (error: any) {
+      console.error('[WhatsApp] ✗ Error sending account verification', {
+        to: phoneNumber,
+        error: error?.message || 'Unknown error',
+        errorType: error?.constructor?.name,
+        timestamp: new Date().toISOString()
+      });
       return false;
     }
   }
