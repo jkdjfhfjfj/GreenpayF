@@ -102,6 +102,14 @@ export default function SignupPage() {
           className="max-w-sm mx-auto"
         >
           <div className="text-center mb-8">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <span className="material-icons text-white text-2xl">attach_money</span>
+            </motion.div>
             <h2 className="text-2xl font-bold mb-2">Join GreenPay</h2>
             <p className="text-muted-foreground">Create your account to start sending money</p>
             <p className="text-xs text-muted-foreground mt-3 px-2">Account verification requires a valid phone number on WhatsApp with SMS capability, a verified email address, and identification that matches your registered name.</p>
