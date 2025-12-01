@@ -1126,6 +1126,7 @@ export class WhatsAppService {
 
   /**
    * Get template parameters from Meta - ALWAYS fetches directly from Meta, extracts ONLY from BODY text
+   * STRICTLY: Only counts {{1}}, {{2}}, etc patterns in BODY component's text field
    */
   async getTemplateParameters(templateName: string): Promise<{ 
     required: string[]; 
@@ -1138,47 +1139,59 @@ export class WhatsAppService {
       // ALWAYS fetch fresh template details from Meta (don't use cached list)
       const template = await this.fetchTemplateDetails(templateName);
       
-      if (!template || !template.components) {
-        console.log(`[WhatsApp] Template "${templateName}" - No components found in Meta response`);
-        return { required: [], paramCount: 0, language: 'en_US', components: [] };
+      if (!template || !Array.isArray(template.components) || template.components.length === 0) {
+        console.log(`[WhatsApp] Template "${templateName}" - No valid components found`);
+        return { required: [], paramCount: 0, language: template?.language || 'en_US', components: [] };
       }
 
-      // Extract parameters ONLY from BODY component text
-      const bodyComponent = template.components.find((c: any) => c?.type === 'BODY');
-      const bodyText = bodyComponent?.text || '';
+      // Find BODY component and extract its text field ONLY
+      const bodyComponent = template.components.find((c: any) => c && typeof c === 'object' && c.type === 'BODY');
       
-      // Extract {{1}}, {{2}}, etc from BODY text only
-      const regex = /\{\{(\d+)\}\}/g;
+      if (!bodyComponent || typeof bodyComponent.text !== 'string') {
+        console.log(`[WhatsApp] Template "${templateName}" - No BODY component with text found`);
+        return { required: [], paramCount: 0, language: template?.language || 'en_US', components: template.components };
+      }
+
+      const bodyText = bodyComponent.text;
+      
+      // Extract ONLY {{digit}} patterns from BODY text
+      // Strict regex: {{ followed by one or more digits, followed by }}
+      const regex = /\{\{\s*(\d+)\s*\}\}/g;
       const paramNumbers = new Set<number>();
-      const matches = [...bodyText.matchAll(regex)];
-      matches.forEach(m => {
-        const num = parseInt(m[1]);
-        if (!isNaN(num)) paramNumbers.add(num);
-      });
       
-      // Convert to param names
+      let match;
+      while ((match = regex.exec(bodyText)) !== null) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > 0) {
+          paramNumbers.add(num);
+        }
+      }
+      
+      // Convert to sorted param names
       const params = Array.from(paramNumbers)
         .sort((a, b) => a - b)
         .map(n => `param${n}`);
       
-      // Analyze parameter types
-      const metadata = this.analyzeParameterTypes(template.components || [], paramNumbers);
+      // Analyze parameter types only for detected parameters
+      const metadata = paramNumbers.size > 0 
+        ? this.analyzeParameterTypes(template.components, paramNumbers)
+        : {};
       
-      // Debug logging - show exact BODY text and extracted params
-      console.log(`[WhatsApp] Template "${templateName}" parameters (from BODY only):`, {
-        bodyText: bodyText.substring(0, 200),
-        rawMatches: matches.map(m => m[0]),
-        params,
-        paramCount: params.length,
-        componentCount: template.components?.length || 0,
-        componentTypes: template.components?.map((c: any) => c.type) || []
+      // Debug logging - show exact extraction details
+      console.log(`[WhatsApp] Template "${templateName}" parameters:`, {
+        bodyText: bodyText.substring(0, 150),
+        hasBodyText: !!bodyText,
+        bodyLength: bodyText.length,
+        parameterCount: params.length,
+        parameterNames: params,
+        isNoParams: params.length === 0
       });
 
       return { 
         required: params, 
         paramCount: params.length, 
         language: template.language || 'en_US', 
-        components: template.components || [],
+        components: template.components,
         parameterMetadata: metadata
       };
     } catch (error) {
