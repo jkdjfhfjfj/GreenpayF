@@ -782,6 +782,18 @@ export class WhatsAppService {
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
 
+      // Get template to get the correct language code
+      const template = await this.getTemplateDetails(templateName);
+      const languageCode = template?.language || 'en_US';
+
+      // Check for templates that Meta doesn't allow
+      const restrictedTemplates = ['call']; // Business-initiated calling not available for all accounts
+      if (restrictedTemplates.includes(templateName)) {
+        const error = `This template (${templateName}) is not available for sending. Contact Meta support to enable this feature.`;
+        console.warn(`[WhatsApp] ✗ Template "${templateName}" is restricted:`, error);
+        return { success: false, error };
+      }
+
       // Validate parameters first
       const validation = await this.validateTemplateParameters(templateName, parameters);
       if (!validation.valid) {
@@ -789,12 +801,9 @@ export class WhatsAppService {
         return { success: false, error: validation.error };
       }
 
-      // Get template to get the correct language code
-      const template = await this.getTemplateDetails(templateName);
-      const languageCode = template?.language || 'en_US';
-
-      // Build parameters array from the provided object
-      const paramArray = Object.values(parameters).filter(p => p && p.trim() !== '');
+      // Build parameters array - keep order from the user's input
+      // Only include parameters that were explicitly provided and are non-empty
+      const paramArray = Object.values(parameters).filter(p => p && typeof p === 'string' && p.trim() !== '');
 
       const payload = {
         messaging_product: 'whatsapp',
@@ -806,7 +815,7 @@ export class WhatsAppService {
           components: paramArray.length > 0 ? [
             {
               type: 'body',
-              parameters: paramArray.map(p => ({ type: 'text', text: p }))
+              parameters: paramArray.map(p => ({ type: 'text', text: String(p).trim() }))
             }
           ] : undefined
         }
@@ -817,10 +826,11 @@ export class WhatsAppService {
         delete payload.template.components;
       }
 
-      console.log(`[WhatsApp] Sending generic template "${templateName}" with language: ${languageCode}`, {
+      console.log(`[WhatsApp] Sending generic template "${templateName}"`, {
+        language: languageCode,
         paramCount: paramArray.length,
-        validated: true,
-        requiredParams: validation.required
+        requiredParams: validation.required,
+        parameters: paramArray
       });
 
       const response = await fetch(url, {
@@ -851,6 +861,7 @@ export class WhatsAppService {
           error: errorMsg,
           errorCode: errorCode,
           language: languageCode,
+          sentParams: paramArray.length,
           statusCode: response.status
         });
         return { success: false, error: errorMsg };

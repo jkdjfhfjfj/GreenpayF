@@ -6917,6 +6917,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
 
       // Special handling for templates with known handlers
       let success = false;
+      let errorMsg: string | undefined;
 
       switch (templateName) {
         case 'otp':
@@ -6982,6 +6983,8 @@ Sitemap: https://greenpay.world/sitemap.xml`;
           // Send the template
           const result = await whatsappService.sendTemplateGeneric(user.phone, templateName, parameters || {});
           success = result.success;
+          errorMsg = result.error;
+          
           if (!success && result.error) {
             console.error('[Admin] Generic template send error:', { userId, templateName, error: result.error });
           } else {
@@ -6990,14 +6993,27 @@ Sitemap: https://greenpay.world/sitemap.xml`;
           break;
       }
 
-      res.json({ 
-        success, 
-        templateName, 
-        userId, 
-        message: success ? 'Template delivered to WhatsApp' : 'Template delivery failed',
-        templateStatus: template.status,
-        timestamp: new Date().toISOString()
-      });
+      // Return appropriate response based on success/failure
+      if (success) {
+        return res.json({ 
+          success: true, 
+          templateName, 
+          userId, 
+          message: 'Template delivered to WhatsApp',
+          templateStatus: template.status,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        // If failed, return error with details
+        return res.status(400).json({ 
+          success: false, 
+          templateName, 
+          userId, 
+          message: errorMsg || 'Template delivery failed',
+          templateStatus: template.status,
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (error) {
       console.error('[Admin] Send template error:', error);
       res.status(500).json({ message: "Failed to send template", error: String(error) });
