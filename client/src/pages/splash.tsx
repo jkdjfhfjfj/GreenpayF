@@ -99,24 +99,65 @@ export default function SplashPage() {
         />
       </div>
 
-      {/* Top Navigation Bar */}
+      {/* Top Navigation Bar - Wavy Design */}
       <motion.div
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="flex items-center justify-between px-6 py-5 relative z-10"
+        className="relative z-10 pb-8"
       >
-        <div className="text-center flex-1">
-          <h1 className="text-white font-bold text-2xl">GreenPay</h1>
+        {/* Wavy SVG Background */}
+        <svg className="w-full" viewBox="0 0 1280 200" preserveAspectRatio="none" style={{ height: '180px' }}>
+          <defs>
+            <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style={{ stopColor: '#4CAF50', stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: '#45a049', stopOpacity: 0.3 }} />
+            </linearGradient>
+          </defs>
+          
+          {/* Main wave fill */}
+          <path
+            d="M0,60 Q320,0 640,60 T1280,60 L1280,0 L0,0 Z"
+            fill="#4CAF50"
+          />
+          
+          {/* Flowing curves */}
+          <path
+            d="M0,80 Q320,40 640,80 T1280,80 Q960,120 640,100 Q320,80 0,100 Z"
+            fill="rgba(76, 175, 80, 0.4)"
+            opacity="0.6"
+          />
+          
+          {/* Accent curves */}
+          <path
+            d="M0,120 Q320,90 640,120 T1280,120"
+            stroke="#4CAF50"
+            strokeWidth="2"
+            fill="none"
+            opacity="0.5"
+          />
+          
+          {/* Bottom wave transition */}
+          <path
+            d="M0,140 Q320,110 640,140 T1280,140 L1280,200 L0,200 Z"
+            fill="rgba(30, 30, 40, 0.8)"
+          />
+        </svg>
+
+        {/* Content Overlay */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-6 h-24">
+          <div className="text-center flex-1">
+            <h1 className="text-white font-bold text-2xl drop-shadow-lg">GreenPay</h1>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleSkip}
+            className="text-white hover:text-gray-200 transition-colors text-sm font-medium drop-shadow-md"
+          >
+            Skip
+          </motion.button>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleSkip}
-          className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
-        >
-          Skip
-        </motion.button>
       </motion.div>
 
       {/* Slide Container */}
