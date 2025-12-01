@@ -108,7 +108,7 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={SplashPage} />
+      <Route path="/" component={LoginPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={SignupPage} />
       <Route path="/auth/otp-verification" component={OtpVerificationPage} />
