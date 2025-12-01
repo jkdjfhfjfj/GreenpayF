@@ -173,7 +173,7 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
   
   // Landing/public pages that should not show widgets
-  const landingPages = ['/', '/login', '/signup', '/splash', '/help', '/about', '/pricing', '/security', '/contact', '/terms', '/privacy', '/loans', '/api-service', '/api-documentation', '/send-money', '/virtual-cards', '/exchange', '/airtime', '/admin-login'];
+  const landingPages = ['/login', '/signup', '/splash', '/help', '/about', '/pricing', '/security', '/contact', '/terms', '/privacy', '/loans', '/api-service', '/api-documentation', '/send-money', '/virtual-cards', '/exchange', '/airtime', '/admin-login'];
   const isLandingPage = landingPages.some(page => location === page || location.startsWith(page + '/'));
   
   // Only show widgets on authenticated pages (not landing/public pages)
