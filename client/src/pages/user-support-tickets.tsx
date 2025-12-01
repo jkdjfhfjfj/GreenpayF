@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Plus, Send, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 
 interface TicketReply {
   id: string;
@@ -17,6 +16,7 @@ interface TicketReply {
   senderType: "user" | "admin";
   createdAt: string;
   fileUrl?: string;
+  fileName?: string;
 }
 
 interface SupportTicket {
@@ -31,7 +31,6 @@ interface SupportTicket {
 
 interface TicketsResponse {
   tickets: SupportTicket[];
-  total: number;
 }
 
 export default function UserSupportTickets() {
@@ -46,9 +45,7 @@ export default function UserSupportTickets() {
   const { data, isLoading } = useQuery<TicketsResponse>({
     queryKey: ['user-support-tickets'],
     queryFn: async () => {
-      const response = await fetch('/api/user/support-tickets', {
-        credentials: "include",
-      });
+      const response = await fetch('/api/user/support-tickets', { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch");
       return response.json();
     },
@@ -121,8 +118,8 @@ export default function UserSupportTickets() {
       <div className="max-w-4xl mx-auto space-y-6 p-4">
         <Button variant="outline" onClick={() => setSelectedId(null)}>← Back to Tickets</Button>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
-          <CardHeader>
+        <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-2 border-indigo-200">
+          <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <CardTitle className="text-2xl">{selectedTicket.issueType}</CardTitle>
               <div className="flex gap-2">
@@ -135,10 +132,10 @@ export default function UserSupportTickets() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div>
-              <p className="text-sm text-gray-600">Description</p>
-              <p className="mt-2 p-3 bg-white rounded border">{selectedTicket.description}</p>
+              <p className="text-sm font-semibold text-gray-700">Description</p>
+              <p className="mt-2 p-4 bg-white rounded-lg border-l-4 border-indigo-500">{selectedTicket.description}</p>
             </div>
 
             <div className="text-xs text-gray-500">
@@ -148,47 +145,45 @@ export default function UserSupportTickets() {
         </Card>
 
         {/* Replies Section */}
-        <Card>
-          <CardHeader>
+        <Card className="border-2 border-indigo-200">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
             <CardTitle>Conversation</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 pt-6 max-h-96 overflow-y-auto">
             {!selectedTicket.replies || selectedTicket.replies.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No replies yet</p>
             ) : (
-              <div className="space-y-3">
-                {selectedTicket.replies.map((reply) => (
-                  <div
-                    key={reply.id}
-                    className={`p-4 rounded-lg ${
-                      reply.senderType === 'admin'
-                        ? 'bg-blue-50 border-l-4 border-blue-500'
-                        : 'bg-gray-50 border-l-4 border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-sm">
-                        {reply.senderType === 'admin' ? '👨‍💼 Support Team' : '👤 You'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {format(new Date(reply.createdAt), 'MMM d HH:mm')}
-                      </span>
-                    </div>
-                    <p className="text-sm">{reply.content}</p>
-                    {reply.fileUrl && (
-                      <a href={reply.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 inline-block">
-                        📎 View attachment
-                      </a>
-                    )}
+              selectedTicket.replies.map((reply) => (
+                <div
+                  key={reply.id}
+                  className={`p-4 rounded-lg ${
+                    reply.senderType === 'admin'
+                      ? 'bg-blue-50 border-l-4 border-blue-500 ml-4'
+                      : 'bg-gray-50 border-l-4 border-gray-300 mr-4'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-sm">
+                      {reply.senderType === 'admin' ? '👨‍💼 Support Team' : '👤 You'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {format(new Date(reply.createdAt), 'MMM d HH:mm')}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <p className="text-sm text-gray-800">{reply.content}</p>
+                  {reply.fileUrl && (
+                    <a href={reply.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 inline-block hover:underline">
+                      📎 {reply.fileName || 'Download attachment'}
+                    </a>
+                  )}
+                </div>
+              ))
             )}
           </CardContent>
         </Card>
 
         {/* Reply Form */}
-        <Card>
+        <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
           <CardHeader>
             <CardTitle>Send Reply</CardTitle>
           </CardHeader>
@@ -218,7 +213,7 @@ export default function UserSupportTickets() {
             <Button
               onClick={() => replyMutation.mutate()}
               disabled={!replyText.trim() || replyMutation.isPending}
-              className="w-full"
+              className="w-full bg-green-600 hover:bg-green-700"
             >
               <Send className="w-4 h-4 mr-2" />
               {replyMutation.isPending ? "Sending..." : "Send Reply"}
@@ -245,11 +240,11 @@ export default function UserSupportTickets() {
 
       {/* Create Ticket Form */}
       {showCreateForm && (
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50">
-          <CardHeader>
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+          <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
             <CardTitle>Create Support Ticket</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div>
               <Label htmlFor="type">Issue Type</Label>
               <Input
@@ -317,7 +312,7 @@ export default function UserSupportTickets() {
           tickets.map((ticket) => (
             <Card
               key={ticket.id}
-              className="hover:shadow-lg transition-all cursor-pointer bg-gradient-to-r from-gray-50 to-gray-100 hover:from-blue-50 hover:to-indigo-50"
+              className="hover:shadow-lg transition-all cursor-pointer bg-gradient-to-r from-gray-50 to-gray-100 hover:from-blue-50 hover:to-indigo-50 border-2 border-gray-200 hover:border-indigo-300"
               onClick={() => setSelectedId(ticket.id)}
             >
               <CardContent className="p-4">
@@ -336,6 +331,7 @@ export default function UserSupportTickets() {
                     <p className="text-sm text-gray-700 mb-2">{ticket.description.substring(0, 150)}...</p>
                     <p className="text-xs text-gray-500">
                       Created {format(new Date(ticket.createdAt), 'MMM d, yyyy')}
+                      {ticket.replies && ` • ${ticket.replies.length} replies`}
                     </p>
                   </div>
                   <Button size="sm" variant="outline">

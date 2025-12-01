@@ -154,6 +154,17 @@ export const supportTickets = pgTable("support_tickets", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const ticketReplies = pgTable("ticket_replies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").references(() => supportTickets.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  senderType: text("sender_type").notNull(), // user, admin
+  content: text("content").notNull(),
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
@@ -664,3 +675,6 @@ export type UserActivityLog = typeof userActivityLog.$inferSelect;
 export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
 export type BillPayment = typeof billPayments.$inferSelect;
 export type InsertBillPayment = z.infer<typeof insertBillPaymentSchema>;
+export type TicketReply = typeof ticketReplies.$inferSelect;
+export const insertTicketReplySchema = createInsertSchema(ticketReplies).omit({ id: true, createdAt: true });
+export type InsertTicketReply = z.infer<typeof insertTicketReplySchema>;
