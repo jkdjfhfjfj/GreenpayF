@@ -6862,6 +6862,76 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     });
   });
 
+  // Get template parameter requirements
+  app.get("/api/admin/whatsapp/template-parameters/:templateName", requireAdminAuth, async (req, res) => {
+    try {
+      const { templateName } = req.params;
+      
+      const templateParams: Record<string, {
+        required: string[];
+        optional: string[];
+        defaults: Record<string, string>;
+        description: string;
+      }> = {
+        create_acc: {
+          required: [],
+          optional: [],
+          defaults: {},
+          description: "Welcome message - Auto-filled from user data"
+        },
+        kyc_verified: {
+          required: [],
+          optional: [],
+          defaults: {},
+          description: "KYC approval - Auto-filled from user data"
+        },
+        card_activation: {
+          required: ['lastFour'],
+          optional: [],
+          defaults: { lastFour: '0000' },
+          description: "Card activation notification with last 4 digits"
+        },
+        otp: {
+          required: [],
+          optional: ['code'],
+          defaults: { code: 'auto-generated' },
+          description: "OTP verification code - Auto-generates if not provided"
+        },
+        password_reset: {
+          required: [],
+          optional: ['code'],
+          defaults: { code: 'auto-generated' },
+          description: "Password reset code - Auto-generates if not provided"
+        },
+        fund_receipt: {
+          required: ['currency', 'amount', 'sender'],
+          optional: [],
+          defaults: { currency: 'KES', amount: '0', sender: 'Unknown' },
+          description: "Payment receipt with transaction details"
+        },
+        login_alert: {
+          required: ['location', 'ip'],
+          optional: [],
+          defaults: { location: 'Unknown', ip: 'Unknown IP' },
+          description: "Security alert for new login"
+        }
+      };
+
+      const params = templateParams[templateName];
+      if (!params) {
+        return res.status(404).json({ message: `Unknown template: ${templateName}` });
+      }
+
+      res.json({
+        templateName,
+        ...params
+      });
+    } catch (error) {
+      console.error('[Admin] Get template parameters error:', error);
+      res.status(500).json({ message: "Failed to get template parameters" });
+    }
+  });
+
   // Send template to individual user
   app.post("/api/admin/whatsapp/send-template", requireAdminAuth, async (req, res) => {
     try {
@@ -6869,6 +6939,24 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
+      }
+
+      // Validate required parameters
+      const requiredParams: Record<string, string[]> = {
+        card_activation: ['lastFour'],
+        fund_receipt: ['currency', 'amount', 'sender'],
+        login_alert: ['location', 'ip']
+      };
+
+      if (requiredParams[templateName]) {
+        const missing = requiredParams[templateName].filter(p => !parameters?.[p]);
+        if (missing.length > 0) {
+          return res.status(400).json({
+            message: `Missing required parameters: ${missing.join(', ')}`,
+            required: requiredParams[templateName],
+            provided: Object.keys(parameters || {})
+          });
+        }
       }
 
       const { whatsappService } = await import('./services/whatsapp');
@@ -6896,24 +6984,23 @@ Sitemap: https://greenpay.world/sitemap.xml`;
           console.log('[Admin] KYC verified template sent', { userId, success });
           break;
         case 'card_activation':
-          success = await whatsappService.sendCardActivation(user.phone, parameters?.lastFour || '0000');
+          success = await whatsappService.sendCardActivation(user.phone, parameters.lastFour);
           console.log('[Admin] Card activation template sent', { userId, success });
           break;
         case 'fund_receipt':
-          // Parameters: currency, amount, sender, reference
           success = await whatsappService.sendFundReceipt(
             user.phone,
-            parameters?.currency || 'KES',
-            parameters?.amount || '0',
-            parameters?.sender || 'Unknown Sender'
+            parameters.currency,
+            parameters.amount,
+            parameters.sender
           );
           console.log('[Admin] Fund receipt template sent', { userId, success });
           break;
         case 'login_alert':
           success = await whatsappService.sendLoginAlert(
             user.phone,
-            parameters?.location || 'Unknown Location',
-            parameters?.ip || 'Unknown IP'
+            parameters.location,
+            parameters.ip
           );
           console.log('[Admin] Login alert template sent', { userId, success });
           break;
