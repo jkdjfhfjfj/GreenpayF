@@ -1116,59 +1116,64 @@ export class WhatsAppService {
   /**
    * Analyze which parameters are media vs text based on component types
    */
-  private analyzeParameterTypes(components: any[]): Map<string, { type: 'text' | 'media'; mediaType?: 'image' | 'document' | 'video'; index: number }> {
-    const paramInfo = new Map<string, { type: 'text' | 'media'; mediaType?: 'image' | 'document' | 'video'; index: number }>();
-    let textParamIndex = 1;
+  private analyzeParameterTypes(components: any[], allParams: Set<number>): Record<string, { type: 'text' | 'media'; mediaType?: string }> {
+    const metadata: Record<string, { type: 'text' | 'media'; mediaType?: string }> = {};
     
-    if (!components) return paramInfo;
+    if (!components || !allParams) return metadata;
+    
+    // First, find which parameter numbers are in headers with media
+    const mediaHeaderParams = new Set<number>();
     
     components.forEach((comp: any) => {
       if (!comp.type) return;
       
-      // HEADER components with media (IMAGE, DOCUMENT, VIDEO) have parameters for media
+      // Check for HEADER with media (IMAGE, DOCUMENT, VIDEO, LOCATION)
       if (comp.type === 'HEADER' && comp.format && comp.format !== 'TEXT') {
-        const mediaType = comp.format.toLowerCase() as 'image' | 'document' | 'video' | 'location';
-        // Media headers can have {{1}} as the media file reference parameter
-        if (comp.example?.header_handle || comp.example?.header) {
-          paramInfo.set(`param${textParamIndex}`, {
-            type: 'media',
-            mediaType: mediaType === 'location' ? 'image' : mediaType,
-            index: textParamIndex
+        // Media headers can have parameters like {{1}} for the media file
+        // Check if the header's example contains parameter references
+        const mediaType = comp.format.toLowerCase();
+        
+        if (comp.example) {
+          // Look for {{numbers}} in any field of the example
+          const exampleStr = JSON.stringify(comp.example);
+          const regex = /\{\{(\d+)\}\}/g;
+          const matches = [...exampleStr.matchAll(regex)];
+          matches.forEach(m => {
+            const paramNum = parseInt(m[1]);
+            mediaHeaderParams.add(paramNum);
           });
-          textParamIndex++;
+        }
+        
+        // If header has media format and example, first parameter is typically for media
+        if ((comp.example?.header_handle || comp.example?.header) && allParams.has(1)) {
+          mediaHeaderParams.add(1);
         }
       }
-      
-      // Extract text parameters from BODY, FOOTER, HEADER(TEXT), BUTTONS, URLs
-      const textFields: string[] = [];
-      if (comp.type === 'BODY' && comp.text) textFields.push(comp.text);
-      if (comp.type === 'FOOTER' && comp.text) textFields.push(comp.text);
-      if (comp.type === 'HEADER' && comp.format === 'TEXT' && comp.text) textFields.push(comp.text);
-      if (comp.buttons && Array.isArray(comp.buttons)) {
-        comp.buttons.forEach((btn: any) => {
-          if (btn.url) textFields.push(btn.url);
-          if (btn.text) textFields.push(btn.text);
-        });
-      }
-      
-      // Count unique parameters in text fields
-      const regex = /\{\{(\d+)\}\}/g;
-      const foundParams = new Set<number>();
-      textFields.forEach(field => {
-        const matches = [...field.matchAll(regex)];
-        matches.forEach(m => foundParams.add(parseInt(m[1])));
-      });
-      
-      // Add text parameters
-      foundParams.forEach(paramNum => {
-        const key = `param${paramNum}`;
-        if (!paramInfo.has(key)) {
-          paramInfo.set(key, { type: 'text', index: paramNum });
-        }
-      });
     });
     
-    return paramInfo;
+    // Now classify each parameter
+    allParams.forEach(paramNum => {
+      const paramKey = `param${paramNum}`;
+      
+      if (mediaHeaderParams.has(paramNum)) {
+        // Find which media type this parameter is for
+        let mediaType = 'image';
+        components.forEach((comp: any) => {
+          if (comp.type === 'HEADER' && comp.format && comp.format !== 'TEXT') {
+            mediaType = comp.format.toLowerCase();
+          }
+        });
+        
+        metadata[paramKey] = {
+          type: 'media',
+          mediaType: mediaType === 'location' ? 'image' : mediaType
+        };
+      } else {
+        metadata[paramKey] = { type: 'text' };
+      }
+    });
+    
+    return metadata;
   }
 
   /**
@@ -1193,24 +1198,13 @@ export class WhatsAppService {
         return { required: [], paramCount: 0, language: 'en_US', components: [] };
       }
 
-      // Extract parameters from all component types including buttons, headers, footers
+      // Extract ALL parameters from all component types including buttons, headers, footers
+      // This uses the comprehensive recursive scanner
+      const paramNumbers = this.extractParametersFromComponents(template.components || []);
       const params = this.getComponentParameters(template.components || []);
       
-      // Analyze parameter types
-      const paramTypeMap = this.analyzeParameterTypes(template.components || []);
-      const metadata: Record<string, { type: 'text' | 'media'; mediaType?: string }> = {};
-      
-      params.forEach(param => {
-        const info = paramTypeMap.get(param);
-        if (info) {
-          metadata[param] = {
-            type: info.type,
-            ...(info.mediaType && { mediaType: info.mediaType })
-          };
-        } else {
-          metadata[param] = { type: 'text' };
-        }
-      });
+      // Analyze parameter types to determine which are media vs text
+      const metadata = this.analyzeParameterTypes(template.components || [], paramNumbers);
       
       console.log(`[WhatsApp] Template "${templateName}" parameters analyzed:`, {
         params,
