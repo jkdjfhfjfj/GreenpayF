@@ -84,7 +84,7 @@ export default function SplashPage() {
   const slide = slides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 to-black flex flex-col relative overflow-hidden">
       {/* Animated background gradient orbs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <motion.div
@@ -104,7 +104,7 @@ export default function SplashPage() {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="w-full flex items-center justify-between mb-12 relative z-10"
+        className="h-20 flex items-center justify-between px-6 relative z-10 border-b border-gray-800"
       >
         <div className="text-center flex-1">
           <h1 className="text-white font-bold text-2xl">GreenPay</h1>
@@ -120,7 +120,7 @@ export default function SplashPage() {
       </motion.div>
 
       {/* Slide Container */}
-      <div className="w-full max-w-2xl flex-1 flex flex-col items-center justify-center relative z-10">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 overflow-hidden">
         <AnimatePresence mode="wait" custom={1}>
           <motion.div
             key={currentSlide}
@@ -133,7 +133,7 @@ export default function SplashPage() {
               x: { type: "spring", stiffness: 300, damping: 30 },
               opacity: { duration: 0.4 },
             }}
-            className="w-full flex flex-col items-center justify-center py-12"
+            className="w-full max-w-2xl flex flex-col items-center justify-center"
           >
             {/* Icon */}
             <motion.div
@@ -150,7 +150,7 @@ export default function SplashPage() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="text-5xl font-bold text-white text-center mb-6"
+              className="text-4xl md:text-5xl font-bold text-white text-center mb-4"
             >
               {slide.title}
             </motion.h2>
@@ -160,7 +160,7 @@ export default function SplashPage() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-gray-300 text-center text-lg leading-relaxed max-w-xl"
+              className="text-gray-300 text-center text-base md:text-lg leading-relaxed max-w-xl"
             >
               {slide.description}
             </motion.p>
@@ -173,7 +173,7 @@ export default function SplashPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="flex gap-2 justify-center mb-12 relative z-10"
+        className="flex gap-2 justify-center py-6 relative z-10"
       >
         {slides.map((_, idx) => (
           <motion.button
@@ -192,7 +192,7 @@ export default function SplashPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="w-full max-w-2xl space-y-3 relative z-10"
+        className="h-24 px-6 pb-6 pt-4 space-y-3 relative z-10 border-t border-gray-800"
       >
         {/* Action Buttons */}
         <div className="flex gap-3">
@@ -217,16 +217,6 @@ export default function SplashPage() {
             <ChevronRight className="w-5 h-5" />
           </motion.button>
         </div>
-
-        {/* Skip Button */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleSkip}
-          className="w-full text-gray-400 hover:text-white font-semibold py-3 px-4 transition-colors"
-        >
-          {currentSlide === slides.length - 1 ? "Already have account? Sign In" : "Skip"}
-        </motion.button>
       </motion.div>
     </div>
   );
