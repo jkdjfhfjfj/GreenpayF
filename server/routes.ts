@@ -7922,7 +7922,8 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   app.get("/api/ai/remaining-requests", async (req, res) => {
     try {
       const userId = req.user?.id || null;
-      const remaining = await aiRateLimiter.getRemainingRequests(userId);
+      const ipAddress = req.ip || req.connection.remoteAddress || '';
+      const remaining = await aiRateLimiter.getRemainingRequests(userId, ipAddress);
       res.json({ remainingRequests: remaining });
     } catch (error: any) {
       console.error('Get remaining requests error:', error);
@@ -7942,7 +7943,8 @@ Sitemap: https://greenpay.world/sitemap.xml`;
 
       // Check rate limits using database persistence
       const userId = user?.id || null;
-      const limitCheck = await aiRateLimiter.checkAndUpdateLimit(userId);
+      const ipAddress = req.ip || req.connection.remoteAddress || '';
+      const limitCheck = await aiRateLimiter.checkAndUpdateLimit(userId, ipAddress);
 
       if (!limitCheck.allowed) {
         return res.status(429).json({ error: limitCheck.error, remainingRequests: limitCheck.remainingRequests });
