@@ -999,6 +999,7 @@ export class WhatsAppService {
   /**
    * Extract parameters from template components - scans ALL fields for {{1}}, {{2}}, etc
    * Checks: body text, header text/media, footer, buttons, and all possible URLs
+   * Includes media file parameters, example objects, and all nested fields
    * Returns SET of unique parameter numbers found
    */
   private extractParametersFromComponents(components: any[]): Set<number> {
@@ -1007,58 +1008,69 @@ export class WhatsAppService {
     const paramNumbers = new Set<number>();
     const regex = /\{\{(\d+)\}\}/g;
     
+    // Helper to recursively scan any object for parameters
+    const scanObject = (obj: any, depth = 0) => {
+      if (depth > 5) return; // Prevent infinite recursion
+      if (!obj) return;
+      
+      if (typeof obj === 'string') {
+        const matches = [...obj.matchAll(regex)];
+        matches.forEach(m => paramNumbers.add(parseInt(m[1])));
+      } else if (Array.isArray(obj)) {
+        obj.forEach(item => scanObject(item, depth + 1));
+      } else if (typeof obj === 'object') {
+        Object.values(obj).forEach(val => scanObject(val, depth + 1));
+      }
+    };
+    
     components.forEach((comp: any) => {
-      // Helper function to extract params from string
-      const extractFromString = (str: string) => {
-        if (str && typeof str === 'string') {
-          const matches = [...str.matchAll(regex)];
-          matches.forEach(m => paramNumbers.add(parseInt(m[1])));
-        }
-      };
+      if (!comp) return;
       
-      // 1. Check BODY component - can have text with parameters
-      if (comp.type === 'BODY' && comp.text) {
-        extractFromString(comp.text);
+      // 1. BODY component - text with parameters
+      if (comp.type === 'BODY') {
+        scanObject(comp.text);
       }
       
-      // 2. Check FOOTER component - can have text with parameters
-      if (comp.type === 'FOOTER' && comp.text) {
-        extractFromString(comp.text);
+      // 2. FOOTER component - text with parameters
+      if (comp.type === 'FOOTER') {
+        scanObject(comp.text);
       }
       
-      // 3. Check HEADER component - can be TEXT, IMAGE, DOCUMENT, VIDEO, or LOCATION
+      // 3. HEADER component - can be TEXT, IMAGE, DOCUMENT, VIDEO, or LOCATION
       if (comp.type === 'HEADER') {
-        // TEXT headers have text field
-        if (comp.format === 'TEXT' || comp.text) {
-          extractFromString(comp.text);
+        // Direct text field (for TEXT format headers)
+        if (comp.text) {
+          scanObject(comp.text);
         }
-        // IMAGE/DOCUMENT/VIDEO headers have example object with link
+        
+        // Example object contains media parameters and handles
+        // Media can have {{1}}, {{2}} in:
+        // - example.header_text (text parameter)
+        // - example.header_handle (file URL/reference with parameters)
+        // - example.header (direct reference object)
         if (comp.example) {
-          extractFromString(comp.example.header_text);
-          if (Array.isArray(comp.example.header_handle)) {
-            comp.example.header_handle.forEach((handle: string) => {
-              extractFromString(handle);
-            });
-          }
+          // Scan entire example object recursively
+          // This catches parameters in header_text, header_handle, header, etc.
+          scanObject(comp.example);
         }
       }
       
-      // 4. Check BUTTONS - can have URL parameters and text
+      // 4. BUTTONS - can have URL parameters, phone numbers, and text
       if (comp.buttons && Array.isArray(comp.buttons)) {
         comp.buttons.forEach((btn: any) => {
-          // URL button may have dynamic parameters
-          extractFromString(btn.url);
-          // Button text might have parameters
-          extractFromString(btn.text);
-          // Phone button parameter
-          extractFromString(btn.phone_number);
+          if (btn.url) scanObject(btn.url);
+          if (btn.text) scanObject(btn.text);
+          if (btn.phone_number) scanObject(btn.phone_number);
         });
       }
       
-      // 5. Check generic text field (fallback for any format)
-      if (comp.text && typeof comp.text === 'string' && comp.type !== 'BODY' && comp.type !== 'FOOTER' && comp.type !== 'HEADER') {
-        extractFromString(comp.text);
-      }
+      // 5. Scan any other fields in the component that might have parameters
+      // (handles unexpected component structures)
+      Object.entries(comp).forEach(([key, value]) => {
+        if (key !== 'type' && key !== 'buttons' && !['example', 'text', 'format'].includes(key)) {
+          scanObject(value, 1);
+        }
+      });
     });
     
     return paramNumbers;
