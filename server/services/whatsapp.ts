@@ -742,7 +742,7 @@ export class WhatsAppService {
   }
 
   /**
-   * Create all required WhatsApp templates via Meta API with interactive buttons
+   * Create all required WhatsApp templates via Meta API - Compliant with Meta's API requirements
    */
   async createAllTemplates(): Promise<{ success: string[]; failed: string[] }> {
     // Refresh credentials first to ensure we have latest token
@@ -750,32 +750,19 @@ export class WhatsAppService {
     
     const results = { success: [], failed: [] };
 
-    // 1. Account Creation template - MARKETING with CTA button to activate messaging
+    // 1. Account Creation template - MARKETING with welcome message and CTA
     const createAccSuccess = await this.createTemplate('create_acc', 'MARKETING', [
       {
-        type: 'HEADER',
-        format: 'TEXT',
-        text: '🎉 Welcome to GreenPay!'
-      },
-      {
         type: 'BODY',
-        text: 'Hi {{1}},\n\nYour GreenPay account is ready! Enjoy seamless payments, virtual cards, money transfers, and more.\n\nClick the button below to activate messaging and get started.'
-      },
-      {
-        type: 'FOOTER',
-        text: 'Secure payments powered by GreenPay'
+        text: 'Welcome to GreenPay, {{1}}!\n\nYour account is ready. Click below to start enjoying seamless payments, virtual cards, and money transfers.'
       },
       {
         type: 'BUTTONS',
         buttons: [
           {
             type: 'URL',
-            text: 'Start Using GreenPay',
+            text: 'Get Started',
             url: 'https://app.greenpay.world/dashboard'
-          },
-          {
-            type: 'QUICK_REPLY',
-            text: 'Help & Support'
           }
         ]
       }
@@ -783,23 +770,19 @@ export class WhatsAppService {
     if (createAccSuccess) results.success.push('create_acc');
     else results.failed.push('create_acc');
 
-    // 2. Login Alert template - UTILITY with security action button
+    // 2. Login Alert template - UTILITY with security notification and action
     const loginSuccess = await this.createTemplate('login_alert', 'UTILITY', [
       {
         type: 'BODY',
-        text: 'New login detected on your GreenPay account:\n\nLocation: {{1}}\nIP Address: {{2}}\nTime: {{3}}\n\nIf this wasn\'t you, click the button below to secure your account immediately.'
+        text: 'New login on your GreenPay account\n\nLocation: {{1}}\nIP: {{2}}\n\nIf this wasn\'t you, secure your account now.'
       },
       {
         type: 'BUTTONS',
         buttons: [
           {
             type: 'URL',
-            text: 'Secure Account',
+            text: 'Secure Now',
             url: 'https://app.greenpay.world/security'
-          },
-          {
-            type: 'QUICK_REPLY',
-            text: 'This is Me'
           }
         ]
       }
@@ -807,20 +790,11 @@ export class WhatsAppService {
     if (loginSuccess) results.success.push('login_alert');
     else results.failed.push('login_alert');
 
-    // 3. Fund Receipt template - UTILITY with transaction details and action
+    // 3. Fund Receipt template - UTILITY with transaction details
     const fundSuccess = await this.createTemplate('fund_receipt', 'UTILITY', [
       {
-        type: 'HEADER',
-        format: 'TEXT',
-        text: '✅ Funds Received'
-      },
-      {
         type: 'BODY',
-        text: 'You have received {{1}} {{2}} from {{3}}.\n\nTransaction reference: {{4}}\nYour new balance is available in your wallet.'
-      },
-      {
-        type: 'FOOTER',
-        text: 'Transaction Date: {{5}}'
+        text: 'You received {{1}} {{2}} from {{3}}\n\nRef: {{4}}\n\nView your wallet for details.'
       },
       {
         type: 'BUTTONS',
@@ -829,10 +803,6 @@ export class WhatsAppService {
             type: 'URL',
             text: 'View Wallet',
             url: 'https://app.greenpay.world/wallet'
-          },
-          {
-            type: 'QUICK_REPLY',
-            text: 'Transaction History'
           }
         ]
       }
@@ -840,32 +810,19 @@ export class WhatsAppService {
     if (fundSuccess) results.success.push('fund_receipt');
     else results.failed.push('fund_receipt');
 
-    // 4. Card Activation template - UTILITY with card details and action
+    // 4. Card Activation template - UTILITY with card ready notification
     const cardSuccess = await this.createTemplate('card_activation', 'UTILITY', [
       {
-        type: 'HEADER',
-        format: 'TEXT',
-        text: '💳 Card Activated'
-      },
-      {
         type: 'BODY',
-        text: 'Your GreenPay virtual card {{1}} has been activated!\n\nYou can now:\n• Make online purchases\n• Pay bills\n• Transfer money\n• Manage your spending\n\nCard is ready to use immediately.'
-      },
-      {
-        type: 'FOOTER',
-        text: 'Card valid until {{2}}'
+        text: 'Your GreenPay card {{1}} is now active!\n\nReady for online purchases, bill payments, and transfers.'
       },
       {
         type: 'BUTTONS',
         buttons: [
           {
             type: 'URL',
-            text: 'View Card Details',
+            text: 'View Card',
             url: 'https://app.greenpay.world/cards'
-          },
-          {
-            type: 'QUICK_REPLY',
-            text: 'Card Settings'
           }
         ]
       }
@@ -873,32 +830,19 @@ export class WhatsAppService {
     if (cardSuccess) results.success.push('card_activation');
     else results.failed.push('card_activation');
 
-    // 5. KYC Verified template - MARKETING with congratulations and next steps
+    // 5. KYC Verified template - MARKETING with verification confirmation
     const kycSuccess = await this.createTemplate('kyc_verified', 'MARKETING', [
       {
-        type: 'HEADER',
-        format: 'TEXT',
-        text: '✅ Identity Verified'
-      },
-      {
         type: 'BODY',
-        text: 'Congratulations {{1}}! Your identity has been verified.\n\nYou now have full access to:\n• Higher transaction limits\n• Virtual card creation\n• Enhanced features\n• Priority support\n\nStart enjoying GreenPay benefits today!'
-      },
-      {
-        type: 'FOOTER',
-        text: 'All your data is secure and encrypted'
+        text: 'Great {{1}}! Your identity is verified.\n\nUnlock higher limits, virtual cards, and premium features.'
       },
       {
         type: 'BUTTONS',
         buttons: [
           {
             type: 'URL',
-            text: 'Go to Dashboard',
+            text: 'Explore Features',
             url: 'https://app.greenpay.world/dashboard'
-          },
-          {
-            type: 'QUICK_REPLY',
-            text: 'View Limits'
           }
         ]
       }
@@ -906,11 +850,11 @@ export class WhatsAppService {
     if (kycSuccess) results.success.push('kyc_verified');
     else results.failed.push('kyc_verified');
 
-    // 6. Password Reset template - AUTHENTICATION with code
+    // 6. Password Reset template - AUTHENTICATION
     const pwdSuccess = await this.createTemplate('password_reset', 'AUTHENTICATION', [
       {
         type: 'BODY',
-        text: 'Your GreenPay password reset code is: {{1}}\n\nValid for 10 minutes. Do not share this code with anyone.'
+        text: 'Your password reset code: {{1}}\n\nValid for 10 minutes. Do not share.'
       }
     ]);
     if (pwdSuccess) results.success.push('password_reset');
