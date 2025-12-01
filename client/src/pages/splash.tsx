@@ -84,7 +84,7 @@ export default function SplashPage() {
   const slide = slides[currentSlide];
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 to-black flex flex-col relative overflow-hidden">
+    <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-gray-900 to-black flex flex-col relative overflow-hidden" style={{ top: 0, left: 0, right: 0, bottom: 0 }}>
       {/* Animated background gradient orbs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <motion.div
