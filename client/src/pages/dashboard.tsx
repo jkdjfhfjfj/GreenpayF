@@ -10,6 +10,7 @@ import Notifications from "@/components/notifications";
 import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard, Zap, DollarSign, MapPin, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber } from "@/lib/formatters";
+import { WavyHeader } from "@/components/wavy-header";
 
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
@@ -159,75 +160,114 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Top Navigation */}
+      {/* Wavy Header Background */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10"
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center flex-1">
-            {user?.profilePhotoUrl ? (
-              <img 
-                src={user.profilePhotoUrl} 
-                alt="Profile" 
-                className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-white/30 shadow-lg"
-              />
-            ) : (
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mr-3 border-2 border-white/30 shadow-lg">
-                <span className="text-white font-bold text-lg">
-                  {user?.fullName?.split(' ').map(n => n[0]).join('') || 'JD'}
-                </span>
+        {/* Wavy SVG Background */}
+        <svg 
+          className="w-full" 
+          viewBox="-50 0 1380 110" 
+          preserveAspectRatio="none" 
+          style={{ height: '100px', overflow: 'visible' }}
+        >
+          <defs>
+            <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style={{ stopColor: '#4CAF50', stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: '#45a049', stopOpacity: 0.3 }} />
+            </linearGradient>
+          </defs>
+          
+          {/* Main wave fill */}
+          <path d="M-50,55 Q315,5 665,55 T1365,55 L1365,0 L-50,0 Z" fill="#4CAF50" />
+          
+          {/* Flowing curves */}
+          <path
+            d="M-50,75 Q315,35 665,75 T1365,75 Q1035,110 665,90 Q295,75 -50,95 Z"
+            fill="rgba(76, 175, 80, 0.4)"
+            opacity="0.6"
+          />
+          
+          {/* Accent curves */}
+          <path
+            d="M-50,105 Q315,75 665,105 T1365,105"
+            stroke="#4CAF50"
+            strokeWidth="2"
+            fill="none"
+            opacity="0.5"
+          />
+        </svg>
+
+        {/* Header Content Overlay */}
+        <div className="absolute top-0 left-0 right-0 py-4 px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center flex-1">
+              {user?.profilePhotoUrl ? (
+                <img 
+                  src={user.profilePhotoUrl} 
+                  alt="Profile" 
+                  className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-white/30 shadow-lg"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mr-3 border-2 border-white/30 shadow-lg">
+                  <span className="text-white font-bold text-lg">
+                    {user?.fullName?.split(' ').map(n => n[0]).join('') || 'JD'}
+                  </span>
+                </div>
+              )}
+              <div>
+                <h1 className="font-bold text-lg text-gray-800 dark:text-gray-200">Hi, {user?.fullName?.split(' ')[0] || 'John'}!</h1>
+                <p className="text-xs text-gray-700 dark:text-gray-300">Welcome back 👋</p>
               </div>
-            )}
-            <div>
-              <h1 className="font-bold text-lg">Hi, {user?.fullName?.split(' ')[0] || 'John'}!</h1>
-              <p className="text-xs text-white/80">Welcome back 👋</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Notifications />
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setLocation('/live-chat')}
+                className="p-2 rounded-full hover:opacity-80 transition-opacity"
+                title="Contact Support"
+                data-testid="button-support"
+              >
+                <span className="material-icons text-gray-800 dark:text-gray-200 text-xl">headset_mic</span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleDarkMode}
+                className="p-2 rounded-full hover:opacity-80 transition-opacity mr-2"
+                data-testid="button-dark-mode"
+              >
+                <span className="material-icons text-gray-800 dark:text-gray-200 text-xl">brightness_6</span>
+              </motion.button>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Notifications />
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLocation('/live-chat')}
-              className="p-2 rounded-full hover:opacity-80 transition-opacity"
-              title="Contact Support"
-              data-testid="button-support"
-            >
-              <span className="material-icons text-white text-xl">headset_mic</span>
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleDarkMode}
-              className="p-2 rounded-full hover:opacity-80 transition-opacity mr-2"
-              data-testid="button-dark-mode"
-            >
-              <span className="material-icons text-white text-xl">brightness_6</span>
-            </motion.button>
-          </div>
         </div>
+      </motion.div>
 
-        {/* Logged In + Country Location */}
-        {user?.country && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="flex items-center gap-2 mb-3 justify-start"
-          >
-            <MapPin className="w-3.5 h-3.5 text-white/70" />
-            <span className="text-white/70 text-xs">Logged in</span>
-            <span className="text-white/70 text-xs font-medium">{user.country}</span>
-          </motion.div>
-        )}
-
-        {/* Wallet Balance Card - Dual Wallet */}
+      {/* Logged In + Country Location */}
+      {user?.country && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="flex items-center gap-2 px-6 py-2 justify-start"
         >
+          <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-muted-foreground text-xs">Logged in</span>
+          <span className="text-muted-foreground text-xs font-medium">{user.country}</span>
+        </motion.div>
+      )}
+
+      {/* Wallet Balance Card - Dual Wallet */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.1 }}
+        className="mx-6 mt-4 bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
+      >
           {/* Wallet Switcher */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex bg-white/10 rounded-lg p-1 backdrop-blur-sm">
