@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useInitializeCardPayment, useVerifyCardPayment } from "@/hooks/use-paystack";
 import { apiRequest } from "@/lib/queryClient";
+import { WavyHeader } from "@/components/wavy-header";
 
 export default function VirtualCardPurchasePage() {
   const [, setLocation] = useLocation();
@@ -64,15 +65,12 @@ export default function VirtualCardPurchasePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center elevation-1"
-      >
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setLocation("/dashboard")}
+    <div className="min-h-screen flex flex-col bg-background pb-20">
+      <WavyHeader
+        title="Get Virtual Card"
+        onBack={() => setLocation("/dashboard")}
+        size="sm"
+      />
           className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
           data-testid="button-back"
         >

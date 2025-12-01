@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { mockCountries } from "@/lib/mock-data";
+import { WavyHeader } from "@/components/wavy-header";
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -93,7 +94,12 @@ export default function SignupPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background pb-20">
+      <WavyHeader
+        title="Signup"
+        onBack={() => setLocation("/")}
+        size="sm"
+      />
       <div className="flex-1 p-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}

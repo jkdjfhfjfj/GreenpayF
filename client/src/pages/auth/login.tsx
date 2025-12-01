@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { WavyHeader } from "@/components/wavy-header";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -138,7 +139,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background pb-20">
+      <WavyHeader
+        title="Login"
+        onBack={() => setLocation("/")}
+        size="sm"
+      />
       <div className="flex-1 p-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
