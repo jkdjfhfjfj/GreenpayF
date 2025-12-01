@@ -1114,9 +1114,73 @@ export class WhatsAppService {
   }
 
   /**
-   * Get template parameters from Meta - scans full component structure
+   * Analyze which parameters are media vs text based on component types
    */
-  async getTemplateParameters(templateName: string): Promise<{ required: string[]; paramCount: number; language: string; components: any[] }> {
+  private analyzeParameterTypes(components: any[]): Map<string, { type: 'text' | 'media'; mediaType?: 'image' | 'document' | 'video'; index: number }> {
+    const paramInfo = new Map<string, { type: 'text' | 'media'; mediaType?: 'image' | 'document' | 'video'; index: number }>();
+    let textParamIndex = 1;
+    
+    if (!components) return paramInfo;
+    
+    components.forEach((comp: any) => {
+      if (!comp.type) return;
+      
+      // HEADER components with media (IMAGE, DOCUMENT, VIDEO) have parameters for media
+      if (comp.type === 'HEADER' && comp.format && comp.format !== 'TEXT') {
+        const mediaType = comp.format.toLowerCase() as 'image' | 'document' | 'video' | 'location';
+        // Media headers can have {{1}} as the media file reference parameter
+        if (comp.example?.header_handle || comp.example?.header) {
+          paramInfo.set(`param${textParamIndex}`, {
+            type: 'media',
+            mediaType: mediaType === 'location' ? 'image' : mediaType,
+            index: textParamIndex
+          });
+          textParamIndex++;
+        }
+      }
+      
+      // Extract text parameters from BODY, FOOTER, HEADER(TEXT), BUTTONS, URLs
+      const textFields: string[] = [];
+      if (comp.type === 'BODY' && comp.text) textFields.push(comp.text);
+      if (comp.type === 'FOOTER' && comp.text) textFields.push(comp.text);
+      if (comp.type === 'HEADER' && comp.format === 'TEXT' && comp.text) textFields.push(comp.text);
+      if (comp.buttons && Array.isArray(comp.buttons)) {
+        comp.buttons.forEach((btn: any) => {
+          if (btn.url) textFields.push(btn.url);
+          if (btn.text) textFields.push(btn.text);
+        });
+      }
+      
+      // Count unique parameters in text fields
+      const regex = /\{\{(\d+)\}\}/g;
+      const foundParams = new Set<number>();
+      textFields.forEach(field => {
+        const matches = [...field.matchAll(regex)];
+        matches.forEach(m => foundParams.add(parseInt(m[1])));
+      });
+      
+      // Add text parameters
+      foundParams.forEach(paramNum => {
+        const key = `param${paramNum}`;
+        if (!paramInfo.has(key)) {
+          paramInfo.set(key, { type: 'text', index: paramNum });
+        }
+      });
+    });
+    
+    return paramInfo;
+  }
+
+  /**
+   * Get template parameters from Meta - includes parameter types and requirements
+   */
+  async getTemplateParameters(templateName: string): Promise<{ 
+    required: string[]; 
+    paramCount: number; 
+    language: string; 
+    components: any[];
+    parameterMetadata?: Record<string, { type: 'text' | 'media'; mediaType?: string }>;
+  }> {
     try {
       let template = await this.getTemplateDetails(templateName);
       
@@ -1132,22 +1196,37 @@ export class WhatsAppService {
       // Extract parameters from all component types including buttons, headers, footers
       const params = this.getComponentParameters(template.components || []);
       
-      console.log(`[WhatsApp] Template "${templateName}" parameters extracted:`, {
+      // Analyze parameter types
+      const paramTypeMap = this.analyzeParameterTypes(template.components || []);
+      const metadata: Record<string, { type: 'text' | 'media'; mediaType?: string }> = {};
+      
+      params.forEach(param => {
+        const info = paramTypeMap.get(param);
+        if (info) {
+          metadata[param] = {
+            type: info.type,
+            ...(info.mediaType && { mediaType: info.mediaType })
+          };
+        } else {
+          metadata[param] = { type: 'text' };
+        }
+      });
+      
+      console.log(`[WhatsApp] Template "${templateName}" parameters analyzed:`, {
         params,
         paramCount: params.length,
+        metadata,
         componentCount: template.components?.length || 0,
-        componentTypes: template.components?.map((c: any) => c.type) || [],
-        componentDetails: template.components?.map((c: any) => ({
-          type: c.type,
-          format: c.format,
-          hasText: !!c.text,
-          hasButtons: !!c.buttons,
-          hasExample: !!c.example,
-          textPreview: c.text ? c.text.substring(0, 60) : null
-        })) || []
+        componentTypes: template.components?.map((c: any) => c.type) || []
       });
 
-      return { required: params, paramCount: params.length, language: template.language || 'en_US', components: template.components || [] };
+      return { 
+        required: params, 
+        paramCount: params.length, 
+        language: template.language || 'en_US', 
+        components: template.components || [],
+        parameterMetadata: metadata
+      };
     } catch (error) {
       console.error('[WhatsApp] Error getting template parameters:', error);
       return { required: [], paramCount: 0, language: 'en_US', components: [] };

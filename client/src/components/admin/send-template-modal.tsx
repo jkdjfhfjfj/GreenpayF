@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
-import { Send, X, AlertCircle } from "lucide-react";
+import { Send, X, AlertCircle, Upload } from "lucide-react";
 
 interface User {
   id: string;
@@ -26,6 +26,7 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
   const [selectedUser, setSelectedUser] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [parameters, setParameters] = useState<Record<string, string>>({});
+  const [mediaFiles, setMediaFiles] = useState<Record<string, File>>({});
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
 
@@ -73,16 +74,37 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
 
     setSending(true);
     try {
-      const response = await fetch('/api/admin/whatsapp/send-template', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      // Build FormData if there are media files
+      const hasMediaFiles = Object.keys(mediaFiles).length > 0;
+      let body: string | FormData;
+      let headers: Record<string, string> = {};
+
+      if (hasMediaFiles) {
+        const formData = new FormData();
+        formData.append('userId', selectedUser);
+        formData.append('templateName', selectedTemplate);
+        formData.append('parameters', JSON.stringify(parameters));
+        
+        // Append media files
+        Object.entries(mediaFiles).forEach(([paramName, file]) => {
+          formData.append(`media_${paramName}`, file);
+        });
+        
+        body = formData;
+        // Don't set Content-Type, let browser set it with boundary
+      } else {
+        body = JSON.stringify({
           userId: selectedUser,
           templateName: selectedTemplate,
           parameters
-        })
+        });
+        headers['Content-Type'] = 'application/json';
+      }
+
+      const response = await fetch('/api/admin/whatsapp/send-template', {
+        method: 'POST',
+        headers,
+        body
       });
 
       const data = await response.json();
@@ -95,6 +117,7 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
         setSelectedUser("");
         setSelectedTemplate("");
         setParameters({});
+        setMediaFiles({});
         onClose();
       } else {
         // Show actual error from backend
@@ -119,8 +142,9 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
   if (!isOpen) return null;
 
   // Dynamic parameter fields based on backend response
-  const requiredParams = templateParamData?.requiredParameters || [];
-  const paramCount = templateParamData?.parameterCount || 0;
+  const requiredParams = templateParamData?.required || [];
+  const paramCount = templateParamData?.paramCount || 0;
+  const parameterMetadata = templateParamData?.parameterMetadata || {};
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -200,21 +224,55 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
                 <AlertCircle className="w-4 h-4" />
                 This template requires {paramCount} parameter(s)
               </div>
-              {requiredParams.map((param: string, idx: number) => (
-                <div key={param} className="space-y-1">
-                  <Label htmlFor={param} className="text-xs font-medium">
-                    Parameter {idx + 1}: {param} *
-                  </Label>
-                  <Input
-                    id={param}
-                    placeholder={`Enter ${param}`}
-                    value={parameters[param] || ''}
-                    onChange={(e) => setParameters({ ...parameters, [param]: e.target.value })}
-                    required
-                    className="text-sm"
-                  />
-                </div>
-              ))}
+              {requiredParams.map((param: string, idx: number) => {
+                const paramMeta = parameterMetadata[param];
+                const isMediaParam = paramMeta?.type === 'media';
+                const mediaType = paramMeta?.mediaType || 'image';
+                
+                return (
+                  <div key={param} className="space-y-1">
+                    <Label htmlFor={param} className="text-xs font-medium">
+                      {isMediaParam ? (
+                        <>Parameter {idx + 1}: {param} (Upload {mediaType}) *</>
+                      ) : (
+                        <>Parameter {idx + 1}: {param} *</>
+                      )}
+                    </Label>
+                    
+                    {isMediaParam ? (
+                      <div className="relative">
+                        <Input
+                          id={param}
+                          type="file"
+                          accept={mediaType === 'image' ? 'image/*' : mediaType === 'video' ? 'video/*' : '*/*'}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setMediaFiles({ ...mediaFiles, [param]: file });
+                            }
+                          }}
+                          className="text-sm"
+                        />
+                        {mediaFiles[param] && (
+                          <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                            <Upload className="w-3 h-3" />
+                            {mediaFiles[param].name}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Input
+                        id={param}
+                        placeholder={`Enter ${param}`}
+                        value={parameters[param] || ''}
+                        onChange={(e) => setParameters({ ...parameters, [param]: e.target.value })}
+                        required
+                        className="text-sm"
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
