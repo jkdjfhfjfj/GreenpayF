@@ -173,15 +173,13 @@ export default function OtpVerificationPage() {
           
           <h2 className="text-2xl font-bold mb-2">Verify Login</h2>
           <p className="text-muted-foreground mb-8">
-            We've sent a 6-digit verification code via SMS and WhatsApp to
+            We've sent a 6-digit verification code to:
             <br />
-            <strong>{phone || "your phone"}</strong>
+            <strong>📱 SMS & WhatsApp:</strong> {phone || "your phone"}
             {email && (
               <>
                 <br />
-                <span className="text-sm">
-                  A code has also been sent to <strong>{email}</strong>
-                </span>
+                <strong>📧 Email:</strong> {email}
               </>
             )}
           </p>
