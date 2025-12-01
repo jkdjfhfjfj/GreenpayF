@@ -104,7 +104,7 @@ export default function SplashPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10 pb-8"
+        className="relative z-10 -mb-1"
       >
         {/* Wavy SVG Background */}
         <svg className="w-full" viewBox="0 0 1280 200" preserveAspectRatio="none" style={{ height: '180px' }}>
