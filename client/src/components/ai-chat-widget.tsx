@@ -23,7 +23,7 @@ export function AIChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [remainingRequests, setRemainingRequests] = useState<number | null>(null);
+  const [remainingRequests, setRemainingRequests] = useState<number>(5);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -123,22 +123,6 @@ export function AIChatWidget() {
         />
       </motion.button>
 
-      {/* Floating Button - WhatsApp Widget */}
-      <motion.a
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        href="https://wa.me/254700000000"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-32 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50 border-0 p-0 bg-white overflow-hidden flex items-center justify-center"
-      >
-        <img 
-          src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1764598579/greenpay/widgets/whatsapp-button.jpg" 
-          alt="WhatsApp" 
-          className="w-full h-full object-cover rounded-full hover:scale-110 transition-transform duration-200"
-        />
-      </motion.a>
-
       {/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
@@ -153,11 +137,9 @@ export function AIChatWidget() {
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Ask AI</h3>
                 <p className="text-xs sm:text-sm text-emerald-100">Get help with GreenPay</p>
-                {remainingRequests !== null && (
-                  <p className="text-xs text-emerald-50 mt-1">
-                    {remainingRequests} request{remainingRequests !== 1 ? 's' : ''} remaining today
-                  </p>
-                )}
+                <p className="text-xs text-emerald-50 mt-1">
+                  {remainingRequests} request{remainingRequests !== 1 ? 's' : ''} remaining today
+                </p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
