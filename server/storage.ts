@@ -45,6 +45,8 @@ import {
   type InsertWhatsappConfig,
   type BillPayment,
   type InsertBillPayment,
+  type TicketReply,
+  type InsertTicketReply,
   users,
   kycDocuments,
   virtualCards,
@@ -61,6 +63,7 @@ import {
   systemLogs,
   apiConfigurations,
   supportTickets,
+  ticketReplies,
   savingsGoals,
   qrPayments,
   scheduledPayments,
@@ -75,7 +78,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, count, sum, or, isNull, gte, lt, and, sql } from "drizzle-orm";
+import { eq, desc, count, sum, or, isNull, gte, lt, and, sql, asc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -1721,6 +1724,23 @@ export class DatabaseStorage implements IStorage {
       .where(eq(supportTickets.id, id))
       .returning();
     return updatedTicket;
+  }
+
+  // Ticket Replies operations
+  async createTicketReply(reply: InsertTicketReply): Promise<TicketReply> {
+    const [newReply] = await db
+      .insert(ticketReplies)
+      .values(reply)
+      .returning();
+    return newReply;
+  }
+
+  async getTicketReplies(ticketId: string): Promise<TicketReply[]> {
+    return await db
+      .select()
+      .from(ticketReplies)
+      .where(eq(ticketReplies.ticketId, ticketId))
+      .orderBy(asc(ticketReplies.createdAt));
   }
 
   // Conversation operations

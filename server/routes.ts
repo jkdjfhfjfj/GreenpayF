@@ -3332,7 +3332,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user's support tickets
+  // Get user's support tickets (NEW user API)
+  app.get("/api/user/support-tickets", async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const tickets = await storage.getSupportTicketsByUserId(userId);
+      const ticketsWithReplies = await Promise.all(
+        tickets.map(async (ticket) => ({
+          ...ticket,
+          replies: await storage.getTicketReplies(ticket.id),
+        }))
+      );
+      res.json({ tickets: ticketsWithReplies });
+    } catch (error) {
+      console.error('Get user tickets error:', error);
+      res.status(500).json({ message: "Failed to fetch support tickets" });
+    }
+  });
+
+  // Create support ticket (user facing)
+  app.post("/api/user/support-tickets", upload.single('file'), async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+
+      const { issueType, description } = req.body;
+      if (!issueType || !description) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const ticket = await storage.createSupportTicket({ userId, issueType, description, status: 'open', priority: 'medium' });
+      res.json({ message: "Ticket created", ticket });
+    } catch (error) {
+      console.error('Create user ticket error:', error);
+      res.status(500).json({ message: "Failed to create ticket" });
+    }
+  });
+
+  // Send reply on user ticket
+  app.post("/api/user/support-tickets/:id/reply", upload.single('file'), async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+
+      const { content } = req.body;
+      if (!content) return res.status(400).json({ message: "Reply content required" });
+
+      let fileUrl = undefined;
+      let fileName = undefined;
+      if (req.file) {
+        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
+        fileName = req.file.originalname;
+      }
+
+      const reply = await storage.createTicketReply({
+        ticketId: req.params.id,
+        userId,
+        senderType: 'user',
+        content,
+        fileUrl,
+        fileName,
+      });
+      res.json({ message: "Reply sent", reply });
+    } catch (error) {
+      console.error('Send reply error:', error);
+      res.status(500).json({ message: "Failed to send reply" });
+    }
+  });
+
+  // Get user's support tickets (legacy)
   app.get("/api/support/tickets", async (req, res) => {
     try {
       const userId = (req.session as any)?.user?.id;
@@ -3361,7 +3434,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: limit ? parseInt(limit as string) : undefined,
       });
 
-      res.json(result);
+      // Add user details and replies to each ticket
+      const ticketsWithDetails = await Promise.all(
+        result.tickets.map(async (ticket) => {
+          const user = await storage.getUser(ticket.userId);
+          const replies = await storage.getTicketReplies(ticket.id);
+          return {
+            ...ticket,
+            user: user ? { fullName: user.fullName, email: user.email, phone: user.phone } : undefined,
+            replies,
+          };
+        })
+      );
+
+      res.json({ ...result, tickets: ticketsWithDetails });
     } catch (error) {
       console.error('Get admin tickets error:', error);
       res.status(500).json({ message: "Failed to fetch support tickets" });
@@ -3508,6 +3594,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Cleanup ticket notifications error:', error);
       res.status(500).json({ message: "Failed to cleanup ticket notifications" });
+    }
+  });
+
+  // Admin: Reply to support ticket
+  app.post("/api/admin/support-tickets/:id/reply", requireAdminAuth, upload.single('file'), async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content) return res.status(400).json({ message: "Reply content required" });
+
+      let fileUrl = undefined;
+      let fileName = undefined;
+      if (req.file) {
+        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
+        fileName = req.file.originalname;
+      }
+
+      const reply = await storage.createTicketReply({
+        ticketId: req.params.id,
+        userId: (req.session as any)?.admin?.id || '',
+        senderType: 'admin',
+        content,
+        fileUrl,
+        fileName,
+      });
+
+      await storage.createAdminLog({
+        adminId: (req.session as any)?.admin?.id || null,
+        action: "reply_support_ticket",
+        details: `Admin replied to ticket ${req.params.id}`,
+        targetId: req.params.id,
+      });
+
+      res.json({ message: "Reply sent", reply });
+    } catch (error) {
+      console.error('Send admin reply error:', error);
+      res.status(500).json({ message: "Failed to send reply" });
     }
   });
 

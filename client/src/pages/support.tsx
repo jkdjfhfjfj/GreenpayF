@@ -70,6 +70,10 @@ export default function SupportPage() {
     setShowLiveChat(false);
   };
 
+  const handleViewTickets = () => {
+    setLocation('/support/tickets');
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation */}
@@ -98,16 +102,27 @@ export default function SupportPage() {
         >
           <h3 className="font-bold text-lg mb-2">Need Help?</h3>
           <p className="text-green-100 mb-4">Our support team is available 24/7 to assist you</p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleStartLiveChat}
-            className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors"
-            data-testid="button-start-chat"
-          >
-            <span className="material-icons text-sm mr-1">chat</span>
-            Start Live Chat
-          </motion.button>
+          <div className="flex gap-2">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleStartLiveChat}
+              className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors"
+              data-testid="button-start-chat"
+            >
+              <span className="material-icons text-sm mr-1">chat</span>
+              Start Live Chat
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleViewTickets}
+              className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors"
+            >
+              <span className="material-icons text-sm mr-1">confirmation_number</span>
+              My Tickets
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* FAQ Categories */}
