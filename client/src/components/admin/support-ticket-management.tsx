@@ -406,143 +406,18 @@ export default function SupportTicketManagement() {
                       {ticket.createdAt ? format(new Date(ticket.createdAt), 'MMM d, yyyy HH:mm') : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTicket(ticket);
-                              setAdminNotes(ticket.adminNotes || "");
-                            }}
-                            data-testid={`button-view-ticket-${ticket.id}`}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                              <FileText className="w-5 h-5" />
-                              Support Ticket Details
-                            </DialogTitle>
-                            <DialogDescription>
-                              Ticket ID: {ticket.id}
-                            </DialogDescription>
-                          </DialogHeader>
-                          
-                          {selectedTicket && (
-                            <div className="space-y-6">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label>Issue Type</Label>
-                                  <p className="font-medium">{selectedTicket.issueType}</p>
-                                </div>
-                                <div>
-                                  <Label>Created</Label>
-                                  <p>{format(new Date(selectedTicket.createdAt), 'MMM d, yyyy HH:mm')}</p>
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label>Description</Label>
-                                <Card className="mt-2">
-                                  <CardContent className="p-4">
-                                    <p className="text-sm text-gray-700">
-                                      {selectedTicket.description}
-                                    </p>
-                                  </CardContent>
-                                </Card>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label>Status</Label>
-                                  <Select
-                                    value={selectedTicket.status}
-                                    onValueChange={(value) => 
-                                      setSelectedTicket({...selectedTicket, status: value})
-                                    }
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="open">Open</SelectItem>
-                                      <SelectItem value="in_progress">In Progress</SelectItem>
-                                      <SelectItem value="resolved">Resolved</SelectItem>
-                                      <SelectItem value="closed">Closed</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <Label>Priority</Label>
-                                  <Select
-                                    value={selectedTicket.priority}
-                                    onValueChange={(value) => 
-                                      setSelectedTicket({...selectedTicket, priority: value})
-                                    }
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="low">Low</SelectItem>
-                                      <SelectItem value="medium">Medium</SelectItem>
-                                      <SelectItem value="high">High</SelectItem>
-                                      <SelectItem value="urgent">Urgent</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label>Admin Notes</Label>
-                                <Textarea
-                                  placeholder="Add notes about this ticket..."
-                                  value={adminNotes}
-                                  onChange={(e) => setAdminNotes(e.target.value)}
-                                  rows={4}
-                                  className="mt-2"
-                                  data-testid="textarea-admin-notes"
-                                />
-                              </div>
-
-                              <div className="flex justify-between">
-                                <Button
-                                  variant="destructive"
-                                  onClick={() => {
-                                    if (confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
-                                      deleteTicketMutation.mutate(selectedTicket.id);
-                                    }
-                                  }}
-                                  disabled={deleteTicketMutation.isPending}
-                                  data-testid="button-delete-ticket"
-                                >
-                                  {deleteTicketMutation.isPending ? "Deleting..." : "Delete Ticket"}
-                                </Button>
-                                
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setSelectedTicket(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleUpdateTicket(selectedTicket)}
-                                    disabled={updateTicketMutation.isPending}
-                                    data-testid="button-update-ticket"
-                                  >
-                                    {updateTicketMutation.isPending ? "Updating..." : "Update Ticket"}
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedTicket(ticket);
+                          setAdminNotes(ticket.adminNotes || "");
+                        }}
+                        data-testid={`button-view-ticket-${ticket.id}`}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </Button>
                     </TableCell>
                   </TableRow>
                     );
@@ -579,6 +454,131 @@ export default function SupportTicketManagement() {
           </div>
         </div>
       )}
+
+      {/* Ticket Details Modal - Single Dialog Outside Table */}
+      <Dialog open={!!selectedTicket} onOpenChange={(open) => !open && setSelectedTicket(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Support Ticket Details
+            </DialogTitle>
+            <DialogDescription>
+              Ticket ID: {selectedTicket?.id}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedTicket && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Issue Type</Label>
+                  <p className="font-medium">{selectedTicket?.issueType || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label>Created</Label>
+                  <p>{selectedTicket?.createdAt ? format(new Date(selectedTicket.createdAt), 'MMM d, yyyy HH:mm') : 'N/A'}</p>
+                </div>
+              </div>
+
+              <div>
+                <Label>Description</Label>
+                <Card className="mt-2">
+                  <CardContent className="p-4">
+                    <p className="text-sm text-gray-700">
+                      {selectedTicket?.description || 'N/A'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Status</Label>
+                  <Select
+                    value={selectedTicket?.status || 'open'}
+                    onValueChange={(value) => 
+                      setSelectedTicket({...selectedTicket!, status: value})
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Priority</Label>
+                  <Select
+                    value={selectedTicket?.priority || 'medium'}
+                    onValueChange={(value) => 
+                      setSelectedTicket({...selectedTicket!, priority: value})
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>Admin Notes</Label>
+                <Textarea
+                  placeholder="Add notes about this ticket..."
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  rows={4}
+                  className="mt-2"
+                  data-testid="textarea-admin-notes"
+                />
+              </div>
+
+              <div className="flex justify-between">
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
+                      deleteTicketMutation.mutate(selectedTicket.id);
+                    }
+                  }}
+                  disabled={deleteTicketMutation.isPending}
+                  data-testid="button-delete-ticket"
+                >
+                  {deleteTicketMutation.isPending ? "Deleting..." : "Delete Ticket"}
+                </Button>
+                
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedTicket(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleUpdateTicket(selectedTicket)}
+                    disabled={updateTicketMutation.isPending}
+                    data-testid="button-update-ticket"
+                  >
+                    {updateTicketMutation.isPending ? "Updating..." : "Update Ticket"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       </div>
     );
   } catch (err) {
