@@ -396,22 +396,12 @@ export default function SendMoneyPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Top Navigation */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center elevation-1"
-      >
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setLocation("/dashboard")}
-          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          data-testid="button-back"
-        >
-          arrow_back
-        </motion.button>
-        <h1 className="text-lg font-semibold">Send Money</h1>
-      </motion.div>
+      {/* Header */}
+      <WavyHeader
+        title="Send Money"
+        onBack={() => setLocation("/dashboard")}
+        size="sm"
+      />
 
       <div className="p-6 space-y-6">
         {/* Balance Card */}

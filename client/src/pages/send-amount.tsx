@@ -101,6 +101,7 @@ export default function SendAmountPage() {
         onBack={() => setLocation("/send-money")}
         size="sm"
       />
+
       <div className="p-6 space-y-6">
         {/* Step Indicator */}
         <motion.div

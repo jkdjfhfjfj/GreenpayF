@@ -206,32 +206,11 @@ export default function LiveChatPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="bg-card border-b border-border sticky top-0 z-10 backdrop-blur-lg">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation('/support')}
-              className="p-2"
-              data-testid="button-back-support"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <HeadphonesIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="font-semibold text-lg">Live Support</h1>
-                <p className="text-sm text-muted-foreground">
-                  Chat with our support team
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <WavyHeader
+        title="Live Support"
+        onBack={() => setLocation('/support')}
+        size="sm"
+      />
 
       {/* Messages Container */}
       <div className="flex-1 flex flex-col">
