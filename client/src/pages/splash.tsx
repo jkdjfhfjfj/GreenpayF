@@ -99,24 +99,46 @@ export default function SplashPage() {
         />
       </div>
 
-      {/* Top Navigation Bar - Matches Meta Theme Color */}
+      {/* Top Navigation Bar - Patterned Header */}
       <motion.div
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="flex items-center justify-between px-6 py-5 relative z-10 bg-[#2E7D32]"
+        className="relative z-10 overflow-hidden"
       >
-        <div className="text-center flex-1">
-          <h1 className="text-white font-bold text-2xl">GreenPay</h1>
+        {/* Patterned Background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600">
+          <svg className="w-full h-full" viewBox="0 0 1000 120" preserveAspectRatio="none">
+            <defs>
+              <pattern id="diagonalPattern" x="20" y="20" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="40" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
+              </pattern>
+              <pattern id="dots" x="30" y="30" width="30" height="30" patternUnits="userSpaceOnUse">
+                <circle cx="15" cy="15" r="3" fill="rgba(255,255,255,0.15)" />
+              </pattern>
+            </defs>
+            {/* Wavy shapes */}
+            <path d="M0,30 Q250,0 500,30 T1000,30 L1000,0 Q500,50 0,0 Z" fill="rgba(0,0,0,0.1)" />
+            <path d="M0,60 Q250,40 500,60 T1000,60 L1000,120 L0,120 Z" fill="rgba(255,255,255,0.05)" />
+            {/* Patterns */}
+            <rect width="1000" height="120" fill="url(#diagonalPattern)" />
+          </svg>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleSkip}
-          className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
-        >
-          Skip
-        </motion.button>
+
+        {/* Content */}
+        <div className="relative flex items-center justify-between px-6 py-5">
+          <div className="text-center flex-1">
+            <h1 className="text-white font-bold text-2xl drop-shadow-lg">GreenPay</h1>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleSkip}
+            className="text-white hover:text-gray-200 transition-colors text-sm font-medium drop-shadow-md"
+          >
+            Skip
+          </motion.button>
+        </div>
       </motion.div>
 
       {/* Slide Container */}
