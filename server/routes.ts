@@ -3343,10 +3343,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const tickets = await storage.getSupportTicketsByUserId(userId);
       const ticketsWithReplies = await Promise.all(
-        tickets.map(async (ticket) => ({
-          ...ticket,
-          replies: await storage.getTicketReplies(ticket.id),
-        }))
+        tickets.map(async (ticket) => {
+          try {
+            const replies = await storage.getTicketReplies(ticket.id);
+            return { ...ticket, replies };
+          } catch (e) {
+            // Replies table might not exist yet
+            return { ...ticket, replies: [] };
+          }
+        })
       );
       res.json({ tickets: ticketsWithReplies });
     } catch (error) {
@@ -3434,16 +3439,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: limit ? parseInt(limit as string) : undefined,
       });
 
-      // Add user details and replies to each ticket
+      // Add user details and replies to each ticket (with error handling)
       const ticketsWithDetails = await Promise.all(
         result.tickets.map(async (ticket) => {
-          const user = await storage.getUser(ticket.userId);
-          const replies = await storage.getTicketReplies(ticket.id);
-          return {
-            ...ticket,
-            user: user ? { fullName: user.fullName, email: user.email, phone: user.phone } : undefined,
-            replies,
-          };
+          try {
+            const user = await storage.getUser(ticket.userId);
+            let replies = [];
+            try {
+              replies = await storage.getTicketReplies(ticket.id);
+            } catch (e) {
+              // Replies table might not exist yet, continue without them
+              replies = [];
+            }
+            return {
+              ...ticket,
+              user: user ? { fullName: user.fullName, email: user.email, phone: user.phone } : undefined,
+              replies,
+            };
+          } catch (e) {
+            return {
+              ...ticket,
+              user: undefined,
+              replies: [],
+            };
+          }
         })
       );
 

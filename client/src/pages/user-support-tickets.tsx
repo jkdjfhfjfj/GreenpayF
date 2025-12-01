@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Send, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Send, X, Mail, Phone, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface TicketReply {
   id: string;
@@ -34,7 +35,8 @@ interface TicketsResponse {
 }
 
 export default function UserSupportTickets() {
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [, setLocation] = useLocation();
+  const [showReportForm, setShowReportForm] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createData, setCreateData] = useState({ issueType: "", description: "", file: null as File | null });
   const [replyText, setReplyText] = useState("");
@@ -68,11 +70,10 @@ export default function UserSupportTickets() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-support-tickets'] });
-      toast({ title: "Ticket created successfully" });
+      toast({ title: "Issue reported successfully" });
       setCreateData({ issueType: "", description: "", file: null });
-      setShowCreateForm(false);
+      setShowReportForm(false);
     },
-    onError: () => toast({ title: "Error", variant: "destructive" }),
   });
 
   const replyMutation = useMutation({
@@ -95,7 +96,6 @@ export default function UserSupportTickets() {
       setReplyText("");
       setReplyFile(null);
     },
-    onError: () => toast({ title: "Error sending reply", variant: "destructive" }),
   });
 
   if (isLoading) return <div className="p-8 text-center">Loading...</div>;
@@ -105,243 +105,254 @@ export default function UserSupportTickets() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'open': return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case 'in_progress': return <Clock className="w-4 h-4 text-yellow-500" />;
+      case 'open': return <AlertCircle className="w-5 h-5 text-red-500" />;
+      case 'in_progress': return <Clock className="w-5 h-5 text-yellow-500" />;
       case 'resolved':
-      case 'closed': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      default: return <AlertCircle className="w-4 h-4" />;
+      case 'closed': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      default: return <AlertCircle className="w-5 h-5" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return 'bg-red-100 text-red-800 border-red-300';
+      case 'in_progress': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'resolved': return 'bg-green-100 text-green-800 border-green-300';
+      case 'closed': return 'bg-blue-100 text-blue-800 border-blue-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
   if (selectedTicket) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6 p-4">
-        <Button variant="outline" onClick={() => setSelectedId(null)}>← Back to Tickets</Button>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pb-20">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 shadow-lg">
+          <button onClick={() => setSelectedId(null)} className="flex items-center gap-2 hover:opacity-80">
+            <span>←</span>
+            <span>Back to Tickets</span>
+          </button>
+        </div>
 
-        <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-2 border-indigo-200">
-          <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl">{selectedTicket.issueType}</CardTitle>
-              <div className="flex gap-2">
-                <Badge variant={selectedTicket.status === 'open' ? 'destructive' : 'outline'}>
-                  {selectedTicket.status}
-                </Badge>
-                <Badge variant={selectedTicket.priority === 'urgent' ? 'destructive' : 'default'}>
-                  {selectedTicket.priority}
-                </Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-6">
-            <div>
-              <p className="text-sm font-semibold text-gray-700">Description</p>
-              <p className="mt-2 p-4 bg-white rounded-lg border-l-4 border-indigo-500">{selectedTicket.description}</p>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              Created {format(new Date(selectedTicket.createdAt), 'MMM d, yyyy HH:mm')}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Replies Section */}
-        <Card className="border-2 border-indigo-200">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-            <CardTitle>Conversation</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-6 max-h-96 overflow-y-auto">
-            {!selectedTicket.replies || selectedTicket.replies.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No replies yet</p>
-            ) : (
-              selectedTicket.replies.map((reply) => (
-                <div
-                  key={reply.id}
-                  className={`p-4 rounded-lg ${
-                    reply.senderType === 'admin'
-                      ? 'bg-blue-50 border-l-4 border-blue-500 ml-4'
-                      : 'bg-gray-50 border-l-4 border-gray-300 mr-4'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-sm">
-                      {reply.senderType === 'admin' ? '👨‍💼 Support Team' : '👤 You'}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {format(new Date(reply.createdAt), 'MMM d HH:mm')}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-800">{reply.content}</p>
-                  {reply.fileUrl && (
-                    <a href={reply.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 inline-block hover:underline">
-                      📎 {reply.fileName || 'Download attachment'}
-                    </a>
-                  )}
+        <div className="max-w-2xl mx-auto p-4 space-y-4">
+          {/* Ticket Card */}
+          <Card className="border-2 border-indigo-200 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b-2 border-indigo-200">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    {getStatusIcon(selectedTicket.status)}
+                    {selectedTicket.issueType}
+                  </CardTitle>
+                  <p className="text-xs text-gray-500 mt-1">{format(new Date(selectedTicket.createdAt), 'MMM d, yyyy HH:mm')}</p>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                <div className="flex gap-2">
+                  <Badge className={`${getStatusColor(selectedTicket.status)} border`}>
+                    {selectedTicket.status}
+                  </Badge>
+                  <Badge variant={selectedTicket.priority === 'urgent' ? 'destructive' : 'outline'}>
+                    {selectedTicket.priority}
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Description</p>
+                  <p className="text-sm bg-white p-4 rounded-lg border-l-4 border-indigo-500">{selectedTicket.description}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Reply Form */}
-        <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-          <CardHeader>
-            <CardTitle>Send Reply</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="reply">Your Message</Label>
+          {/* Conversation */}
+          <Card className="shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
+              <CardTitle className="text-lg">Conversation ({selectedTicket.replies?.length || 0})</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 max-h-80 overflow-y-auto space-y-3">
+              {!selectedTicket.replies || selectedTicket.replies.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No replies yet</p>
+              ) : (
+                selectedTicket.replies.map((reply) => (
+                  <div
+                    key={reply.id}
+                    className={`p-4 rounded-lg ${
+                      reply.senderType === 'admin'
+                        ? 'bg-blue-50 border-l-4 border-blue-500'
+                        : 'bg-gray-50 border-l-4 border-gray-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-semibold text-sm">{reply.senderType === 'admin' ? '👨‍💼 Support Team' : '👤 You'}</span>
+                      <span className="text-xs text-gray-500">{format(new Date(reply.createdAt), 'MMM d HH:mm')}</span>
+                    </div>
+                    <p className="text-sm text-gray-800">{reply.content}</p>
+                    {reply.fileUrl && (
+                      <a href={reply.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 inline-block hover:underline">
+                        📎 {reply.fileName || 'Download'}
+                      </a>
+                    )}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Reply Form */}
+          <Card className="shadow-lg border-2 border-green-200">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+              <CardTitle className="text-lg">Send Reply</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
               <Textarea
-                id="reply"
                 placeholder="Type your reply..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                rows={3}
-                className="mt-2"
+                rows={2}
+                className="text-sm"
               />
-            </div>
-
-            <div>
-              <Label htmlFor="file">Attach File (Optional)</Label>
-              <Input
-                id="file"
-                type="file"
-                onChange={(e) => setReplyFile(e.target.files?.[0] || null)}
-                className="mt-2"
-              />
-            </div>
-
-            <Button
-              onClick={() => replyMutation.mutate()}
-              disabled={!replyText.trim() || replyMutation.isPending}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              {replyMutation.isPending ? "Sending..." : "Send Reply"}
-            </Button>
-          </CardContent>
-        </Card>
+              <Input type="file" onChange={(e) => setReplyFile(e.target.files?.[0] || null)} className="text-sm" />
+              <Button
+                onClick={() => replyMutation.mutate()}
+                disabled={!replyText.trim() || replyMutation.isPending}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {replyMutation.isPending ? "Sending..." : "Send Reply"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 p-4">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pb-20">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 shadow-lg flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Support Tickets
-          </h1>
-          <p className="text-gray-600 text-sm mt-1">Track and manage your support requests</p>
+          <h1 className="text-2xl font-bold">Your Support Tickets</h1>
+          <p className="text-blue-100 text-sm">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={() => setShowCreateForm(true)} size="lg">
-          <Plus className="w-4 h-4 mr-2" /> New Ticket
-        </Button>
+        <button onClick={() => setLocation('/support')} className="opacity-80 hover:opacity-100">←</button>
       </div>
 
-      {/* Create Ticket Form */}
-      {showCreateForm && (
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
-          <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
-            <CardTitle>Create Support Ticket</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-6">
-            <div>
-              <Label htmlFor="type">Issue Type</Label>
-              <Input
-                id="type"
-                placeholder="e.g., Payment Issue, Technical Problem, Account Help"
-                value={createData.issueType}
-                onChange={(e) => setCreateData({ ...createData, issueType: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="desc">Description</Label>
-              <Textarea
-                id="desc"
-                placeholder="Describe your issue in detail..."
-                value={createData.description}
-                onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
-                rows={4}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="attach">Attach File (Optional)</Label>
-              <Input
-                id="attach"
-                type="file"
-                onChange={(e) => setCreateData({ ...createData, file: e.target.files?.[0] || null })}
-                className="mt-1"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateForm(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => createMutation.mutate()}
-                disabled={!createData.issueType || !createData.description || createMutation.isPending}
-                className="flex-1"
-              >
-                {createMutation.isPending ? "Creating..." : "Create Ticket"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Tickets List */}
-      <div className="space-y-3">
-        {tickets.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-gray-500">No tickets yet</p>
-              <p className="text-sm text-gray-400 mt-1">Create a new ticket to get support</p>
+      <div className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* Report Issue Form */}
+        {showReportForm && (
+          <Card className="shadow-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg flex items-center justify-between">
+              <CardTitle>Report an Issue</CardTitle>
+              <button onClick={() => setShowReportForm(false)}>
+                <X className="w-5 h-5" />
+              </button>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div>
+                <Label htmlFor="type" className="text-sm font-semibold">Issue Type</Label>
+                <Input
+                  id="type"
+                  placeholder="e.g., Payment Issue, App Bug, Account Help"
+                  value={createData.issueType}
+                  onChange={(e) => setCreateData({ ...createData, issueType: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="desc" className="text-sm font-semibold">Description</Label>
+                <Textarea
+                  id="desc"
+                  placeholder="Tell us what went wrong..."
+                  value={createData.description}
+                  onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="attach" className="text-sm font-semibold">Attach File (Optional)</Label>
+                <Input
+                  id="attach"
+                  type="file"
+                  onChange={(e) => setCreateData({ ...createData, file: e.target.files?.[0] || null })}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowReportForm(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => createMutation.mutate()}
+                  disabled={!createData.issueType || !createData.description || createMutation.isPending}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {createMutation.isPending ? "Submitting..." : "Report Issue"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          tickets.map((ticket) => (
-            <Card
-              key={ticket.id}
-              className="hover:shadow-lg transition-all cursor-pointer bg-gradient-to-r from-gray-50 to-gray-100 hover:from-blue-50 hover:to-indigo-50 border-2 border-gray-200 hover:border-indigo-300"
-              onClick={() => setSelectedId(ticket.id)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      {getStatusIcon(ticket.status)}
-                      <h3 className="font-bold text-lg">{ticket.issueType}</h3>
-                      <Badge variant={ticket.status === 'open' ? 'destructive' : 'outline'}>
-                        {ticket.status}
-                      </Badge>
-                      <Badge variant={ticket.priority === 'urgent' ? 'destructive' : 'default'}>
-                        {ticket.priority}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-700 mb-2">{ticket.description.substring(0, 150)}...</p>
-                    <p className="text-xs text-gray-500">
-                      Created {format(new Date(ticket.createdAt), 'MMM d, yyyy')}
-                      {ticket.replies && ` • ${ticket.replies.length} replies`}
-                    </p>
-                  </div>
-                  <Button size="sm" variant="outline">
-                    View
-                  </Button>
-                </div>
+        )}
+
+        {/* Report Issue CTA */}
+        {!showReportForm && (
+          <Button
+            onClick={() => setShowReportForm(true)}
+            className="w-full h-16 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg font-semibold shadow-lg"
+          >
+            📝 Report an Issue
+          </Button>
+        )}
+
+        {/* Tickets List */}
+        <div className="space-y-3">
+          {tickets.length === 0 ? (
+            <Card className="shadow-lg">
+              <CardContent className="text-center py-12">
+                <AlertCircle className="w-16 h-16 mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-600 font-semibold">No issues reported yet</p>
+                <p className="text-sm text-gray-400 mt-1">Click above to report your first issue</p>
               </CardContent>
             </Card>
-          ))
-        )}
+          ) : (
+            tickets.map((ticket) => (
+              <Card
+                key={ticket.id}
+                className="hover:shadow-xl transition-all cursor-pointer border-2 border-gray-200 hover:border-indigo-300 shadow-md"
+                onClick={() => setSelectedId(ticket.id)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        {getStatusIcon(ticket.status)}
+                        <h3 className="font-bold text-lg">{ticket.issueType}</h3>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-3">{ticket.description.substring(0, 100)}...</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {format(new Date(ticket.createdAt), 'MMM d, yyyy')}
+                        </span>
+                        <span className="text-xs font-semibold text-indigo-600">
+                          {ticket.replies?.length || 0} replies
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 items-end">
+                      <Badge className={`${getStatusColor(ticket.status)} border`}>
+                        {ticket.status}
+                      </Badge>
+                      <Badge variant="outline">{ticket.priority}</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
