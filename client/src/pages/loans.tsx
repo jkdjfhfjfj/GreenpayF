@@ -102,8 +102,8 @@ export default function LoansPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Loans"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

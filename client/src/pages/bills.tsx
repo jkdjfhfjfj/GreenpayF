@@ -158,8 +158,8 @@ export default function BillsPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Pay Bills"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

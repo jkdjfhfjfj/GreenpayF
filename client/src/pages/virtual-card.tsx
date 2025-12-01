@@ -379,8 +379,8 @@ export default function VirtualCardPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Virtual Card"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

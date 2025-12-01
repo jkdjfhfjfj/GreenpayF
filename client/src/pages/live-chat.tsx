@@ -207,8 +207,8 @@ export default function LiveChatPage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <WavyHeader
-        title="Live Support"
-        onBack={() => setLocation('/support')}
+        
+        
         size="sm"
       />
 
@@ -349,7 +349,7 @@ export default function LiveChatPage() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!conversation?.id || uploadFileMutation.isPending}
                 data-testid="button-upload"
-                title="Upload file or image"
+                
               >
                 {uploadFileMutation.isPending ? (
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />

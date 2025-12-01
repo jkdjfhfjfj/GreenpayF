@@ -117,8 +117,8 @@ export default function KycVerificationPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <WavyHeader
-        title="Identity Verification"
-        onBack={() => setLocation("/otp-verification")}
+        
+        
         size="md"
       />
 

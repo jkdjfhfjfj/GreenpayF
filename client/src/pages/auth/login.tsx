@@ -141,8 +141,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <WavyHeader
-        title="Login"
-        onBack={() => setLocation("/")}
+        
+        
         size="sm"
       />
       <div className="flex-1 p-6">

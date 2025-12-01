@@ -141,8 +141,8 @@ export default function OtpVerificationPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <WavyHeader
-        title="Verify Login"
-        onBack={() => setLocation("/login")}
+        
+        
         size="sm"
       />
 

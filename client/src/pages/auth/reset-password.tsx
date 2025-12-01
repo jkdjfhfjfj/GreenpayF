@@ -75,8 +75,8 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <WavyHeader
-        title="Reset Password"
-        onBack={() => setLocation("/auth/login")}
+        
+        
         size="sm"
       />
 

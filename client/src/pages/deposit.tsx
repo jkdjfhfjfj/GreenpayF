@@ -108,8 +108,8 @@ export default function DepositPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Add Money"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

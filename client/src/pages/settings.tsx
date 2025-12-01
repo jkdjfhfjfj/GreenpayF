@@ -456,8 +456,8 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Settings"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

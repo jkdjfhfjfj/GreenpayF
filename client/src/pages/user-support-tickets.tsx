@@ -230,8 +230,8 @@ export default function UserSupportTickets() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Support Tickets"
-        onBack={() => setLocation('/support')}
+        
+        
         size="sm"
       />
 

@@ -525,13 +525,13 @@ export default function ApiDocumentationPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-green-50 pb-20">
       <WavyHeader
-        title="API Documentation"
-        onBack={() => setLocation("/api-service")}
+        
+        
         rightContent={
           <button
             onClick={generatePDF}
             className="text-gray-800 dark:text-gray-200 p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-            title="Download PDF"
+            
           >
             <Download className="w-5 h-5" />
           </button>

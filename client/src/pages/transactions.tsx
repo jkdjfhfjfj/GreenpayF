@@ -183,8 +183,8 @@ export default function TransactionsPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Transactions"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 
@@ -195,7 +195,7 @@ export default function TransactionsPage() {
             whileTap={{ scale: 0.95 }}
             onClick={handleRefresh}
             className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors text-xs md:text-sm"
-            title="Refresh Transactions"
+            
           >
             <RefreshCw className="h-4 w-4" />
             <span className="hidden sm:inline font-medium">Refresh</span>
@@ -205,7 +205,7 @@ export default function TransactionsPage() {
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
             className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors text-xs md:text-sm"
-            title="Advanced Filters"
+            
           >
             <Filter className="h-4 w-4" />
             <span className="hidden sm:inline font-medium">Filters</span>
@@ -216,7 +216,7 @@ export default function TransactionsPage() {
             onClick={() => setShowEmailExport(true)}
             disabled={filteredTransactions.length === 0}
             className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Export & Send via Email"
+            
           >
             <Mail className="h-4 w-4" />
             <span className="hidden sm:inline font-medium">Email</span>

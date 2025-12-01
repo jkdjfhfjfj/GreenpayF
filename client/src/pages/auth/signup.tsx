@@ -96,8 +96,8 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <WavyHeader
-        title="Signup"
-        onBack={() => setLocation("/")}
+        
+        
         size="sm"
       />
       <div className="flex-1 p-6">

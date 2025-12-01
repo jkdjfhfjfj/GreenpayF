@@ -97,8 +97,8 @@ export default function SendAmountPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Send Amount"
-        onBack={() => setLocation("/send-money")}
+        
+        
         size="sm"
       />
 

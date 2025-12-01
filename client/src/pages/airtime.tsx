@@ -105,8 +105,8 @@ export default function AirtimePage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Buy Airtime"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

@@ -91,8 +91,8 @@ export default function SendConfirmPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Confirm Transfer"
-        onBack={() => setLocation("/send-amount")}
+        
+        
         size="sm"
       />
 

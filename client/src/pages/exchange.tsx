@@ -70,8 +70,8 @@ export default function ExchangePage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Currency Exchange"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

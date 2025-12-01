@@ -68,8 +68,8 @@ export default function StatusPage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <WavyHeader
-        title="System Status"
-        onBack={() => navigate('/dashboard')}
+        
+        
         rightContent={
           <Button 
             variant="outline" 

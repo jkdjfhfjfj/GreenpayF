@@ -101,8 +101,8 @@ export default function ReceiveMoneyPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Receive Money"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

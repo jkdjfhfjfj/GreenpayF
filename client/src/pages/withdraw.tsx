@@ -144,8 +144,8 @@ export default function WithdrawPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <WavyHeader
-        title="Withdraw Money"
-        onBack={() => setLocation("/dashboard")}
+        
+        
         size="sm"
       />
 

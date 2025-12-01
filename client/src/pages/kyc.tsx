@@ -143,8 +143,8 @@ export default function KYCPage() {
     return (
       <div className="min-h-screen bg-background pb-20">
         <WavyHeader
-          title="Identity Verification"
-          onBack={() => setLocation("/settings")}
+          
+          
           size="sm"
         />
 
@@ -174,8 +174,8 @@ export default function KYCPage() {
     return (
       <div className="min-h-screen bg-background pb-20">
         <WavyHeader
-          title="Identity Verification"
-          onBack={() => setLocation("/settings")}
+          
+          
           size="sm"
         />
 
