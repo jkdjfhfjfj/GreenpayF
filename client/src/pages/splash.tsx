@@ -104,7 +104,7 @@ export default function SplashPage() {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="h-20 flex items-center justify-between px-6 relative z-10 border-b border-gray-800"
+        className="flex items-center justify-between px-6 py-5 relative z-10"
       >
         <div className="text-center flex-1">
           <h1 className="text-white font-bold text-2xl">GreenPay</h1>
@@ -173,7 +173,7 @@ export default function SplashPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="flex gap-2 justify-center py-6 relative z-10"
+        className="flex gap-2 justify-center py-4 relative z-10"
       >
         {slides.map((_, idx) => (
           <motion.button
@@ -192,7 +192,7 @@ export default function SplashPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="h-24 px-6 pb-6 pt-4 space-y-3 relative z-10 border-t border-gray-800"
+        className="px-6 py-4 space-y-2 relative z-10"
       >
         {/* Action Buttons */}
         <div className="flex gap-3">
