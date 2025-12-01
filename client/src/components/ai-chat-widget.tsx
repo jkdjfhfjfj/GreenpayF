@@ -38,7 +38,7 @@ export function AIChatWidget() {
   useEffect(() => {
     const loadRemainingRequests = async () => {
       try {
-        const response = await apiRequest('GET', '/api/ai/remaining-requests');
+        const response = await fetch('/api/ai/remaining-requests');
         if (response.ok) {
           const data = await response.json();
           setRemainingRequests(data.remainingRequests);

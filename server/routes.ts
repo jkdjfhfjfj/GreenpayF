@@ -7919,10 +7919,10 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   });
 
   // Get AI Remaining Requests
-  app.get("/api/ai/remaining-requests", requireAuth, async (req, res) => {
+  app.get("/api/ai/remaining-requests", async (req, res) => {
     try {
-      const userId = req.user?.id;
-      const remaining = await aiRateLimiter.getRemainingRequests(userId || null);
+      const userId = req.user?.id || null;
+      const remaining = await aiRateLimiter.getRemainingRequests(userId);
       res.json({ remainingRequests: remaining });
     } catch (error: any) {
       console.error('Get remaining requests error:', error);
