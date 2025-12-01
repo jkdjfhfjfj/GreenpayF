@@ -73,9 +73,13 @@ export function AIChatWidget() {
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow z-40"
+        className="fixed bottom-6 right-6 w-20 h-20 rounded-full shadow-lg hover:shadow-xl transition-shadow z-40 border-0 p-0 bg-transparent overflow-hidden"
       >
-        <div className="text-white text-3xl">🤖</div>
+        <img 
+          src="/ai-robot.jpg" 
+          alt="Ask AI" 
+          className="w-full h-full object-cover rounded-full hover:scale-110 transition-transform"
+        />
       </motion.button>
 
       {/* Chat Window */}
