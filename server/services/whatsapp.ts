@@ -1125,7 +1125,7 @@ export class WhatsAppService {
   }
 
   /**
-   * Get template parameters from Meta - includes parameter types and requirements
+   * Get template parameters from Meta - ALWAYS fetches directly from Meta, extracts ONLY from BODY text
    */
   async getTemplateParameters(templateName: string): Promise<{ 
     required: string[]; 
@@ -1135,38 +1135,43 @@ export class WhatsAppService {
     parameterMetadata?: Record<string, { type: 'text' | 'media'; mediaType?: string }>;
   }> {
     try {
-      let template = await this.getTemplateDetails(templateName);
+      // ALWAYS fetch fresh template details from Meta (don't use cached list)
+      const template = await this.fetchTemplateDetails(templateName);
       
-      // If basic fetch doesn't have components, try fetching full details
-      if (!template || !template.components || template.components.length === 0) {
-        template = await this.fetchTemplateDetails(templateName);
-      }
-      
-      if (!template) {
+      if (!template || !template.components) {
+        console.log(`[WhatsApp] Template "${templateName}" - No components found in Meta response`);
         return { required: [], paramCount: 0, language: 'en_US', components: [] };
       }
 
-      // Extract ALL parameters from all component types
-      const paramNumbers = this.extractParametersFromComponents(template.components || []);
-      const params = this.getComponentParameters(template.components || []);
+      // Extract parameters ONLY from BODY component text
+      const bodyComponent = template.components.find((c: any) => c?.type === 'BODY');
+      const bodyText = bodyComponent?.text || '';
       
-      // Analyze parameter types to determine which are media vs text
+      // Extract {{1}}, {{2}}, etc from BODY text only
+      const regex = /\{\{(\d+)\}\}/g;
+      const paramNumbers = new Set<number>();
+      const matches = [...bodyText.matchAll(regex)];
+      matches.forEach(m => {
+        const num = parseInt(m[1]);
+        if (!isNaN(num)) paramNumbers.add(num);
+      });
+      
+      // Convert to param names
+      const params = Array.from(paramNumbers)
+        .sort((a, b) => a - b)
+        .map(n => `param${n}`);
+      
+      // Analyze parameter types
       const metadata = this.analyzeParameterTypes(template.components || [], paramNumbers);
       
-      // Debug: Detailed logging for all templates
-      console.log(`[WhatsApp] Template "${templateName}" analysis:`, {
+      // Debug logging - show exact BODY text and extracted params
+      console.log(`[WhatsApp] Template "${templateName}" parameters (from BODY only):`, {
+        bodyText: bodyText.substring(0, 200),
+        rawMatches: matches.map(m => m[0]),
         params,
         paramCount: params.length,
         componentCount: template.components?.length || 0,
-        componentTypes: template.components?.map((c: any) => c.type) || [],
-        // Log text field from BODY component for debugging
-        bodyText: template.components?.find((c: any) => c.type === 'BODY')?.text?.substring(0, 100),
-        componentsPreview: template.components?.map((c: any) => ({
-          type: c.type,
-          text: c.text?.substring(0, 50),
-          format: c.format,
-          buttonCount: c.buttons?.length
-        }))
+        componentTypes: template.components?.map((c: any) => c.type) || []
       });
 
       return { 
