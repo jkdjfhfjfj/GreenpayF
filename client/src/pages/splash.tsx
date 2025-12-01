@@ -107,7 +107,7 @@ export default function SplashPage() {
         className="relative z-10"
       >
         {/* Wavy SVG Background */}
-        <svg className="w-full" viewBox="0 0 1280 130" preserveAspectRatio="none" style={{ height: '140px' }}>
+        <svg className="w-full" viewBox="-50 0 1380 130" preserveAspectRatio="none" style={{ height: '140px', overflow: 'visible' }}>
           <defs>
             <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" style={{ stopColor: '#4CAF50', stopOpacity: 1 }} />
@@ -117,20 +117,20 @@ export default function SplashPage() {
           
           {/* Main wave fill */}
           <path
-            d="M0,60 Q320,0 640,60 T1280,60 L1280,0 L0,0 Z"
+            d="M-50,60 Q315,0 665,60 T1365,60 L1365,0 L-50,0 Z"
             fill="#4CAF50"
           />
           
           {/* Flowing curves */}
           <path
-            d="M0,80 Q320,40 640,80 T1280,80 Q960,120 640,100 Q320,80 0,100 Z"
+            d="M-50,80 Q315,40 665,80 T1365,80 Q1035,120 665,100 Q295,80 -50,100 Z"
             fill="rgba(76, 175, 80, 0.4)"
             opacity="0.6"
           />
           
           {/* Accent curves */}
           <path
-            d="M0,120 Q320,90 640,120 T1280,120"
+            d="M-50,120 Q315,90 665,120 T1365,120"
             stroke="#4CAF50"
             strokeWidth="2"
             fill="none"
@@ -139,7 +139,10 @@ export default function SplashPage() {
         </svg>
 
         {/* Content Overlay */}
-        <div className="absolute top-0 right-6 flex items-center justify-end px-6 py-6 h-24">
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-6 h-24">
+          <div className="text-center flex-1">
+            <h1 className="text-white font-bold text-2xl drop-shadow-lg">GreenPay</h1>
+          </div>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
