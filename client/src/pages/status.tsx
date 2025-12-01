@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, AlertCircle, RefreshCw, Activity, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { WavyHeader } from "@/components/wavy-header";
 
 interface FeatureStatus {
   status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
@@ -66,25 +67,10 @@ export default function StatusPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Top Navigation Bar */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 elevation-1 sticky top-0 z-40"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-xl font-bold">System Status</h1>
-              <p className="text-xs text-muted-foreground">Check all features in real-time</p>
-            </div>
-          </div>
+      <WavyHeader
+        title="System Status"
+        onBack={() => navigate('/dashboard')}
+        rightContent={
           <Button 
             variant="outline" 
             size="sm"
@@ -95,8 +81,9 @@ export default function StatusPage() {
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
-        </div>
-      </motion.div>
+        }
+        size="md"
+      />
 
       <div className="max-w-2xl mx-auto p-4 space-y-6 mt-4">
 

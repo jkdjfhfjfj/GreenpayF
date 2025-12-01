@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { WavyHeader } from "@/components/wavy-header";
 import { useState, useEffect } from "react";
 import { Copy, Eye, EyeOff, Plus, Trash2, CheckCircle, Code } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -176,23 +177,11 @@ export default function APIServicePage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center justify-between elevation-1"
-      >
-        <div className="flex items-center">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation("/dashboard")}
-            className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          >
-            arrow_back
-          </motion.button>
-          <h1 className="text-lg font-semibold">API Services</h1>
-        </div>
-      </motion.div>
+      <WavyHeader
+        title="API Services"
+        onBack={() => setLocation("/dashboard")}
+        size="md"
+      />
 
       {/* Main Content */}
       <div className="p-6 space-y-6">

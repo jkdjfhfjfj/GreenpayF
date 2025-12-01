@@ -99,13 +99,14 @@ export function WavyHeader({
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={onBack}
-            className="material-icons text-gray-800 dark:text-gray-200 mr-3 p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+            className="material-icons text-gray-800 dark:text-gray-200 p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors flex-shrink-0"
           >
             arrow_back
           </motion.button>
         )}
+        <div className="flex-1" />
         {title && (
-          <h1 className="text-gray-800 dark:text-gray-200 font-semibold drop-shadow-lg flex-1" 
+          <h1 className="text-gray-800 dark:text-gray-200 font-semibold drop-shadow-lg text-right" 
             style={{ fontSize: size === 'sm' ? '14px' : size === 'md' ? '16px' : '18px' }}>
             {title}
           </h1>

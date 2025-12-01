@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { WavyHeader } from "@/components/wavy-header";
 
 const kycSchema = z.object({
   dateOfBirth: z.string().min(1, "Date of birth is required"),
@@ -115,21 +116,11 @@ export default function KycVerificationPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center elevation-1"
-      >
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setLocation("/otp-verification")}
-          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          data-testid="button-back"
-        >
-          arrow_back
-        </motion.button>
-        <h1 className="text-lg font-semibold">Identity Verification</h1>
-      </motion.div>
+      <WavyHeader
+        title="Identity Verification"
+        onBack={() => setLocation("/otp-verification")}
+        size="md"
+      />
 
       <div className="flex-1 p-6">
         <motion.div

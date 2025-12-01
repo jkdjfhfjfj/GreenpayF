@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { WavyHeader } from "@/components/wavy-header";
 import { Download, Copy, Play, Check, Globe, Zap, Shield, Code2, Eye, EyeOff, MapPin } from "lucide-react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -523,44 +524,20 @@ export default function ApiDocumentationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-green-50 pb-20">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-green-600 to-green-700 shadow-lg p-4 sm:p-6 sticky top-0 z-50"
-      >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Back Button */}
-          <button
-            onClick={() => setLocation("/api-service")}
-            className="text-white hover:bg-green-700 p-2 rounded-lg transition-colors"
-          >
-            ← Back
-          </button>
-
-          {/* Desktop Title - Hidden on Mobile */}
-          <div className="hidden sm:flex items-center gap-3 flex-1 mx-4">
-            <div>
-              <h1 className="text-2xl font-bold text-white">GreenPay API</h1>
-              <p className="text-green-100 text-sm">Complete API Reference & Examples</p>
-            </div>
-          </div>
-
-          {/* Mobile Title - Visible only on Mobile */}
-          <div className="sm:hidden flex-1 mx-3">
-            <h1 className="text-lg font-bold text-white">Documentation</h1>
-          </div>
-
-          {/* Download Button */}
+      <WavyHeader
+        title="API Documentation"
+        onBack={() => setLocation("/api-service")}
+        rightContent={
           <button
             onClick={generatePDF}
-            className="bg-white text-green-600 hover:bg-green-50 p-2 sm:px-4 sm:py-2 rounded-lg font-semibold flex items-center gap-2 transition-all"
+            className="text-gray-800 dark:text-gray-200 p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+            title="Download PDF"
           >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Download PDF</span>
+            <Download className="w-5 h-5" />
           </button>
-        </div>
-      </motion.div>
+        }
+        size="md"
+      />
 
       <div className="max-w-7xl mx-auto p-6 space-y-8">
         {/* API Key Input */}
