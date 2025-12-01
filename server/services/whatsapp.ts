@@ -998,6 +998,7 @@ export class WhatsAppService {
 
   /**
    * Extract parameters from template components - scans ALL fields for {{1}}, {{2}}, etc
+   * Checks: body text, header text/media, footer, buttons, and all possible URLs
    * Returns SET of unique parameter numbers found
    */
   private extractParametersFromComponents(components: any[]): Set<number> {
@@ -1007,32 +1008,56 @@ export class WhatsAppService {
     const regex = /\{\{(\d+)\}\}/g;
     
     components.forEach((comp: any) => {
-      // Check text field
-      if (comp.text && typeof comp.text === 'string') {
-        const matches = [...comp.text.matchAll(regex)];
-        matches.forEach(m => {
-          paramNumbers.add(parseInt(m[1]));
-        });
+      // Helper function to extract params from string
+      const extractFromString = (str: string) => {
+        if (str && typeof str === 'string') {
+          const matches = [...str.matchAll(regex)];
+          matches.forEach(m => paramNumbers.add(parseInt(m[1])));
+        }
+      };
+      
+      // 1. Check BODY component - can have text with parameters
+      if (comp.type === 'BODY' && comp.text) {
+        extractFromString(comp.text);
       }
       
-      // Check buttons for URL parameters
-      if (comp.buttons && Array.isArray(comp.buttons)) {
-        comp.buttons.forEach((btn: any) => {
-          if (btn.url && typeof btn.url === 'string') {
-            const matches = [...btn.url.matchAll(regex)];
-            matches.forEach(m => {
-              paramNumbers.add(parseInt(m[1]));
+      // 2. Check FOOTER component - can have text with parameters
+      if (comp.type === 'FOOTER' && comp.text) {
+        extractFromString(comp.text);
+      }
+      
+      // 3. Check HEADER component - can be TEXT, IMAGE, DOCUMENT, VIDEO, or LOCATION
+      if (comp.type === 'HEADER') {
+        // TEXT headers have text field
+        if (comp.format === 'TEXT' || comp.text) {
+          extractFromString(comp.text);
+        }
+        // IMAGE/DOCUMENT/VIDEO headers have example object with link
+        if (comp.example) {
+          extractFromString(comp.example.header_text);
+          if (Array.isArray(comp.example.header_handle)) {
+            comp.example.header_handle.forEach((handle: string) => {
+              extractFromString(handle);
             });
           }
+        }
+      }
+      
+      // 4. Check BUTTONS - can have URL parameters and text
+      if (comp.buttons && Array.isArray(comp.buttons)) {
+        comp.buttons.forEach((btn: any) => {
+          // URL button may have dynamic parameters
+          extractFromString(btn.url);
+          // Button text might have parameters
+          extractFromString(btn.text);
+          // Phone button parameter
+          extractFromString(btn.phone_number);
         });
       }
       
-      // Check header for parameters
-      if (comp.format === 'TEXT' && comp.text) {
-        const matches = [...comp.text.matchAll(regex)];
-        matches.forEach(m => {
-          paramNumbers.add(parseInt(m[1]));
-        });
+      // 5. Check generic text field (fallback for any format)
+      if (comp.text && typeof comp.text === 'string' && comp.type !== 'BODY' && comp.type !== 'FOOTER' && comp.type !== 'HEADER') {
+        extractFromString(comp.text);
       }
     });
     
@@ -1092,14 +1117,22 @@ export class WhatsAppService {
         return { required: [], paramCount: 0, language: 'en_US', components: [] };
       }
 
-      // Extract parameters from all component types including buttons
+      // Extract parameters from all component types including buttons, headers, footers
       const params = this.getComponentParameters(template.components || []);
       
       console.log(`[WhatsApp] Template "${templateName}" parameters extracted:`, {
         params,
         paramCount: params.length,
         componentCount: template.components?.length || 0,
-        componentTypes: template.components?.map((c: any) => c.type) || []
+        componentTypes: template.components?.map((c: any) => c.type) || [],
+        componentDetails: template.components?.map((c: any) => ({
+          type: c.type,
+          format: c.format,
+          hasText: !!c.text,
+          hasButtons: !!c.buttons,
+          hasExample: !!c.example,
+          textPreview: c.text ? c.text.substring(0, 60) : null
+        })) || []
       });
 
       return { required: params, paramCount: params.length, language: template.language || 'en_US', components: template.components || [] };
