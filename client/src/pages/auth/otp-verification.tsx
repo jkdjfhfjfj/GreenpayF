@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { WavyHeader } from "@/components/wavy-header";
 
 export default function OtpVerificationPage() {
   const [, setLocation] = useLocation();
@@ -139,21 +140,11 @@ export default function OtpVerificationPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center elevation-1"
-      >
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setLocation("/login")}
-          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          data-testid="button-back"
-        >
-          arrow_back
-        </motion.button>
-        <h1 className="text-lg font-semibold">Verify Login</h1>
-      </motion.div>
+      <WavyHeader
+        title="Verify Login"
+        onBack={() => setLocation("/login")}
+        size="sm"
+      />
 
       <div className="flex-1 p-6 flex items-center justify-center">
         <motion.div
