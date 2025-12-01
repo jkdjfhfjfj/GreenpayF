@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Send, X, Mail, Phone, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Send, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -36,9 +36,7 @@ interface TicketsResponse {
 
 export default function UserSupportTickets() {
   const [, setLocation] = useLocation();
-  const [showReportForm, setShowReportForm] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [createData, setCreateData] = useState({ issueType: "", description: "", file: null as File | null });
   const [replyText, setReplyText] = useState("");
   const [replyFile, setReplyFile] = useState<File | null>(null);
   const { toast } = useToast();
@@ -50,29 +48,6 @@ export default function UserSupportTickets() {
       const response = await fetch('/api/user/support-tickets', { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch");
       return response.json();
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const formData = new FormData();
-      formData.append('issueType', createData.issueType);
-      formData.append('description', createData.description);
-      if (createData.file) formData.append('file', createData.file);
-
-      const response = await fetch('/api/user/support-tickets', {
-        method: 'POST',
-        credentials: "include",
-        body: formData,
-      });
-      if (!response.ok) throw new Error("Failed to create");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-support-tickets'] });
-      toast({ title: "Issue reported successfully" });
-      setCreateData({ issueType: "", description: "", file: null });
-      setShowReportForm(false);
     },
   });
 
@@ -92,9 +67,13 @@ export default function UserSupportTickets() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-support-tickets'] });
-      toast({ title: "Reply sent" });
+      toast({ title: "Reply sent successfully" });
       setReplyText("");
       setReplyFile(null);
+    },
+    onError: (error) => {
+      console.error('Reply error:', error);
+      toast({ title: "Failed to send reply", variant: "destructive" });
     },
   });
 
@@ -240,73 +219,7 @@ export default function UserSupportTickets() {
         <button onClick={() => setLocation('/support')} className="opacity-80 hover:opacity-100">←</button>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* Report Issue Form */}
-        {showReportForm && (
-          <Card className="shadow-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg flex items-center justify-between">
-              <CardTitle>Report an Issue</CardTitle>
-              <button onClick={() => setShowReportForm(false)}>
-                <X className="w-5 h-5" />
-              </button>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div>
-                <Label htmlFor="type" className="text-sm font-semibold">Issue Type</Label>
-                <Input
-                  id="type"
-                  placeholder="e.g., Payment Issue, App Bug, Account Help"
-                  value={createData.issueType}
-                  onChange={(e) => setCreateData({ ...createData, issueType: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="desc" className="text-sm font-semibold">Description</Label>
-                <Textarea
-                  id="desc"
-                  placeholder="Tell us what went wrong..."
-                  value={createData.description}
-                  onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
-                  rows={3}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="attach" className="text-sm font-semibold">Attach File (Optional)</Label>
-                <Input
-                  id="attach"
-                  type="file"
-                  onChange={(e) => setCreateData({ ...createData, file: e.target.files?.[0] || null })}
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowReportForm(false)} className="flex-1">
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => createMutation.mutate()}
-                  disabled={!createData.issueType || !createData.description || createMutation.isPending}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  {createMutation.isPending ? "Submitting..." : "Report Issue"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Report Issue CTA */}
-        {!showReportForm && (
-          <Button
-            onClick={() => setShowReportForm(true)}
-            className="w-full h-16 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg font-semibold shadow-lg"
-          >
-            📝 Report an Issue
-          </Button>
-        )}
-
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
         {/* Tickets List */}
         <div className="space-y-3">
           {tickets.length === 0 ? (
@@ -314,7 +227,7 @@ export default function UserSupportTickets() {
               <CardContent className="text-center py-12">
                 <AlertCircle className="w-16 h-16 mx-auto mb-3 text-gray-300" />
                 <p className="text-gray-600 font-semibold">No issues reported yet</p>
-                <p className="text-sm text-gray-400 mt-1">Click above to report your first issue</p>
+                <p className="text-sm text-gray-400 mt-1">Click on the Support page to report an issue</p>
               </CardContent>
             </Card>
           ) : (

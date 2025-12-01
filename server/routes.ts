@@ -3397,7 +3397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reply = await storage.createTicketReply({
         ticketId: req.params.id,
-        userId,
+        senderId: userId,
         senderType: 'user',
         content,
         fileUrl,
@@ -3631,7 +3631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reply = await storage.createTicketReply({
         ticketId: req.params.id,
-        userId: (req.session as any)?.admin?.id || '',
+        senderId: (req.session as any)?.admin?.id || '',
         senderType: 'admin',
         content,
         fileUrl,
