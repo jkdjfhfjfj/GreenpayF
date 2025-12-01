@@ -742,6 +742,65 @@ export class WhatsAppService {
   }
 
   /**
+   * Send generic template with dynamic parameters
+   */
+  async sendTemplateGeneric(phoneNumber: string, templateName: string, parameters: Record<string, string>): Promise<boolean> {
+    await this.refreshCredentials();
+    if (!this.checkCredentials()) return false;
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+
+      // Build parameters array from the provided object
+      const paramArray = Object.values(parameters);
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: 'en_US' },
+          components: paramArray.length > 0 ? [
+            {
+              type: 'body',
+              parameters: paramArray.map(p => ({ type: 'text', text: p }))
+            }
+          ] : undefined
+        }
+      };
+
+      // Remove undefined components
+      if (!payload.template.components) {
+        delete payload.template.components;
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const responseData = await response.json() as any;
+
+      if (response.ok && responseData.messages) {
+        console.log(`[WhatsApp] ✓ Generic template "${templateName}" sent successfully`);
+        return true;
+      } else {
+        console.error(`[WhatsApp] ✗ Generic template send failed:`, responseData.error?.message);
+        return false;
+      }
+    } catch (error) {
+      console.error(`[WhatsApp] Error sending generic template "${templateName}":`, error);
+      return false;
+    }
+  }
+
+  /**
    * Create all required WhatsApp templates via Meta API - Compliant with Meta's API requirements
    */
   async createAllTemplates(): Promise<{ success: string[]; failed: string[] }> {

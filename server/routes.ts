@@ -6883,7 +6883,7 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
-  // Send template to individual user
+  // Send template to individual user - Dynamic for any Meta template
   app.post("/api/admin/whatsapp/send-template", requireAdminAuth, async (req, res) => {
     try {
       const { userId, templateName, parameters } = req.body;
@@ -6892,74 +6892,89 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Validate required parameters
-      const requiredParams: Record<string, string[]> = {
-        card_activation: ['lastFour'],
-        fund_receipt: ['currency', 'amount', 'sender'],
-        login_alert: ['location', 'ip']
-      };
-
-      if (requiredParams[templateName]) {
-        const missing = requiredParams[templateName].filter(p => !parameters?.[p]);
-        if (missing.length > 0) {
-          return res.status(400).json({
-            message: `Missing required parameters: ${missing.join(', ')}`,
-            required: requiredParams[templateName],
-            provided: Object.keys(parameters || {})
-          });
-        }
-      }
-
       const { whatsappService } = await import('./services/whatsapp');
       const { messagingService } = await import('./services/messaging');
+
+      // Get available templates from Meta to verify it exists
+      const templates = await whatsappService.fetchTemplatesFromMeta();
+      const template = templates.find((t: any) => t.name === templateName);
+      
+      if (!template) {
+        return res.status(404).json({ message: `Template "${templateName}" not found in Meta` });
+      }
+
+      if (template.status !== 'APPROVED') {
+        return res.status(400).json({ 
+          message: `Template "${templateName}" is not approved. Status: ${template.status}`,
+          status: template.status
+        });
+      }
+
+      // Special handling for templates with known handlers
       let success = false;
 
       switch (templateName) {
         case 'otp':
           const otpCode = parameters?.code || messagingService.generateOTP();
-          const otpResult = await whatsappService.sendOTP(user.phone, otpCode);
-          success = otpResult;
-          console.log('[Admin] OTP template sent', { userId, success });
+          success = await whatsappService.sendOTP(user.phone, otpCode);
+          console.log('[Admin] OTP template sent', { userId, templateName, success });
           break;
+
         case 'password_reset':
           const pwdCode = parameters?.code || messagingService.generateOTP();
           success = await whatsappService.sendPasswordReset(user.phone, pwdCode);
-          console.log('[Admin] Password reset template sent', { userId, success });
+          console.log('[Admin] Password reset template sent', { userId, templateName, success });
           break;
+
         case 'create_acc':
           success = await whatsappService.sendAccountCreation(user.phone, user.fullName || 'User');
-          console.log('[Admin] Create account template sent', { userId, success });
+          console.log('[Admin] Create account template sent', { userId, templateName, success });
           break;
+
         case 'kyc_verified':
           success = await whatsappService.sendKYCVerified(user.phone);
-          console.log('[Admin] KYC verified template sent', { userId, success });
+          console.log('[Admin] KYC verified template sent', { userId, templateName, success });
           break;
+
         case 'card_activation':
-          success = await whatsappService.sendCardActivation(user.phone, parameters.lastFour);
-          console.log('[Admin] Card activation template sent', { userId, success });
+          success = await whatsappService.sendCardActivation(user.phone, parameters?.lastFour || '0000');
+          console.log('[Admin] Card activation template sent', { userId, templateName, success });
           break;
+
         case 'fund_receipt':
           success = await whatsappService.sendFundReceipt(
             user.phone,
-            parameters.currency,
-            parameters.amount,
-            parameters.sender
+            parameters?.currency || 'KES',
+            parameters?.amount || '0',
+            parameters?.sender || 'Unknown Sender'
           );
-          console.log('[Admin] Fund receipt template sent', { userId, success });
+          console.log('[Admin] Fund receipt template sent', { userId, templateName, success });
           break;
+
         case 'login_alert':
           success = await whatsappService.sendLoginAlert(
             user.phone,
-            parameters.location,
-            parameters.ip
+            parameters?.location || 'Unknown',
+            parameters?.ip || 'Unknown IP'
           );
-          console.log('[Admin] Login alert template sent', { userId, success });
+          console.log('[Admin] Login alert template sent', { userId, templateName, success });
           break;
+
+        // Generic handler for any other approved template
         default:
-          return res.status(400).json({ message: `Unknown template: ${templateName}` });
+          // For unknown templates, try to send them dynamically
+          success = await whatsappService.sendTemplateGeneric(user.phone, templateName, parameters || {});
+          console.log('[Admin] Generic template sent', { userId, templateName, success });
+          break;
       }
 
-      res.json({ success, templateName, userId, message: success ? 'Template sent successfully' : 'Template send failed' });
+      res.json({ 
+        success, 
+        templateName, 
+        userId, 
+        message: success ? 'Template sent successfully' : 'Template send failed',
+        templateStatus: template.status
+      });
     } catch (error) {
       console.error('[Admin] Send template error:', error);
       res.status(500).json({ message: "Failed to send template", error: String(error) });
