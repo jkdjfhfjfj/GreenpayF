@@ -181,78 +181,69 @@ export default function TransactionsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Top Navigation */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-3 md:p-4 elevation-1"
-      >
-        <div className="flex items-center justify-between mb-4 gap-2">
-          <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLocation("/dashboard")}
-              className="material-icons text-muted-foreground p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              arrow_back
-            </motion.button>
-            <h1 className="text-lg font-semibold">Transactions</h1>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={handleRefresh}
-              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors text-xs md:text-sm"
-              title="Refresh Transactions"
-            >
-              <RefreshCw className="h-4 w-4" />
-              <span className="hidden sm:inline font-medium">Refresh</span>
-            </motion.button>
+      {/* Header */}
+      <WavyHeader
+        title="Transactions"
+        onBack={() => setLocation("/dashboard")}
+        size="sm"
+      />
 
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors text-xs md:text-sm"
-              title="Advanced Filters"
-            >
-              <Filter className="h-4 w-4" />
-              <span className="hidden sm:inline font-medium">Filters</span>
-            </motion.button>
-            
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowEmailExport(true)}
-              disabled={filteredTransactions.length === 0}
-              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Export & Send via Email"
-            >
-              <Mail className="h-4 w-4" />
-              <span className="hidden sm:inline font-medium">Email</span>
-            </motion.button>
+      {/* Toolbar */}
+      <div className="bg-background px-3 md:px-6 py-4 border-b border-border">
+        <div className="flex items-center gap-2 flex-wrap justify-end mb-4">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRefresh}
+            className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors text-xs md:text-sm"
+            title="Refresh Transactions"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span className="hidden sm:inline font-medium">Refresh</span>
+          </motion.button>
 
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (filteredTransactions.length > 0) {
-                  generateTransactionPDF(filteredTransactions, {
-                    fullName: user?.fullName,
-                    email: user?.email,
-                    phone: user?.phone
-                  });
-                }
-              }}
-              disabled={filteredTransactions.length === 0}
-              className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              data-testid="button-export-pdf"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline font-medium">PDF</span>
-            </motion.button>
-          </div>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors text-xs md:text-sm"
+            title="Advanced Filters"
+          >
+            <Filter className="h-4 w-4" />
+            <span className="hidden sm:inline font-medium">Filters</span>
+          </motion.button>
+          
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowEmailExport(true)}
+            disabled={filteredTransactions.length === 0}
+            className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Export & Send via Email"
+          >
+            <Mail className="h-4 w-4" />
+            <span className="hidden sm:inline font-medium">Email</span>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              if (filteredTransactions.length > 0) {
+                generateTransactionPDF(filteredTransactions, {
+                  fullName: user?.fullName,
+                  email: user?.email,
+                  phone: user?.phone
+                });
+              }
+            }}
+            disabled={filteredTransactions.length === 0}
+            className="flex items-center justify-center gap-1 px-2 md:px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="button-export-pdf"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline font-medium">PDF</span>
+          </motion.button>
         </div>
         
         {/* Filter Tabs */}
-        <div className="flex gap-1 bg-muted p-1 rounded-lg mb-4 overflow-x-auto">
+        <div className="flex gap-1 bg-muted p-1 rounded-lg overflow-x-auto">
           {[
             { id: "all", label: "All" },
             { id: "sent", label: "Sent" },

@@ -229,33 +229,11 @@ export default function UserSupportTickets() {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center justify-between elevation-1 border-b border-border"
-      >
-        <div>
-          <h1 className="text-lg font-semibold">Support Tickets</h1>
-          <p className="text-xs text-muted-foreground">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div className="flex gap-2">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="material-icons text-emerald-600 p-2 rounded-full hover:bg-emerald-50 transition-colors"
-          >
-            {isFetching ? "schedule" : "refresh"}
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation('/support')}
-            className="material-icons text-muted-foreground p-2 rounded-full hover:bg-muted transition-colors"
-          >
-            close
-          </motion.button>
-        </div>
-      </motion.div>
+      <WavyHeader
+        title="Support Tickets"
+        onBack={() => setLocation('/support')}
+        size="sm"
+      />
 
       <div className="p-4 space-y-3">
         {tickets.length === 0 ? (

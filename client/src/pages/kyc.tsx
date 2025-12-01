@@ -142,16 +142,11 @@ export default function KYCPage() {
   if (user?.kycStatus === "verified") {
     return (
       <div className="min-h-screen bg-background pb-20">
-        <motion.div className="bg-card shadow-sm p-4 flex items-center elevation-1">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation("/settings")}
-            className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          >
-            arrow_back
-          </motion.button>
-          <h1 className="text-lg font-semibold">Identity Verification</h1>
-        </motion.div>
+        <WavyHeader
+          title="Identity Verification"
+          onBack={() => setLocation("/settings")}
+          size="sm"
+        />
 
         <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
           <motion.div
@@ -178,16 +173,11 @@ export default function KYCPage() {
   if (kycData?.kyc && user?.kycStatus === "pending") {
     return (
       <div className="min-h-screen bg-background pb-20">
-        <motion.div className="bg-card shadow-sm p-4 flex items-center elevation-1">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation("/settings")}
-            className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          >
-            arrow_back
-          </motion.button>
-          <h1 className="text-lg font-semibold">Identity Verification</h1>
-        </motion.div>
+        <WavyHeader
+          title="Identity Verification"
+          onBack={() => setLocation("/settings")}
+          size="sm"
+        />
 
         <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
           <motion.div

@@ -79,24 +79,14 @@ export default function PaymentRequestsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Top Navigation */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card shadow-sm p-4 flex items-center justify-between elevation-1"
-      >
-        <div className="flex items-center">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation("/dashboard")}
-            className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-            data-testid="button-back"
-          >
-            arrow_back
-          </motion.button>
-          <h1 className="text-lg font-semibold">Payment Requests</h1>
-        </div>
-        
+      {/* Header */}
+      <WavyHeader
+        title="Payment Requests"
+        onBack={() => setLocation("/dashboard")}
+        size="sm"
+      />
+
+      <div className="bg-background px-6 py-3 border-b border-border flex justify-end">
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button size="sm" data-testid="button-create-request">
@@ -184,7 +174,7 @@ export default function PaymentRequestsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </motion.div>
+      </div>
 
       <div className="p-6 space-y-6">
         {/* Quick Stats */}
