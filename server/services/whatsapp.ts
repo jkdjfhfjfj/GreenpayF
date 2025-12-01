@@ -998,8 +998,7 @@ export class WhatsAppService {
 
   /**
    * Extract parameters from template components - finds {{1}}, {{2}}, etc EVERYWHERE
-   * Simply converts entire component to string and extracts all parameter references
-   * This catches parameters in headers, body, footer, buttons, media, examples, etc.
+   * Handles both full component structures from getTemplateDetails and list responses
    */
   private extractParametersFromComponents(components: any[]): Set<number> {
     if (!components || !Array.isArray(components)) return new Set();
@@ -1008,20 +1007,19 @@ export class WhatsAppService {
     const regex = /\{\{(\d+)\}\}/g;
     
     // Convert entire component structure to JSON string and extract all {{n}} patterns
-    // This ensures we catch parameters in ANY location: headers, examples, media, etc.
     components.forEach((comp: any) => {
       if (!comp) return;
       
       try {
-        // Stringify the entire component
+        // Stringify the entire component - catches {{n}} anywhere in the structure
         const compStr = JSON.stringify(comp);
-        // Extract all {{n}} patterns
         const matches = [...compStr.matchAll(regex)];
         matches.forEach(m => {
-          paramNumbers.add(parseInt(m[1]));
+          const num = parseInt(m[1]);
+          if (!isNaN(num)) paramNumbers.add(num);
         });
       } catch (e) {
-        // Ignore stringify errors, continue with next component
+        // Ignore stringify errors
       }
     });
     
@@ -1150,13 +1148,27 @@ export class WhatsAppService {
         return { required: [], paramCount: 0, language: 'en_US', components: [] };
       }
 
-      // Extract ALL parameters from all component types including buttons, headers, footers
-      // This uses the comprehensive recursive scanner
+      // Extract ALL parameters from all component types
       const paramNumbers = this.extractParametersFromComponents(template.components || []);
       const params = this.getComponentParameters(template.components || []);
       
       // Analyze parameter types to determine which are media vs text
       const metadata = this.analyzeParameterTypes(template.components || [], paramNumbers);
+      
+      // Debug: Log component structure for templates with no params
+      if (params.length === 0 && template.components && template.components.length > 0) {
+        console.log(`[WhatsApp] DEBUG - Template "${templateName}" found 0 params. Component structure:`, {
+          components: template.components.map((c: any) => ({
+            type: c.type,
+            format: c.format,
+            hasText: !!c.text,
+            textPreview: c.text ? c.text.substring(0, 100) : null,
+            hasExample: !!c.example,
+            hasButtons: !!c.buttons,
+            fullComponent: JSON.stringify(c).substring(0, 200)
+          }))
+        });
+      }
       
       console.log(`[WhatsApp] Template "${templateName}" parameters analyzed:`, {
         params,

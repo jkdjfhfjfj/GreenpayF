@@ -87,19 +87,28 @@ export default function SupportTicketManagement() {
       params.append('page', page.toString());
       params.append('limit', '20');
       
-      const response = await fetch(`/api/admin/support/tickets?${params}`, {
-        credentials: "include"
-      });
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Admin session expired
-          localStorage.removeItem("adminAuth");
-          window.location.href = "/admin/login";
-          throw new Error('Admin session expired');
+      try {
+        const response = await fetch(`/api/admin/support/tickets?${params}`, {
+          credentials: "include"
+        });
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Admin session expired
+            localStorage.removeItem("adminAuth");
+            window.location.href = "/admin/login";
+            throw new Error('Admin session expired');
+          }
+          const errorText = await response.text();
+          console.error('Tickets API error:', response.status, errorText);
+          throw new Error(`Failed to fetch tickets: ${response.status}`);
         }
-        throw new Error('Failed to fetch tickets');
+        const data = await response.json();
+        console.log('Tickets data received:', data);
+        return data;
+      } catch (err) {
+        console.error('Tickets fetch error:', err);
+        throw err;
       }
-      return response.json();
     },
     retry: false,
   });
