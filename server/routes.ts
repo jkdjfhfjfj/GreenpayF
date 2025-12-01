@@ -24,6 +24,7 @@ import { statumService } from "./statumService";
 import { ActivityLogger } from "./services/activity-logger";
 import { validateApiKey, optionalApiKey } from "./middleware/api-key";
 import { openaiService } from "./services/ai";
+import { rateLimiter } from "./services/rate-limiter";
 
 const cloudinaryStorage = new CloudinaryStorageService();
 
@@ -7921,9 +7922,18 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   app.post("/api/ai/chat", async (req, res) => {
     try {
       const { messages } = req.body;
+      const user = req.user;
       
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ error: "Messages array required" });
+      }
+
+      // Check rate limits using user ID or session ID
+      const userId = user?.id || req.sessionID || req.ip || 'anonymous';
+      const limitCheck = rateLimiter.checkLimit(userId);
+
+      if (!limitCheck.allowed) {
+        return res.status(429).json({ error: limitCheck.error });
       }
 
       const response = await openaiService.generateResponse(messages);

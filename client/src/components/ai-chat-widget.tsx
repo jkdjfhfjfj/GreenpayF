@@ -59,6 +59,14 @@ export function AIChatWidget() {
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, assistantMessage]);
+      } else if (response.status === 429) {
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.error || 'Rate limit reached. Please try again later.',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
       } else {
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
