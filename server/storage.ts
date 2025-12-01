@@ -75,7 +75,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, count, sum, or, isNull, gte, lt } from "drizzle-orm";
+import { eq, desc, count, sum, or, isNull, gte, lt, and, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -1656,9 +1656,9 @@ export class DatabaseStorage implements IStorage {
     const offset = (page - 1) * limit;
 
     let query = db.select().from(supportTickets);
-    let countQuery = db.select({ count: count() }).from(supportTickets);
+    let countQuery: any = db.select({ count: count() }).from(supportTickets);
 
-    // Apply filters
+    // Apply filters - AND logic (both conditions must match)
     const conditions = [];
     if (status) {
       conditions.push(eq(supportTickets.status, status));
@@ -1668,8 +1668,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (conditions.length > 0) {
-      query = query.where(or(...conditions));
-      countQuery = countQuery.where(or(...conditions));
+      const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions as any);
+      query = query.where(whereClause);
+      countQuery = countQuery.where(whereClause);
     }
 
     const [tickets, totalResult] = await Promise.all([
@@ -1680,7 +1681,7 @@ export class DatabaseStorage implements IStorage {
       countQuery
     ]);
 
-    const total = totalResult[0]?.count || 0;
+    const total = Array.isArray(totalResult) ? (totalResult[0]?.count || 0) : (totalResult?.count || 0);
     const totalPages = Math.ceil(Number(total) / limit);
 
     return { tickets, total: Number(total), page, totalPages };

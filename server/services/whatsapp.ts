@@ -1155,27 +1155,20 @@ export class WhatsAppService {
       // Analyze parameter types to determine which are media vs text
       const metadata = this.analyzeParameterTypes(template.components || [], paramNumbers);
       
-      // Debug: Log component structure for templates with no params
-      if (params.length === 0 && template.components && template.components.length > 0) {
-        console.log(`[WhatsApp] DEBUG - Template "${templateName}" found 0 params. Component structure:`, {
-          components: template.components.map((c: any) => ({
-            type: c.type,
-            format: c.format,
-            hasText: !!c.text,
-            textPreview: c.text ? c.text.substring(0, 100) : null,
-            hasExample: !!c.example,
-            hasButtons: !!c.buttons,
-            fullComponent: JSON.stringify(c).substring(0, 200)
-          }))
-        });
-      }
-      
-      console.log(`[WhatsApp] Template "${templateName}" parameters analyzed:`, {
+      // Debug: Detailed logging for all templates
+      console.log(`[WhatsApp] Template "${templateName}" analysis:`, {
         params,
         paramCount: params.length,
-        metadata,
         componentCount: template.components?.length || 0,
-        componentTypes: template.components?.map((c: any) => c.type) || []
+        componentTypes: template.components?.map((c: any) => c.type) || [],
+        // Log text field from BODY component for debugging
+        bodyText: template.components?.find((c: any) => c.type === 'BODY')?.text?.substring(0, 100),
+        componentsPreview: template.components?.map((c: any) => ({
+          type: c.type,
+          text: c.text?.substring(0, 50),
+          format: c.format,
+          buttonCount: c.buttons?.length
+        }))
       });
 
       return { 

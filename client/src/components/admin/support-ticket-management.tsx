@@ -78,7 +78,7 @@ export default function SupportTicketManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: ticketsData, isLoading, error } = useQuery<TicketsResponse>({
+  const { data: ticketsData, isLoading, error, refetch } = useQuery<TicketsResponse>({
     queryKey: ['/api/admin/support/tickets', { status, priority, page }],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -89,28 +89,28 @@ export default function SupportTicketManagement() {
       
       try {
         const response = await fetch(`/api/admin/support/tickets?${params}`, {
-          credentials: "include"
+          credentials: "include",
+          headers: {
+            'Accept': 'application/json'
+          }
         });
         if (!response.ok) {
           if (response.status === 401) {
-            // Admin session expired
             localStorage.removeItem("adminAuth");
             window.location.href = "/admin/login";
             throw new Error('Admin session expired');
           }
-          const errorText = await response.text();
-          console.error('Tickets API error:', response.status, errorText);
-          throw new Error(`Failed to fetch tickets: ${response.status}`);
+          throw new Error(`API returned ${response.status}`);
         }
         const data = await response.json();
-        console.log('Tickets data received:', data);
+        console.log('Support tickets loaded:', { total: data.total, count: data.tickets?.length });
         return data;
       } catch (err) {
-        console.error('Tickets fetch error:', err);
+        console.error('Tickets API failed:', err);
         throw err;
       }
     },
-    retry: false,
+    retry: 1,
   });
 
   const updateTicketMutation = useMutation({
@@ -226,6 +226,18 @@ export default function SupportTicketManagement() {
   };
 
   const tickets = ticketsData?.tickets || [];
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800 font-medium">Failed to load support tickets</p>
+          <p className="text-red-600 text-sm mt-1">{String(error)}</p>
+          <Button onClick={() => refetch()} className="mt-3">Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
