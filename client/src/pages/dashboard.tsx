@@ -10,7 +10,6 @@ import Notifications from "@/components/notifications";
 import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard, Zap, DollarSign, MapPin, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber } from "@/lib/formatters";
-import { WavyHeader } from "@/components/wavy-header";
 
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
@@ -160,189 +159,150 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Wavy Header Background with Content */}
+      {/* Top Navigation */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="relative z-10"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
       >
-        {/* Wavy SVG Background */}
-        <svg 
-          className="w-full absolute top-0 left-0" 
-          viewBox="-50 0 1380 500" 
-          preserveAspectRatio="none" 
-          style={{ height: '380px', overflow: 'visible' }}
-        >
-          <defs>
-            <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style={{ stopColor: '#4CAF50', stopOpacity: 1 }} />
-              <stop offset="100%" style={{ stopColor: '#45a049', stopOpacity: 0.8 }} />
-            </linearGradient>
-          </defs>
-          
-          {/* Main wave fill */}
-          <path d="M-50,55 Q315,5 665,55 T1365,55 L1365,500 L-50,500 Z" fill="#4CAF50" />
-          
-          {/* Flowing curves */}
-          <path
-            d="M-50,75 Q315,35 665,75 T1365,75 Q1035,110 665,90 Q295,75 -50,95 Z"
-            fill="rgba(76, 175, 80, 0.4)"
-            opacity="0.6"
-          />
-          
-          {/* Accent curves */}
-          <path
-            d="M-50,105 Q315,75 665,105 T1365,105"
-            stroke="#4CAF50"
-            strokeWidth="2"
-            fill="none"
-            opacity="0.5"
-          />
-        </svg>
-
-        {/* Content relative to wavy background */}
-        <div className="relative z-10 px-6 pt-4">
-          {/* Greeting Section */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center flex-1">
-              {user?.profilePhotoUrl ? (
-                <img 
-                  src={user.profilePhotoUrl} 
-                  alt="Profile" 
-                  className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-white/30 shadow-lg"
-                />
-              ) : (
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mr-3 border-2 border-white/30 shadow-lg">
-                  <span className="text-white font-bold text-lg">
-                    {user?.fullName?.split(' ').map(n => n[0]).join('') || 'JD'}
-                  </span>
-                </div>
-              )}
-              <div>
-                <h1 className="font-bold text-lg text-white">Hi, {user?.fullName?.split(' ')[0] || 'John'}!</h1>
-                <p className="text-xs text-white/80">Welcome back 👋</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center flex-1">
+            {user?.profilePhotoUrl ? (
+              <img 
+                src={user.profilePhotoUrl} 
+                alt="Profile" 
+                className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-white/30 shadow-lg"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mr-3 border-2 border-white/30 shadow-lg">
+                <span className="text-white font-bold text-lg">
+                  {user?.fullName?.split(' ').map(n => n[0]).join('') || 'JD'}
+                </span>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Notifications />
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setLocation('/live-chat')}
-                className="p-2 rounded-full hover:opacity-80 transition-opacity"
-                title="Contact Support"
-                data-testid="button-support"
-              >
-                <span className="material-icons text-white text-xl">headset_mic</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleDarkMode}
-                className="p-2 rounded-full hover:opacity-80 transition-opacity"
-                data-testid="button-dark-mode"
-              >
-                <span className="material-icons text-white text-xl">brightness_6</span>
-              </motion.button>
+            )}
+            <div>
+              <h1 className="font-bold text-lg">Hi, {user?.fullName?.split(' ')[0] || 'John'}!</h1>
+              <p className="text-xs text-white/80">Welcome back 👋</p>
             </div>
           </div>
-
-          {/* Logged In + Country Location */}
-          {user?.country && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-              className="flex items-center gap-2 mb-3 justify-start"
+          <div className="flex items-center space-x-2">
+            <Notifications />
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setLocation('/live-chat')}
+              className="p-2 rounded-full hover:opacity-80 transition-opacity"
+              title="Contact Support"
+              data-testid="button-support"
             >
-              <MapPin className="w-3.5 h-3.5 text-white/70" />
-              <span className="text-white/70 text-xs">Logged in</span>
-              <span className="text-white/70 text-xs font-medium">{user.country}</span>
-            </motion.div>
-          )}
-
-          {/* Wallet Balance Card - Dual Wallet */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
-          >
-            {/* Wallet Switcher */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex bg-white/10 rounded-lg p-1 backdrop-blur-sm">
-                <button
-                  onClick={() => setActiveWallet('USD')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    activeWallet === 'USD'
-                      ? 'bg-white text-primary shadow-md'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  USD
-                </button>
-                <button
-                  onClick={() => setActiveWallet('KES')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    activeWallet === 'KES'
-                      ? 'bg-white text-primary shadow-md'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  KES
-                </button>
-              </div>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowBalance(!showBalance)}
-                className="p-2 rounded-full hover:opacity-80 transition-opacity"
-                data-testid="button-toggle-balance"
-              >
-                <span className="material-icons text-white text-lg">
-                  {showBalance ? "visibility" : "visibility_off"}
-                </span>
-              </motion.button>
-            </div>
-
-            {/* Balance Display */}
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-white/70 text-xs flex items-center">
-                    {activeWallet} Balance
-                    {isKYCVerified && (
-                      <span className="material-icons text-green-300 ml-1 text-sm">verified</span>
-                    )}
-                  </p>
-                </div>
-                <p className="text-3xl font-bold mb-2 text-white" data-testid="text-balance">
-                  {showBalance 
-                    ? activeWallet === 'USD' 
-                      ? `$${formatNumber(activeBalance)}`
-                      : `KSh ${formatNumber(activeBalance)}`
-                    : "••••••"}
-                </p>
-                {/* Show other wallet balance and exchange button */}
-                <div className="flex items-center justify-between">
-                  <p className="text-white/60 text-xs">
-                    {activeWallet === 'USD' ? (
-                      <>Other: KSh {showBalance ? formatNumber(kesBalance) : '••••'}</>
-                    ) : (
-                      <>Other: ${showBalance ? formatNumber(usdBalance) : '••••'}</>
-                    )}
-                  </p>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setLocation("/exchange")}
-                    className="flex items-center bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-lg transition-colors"
-                  >
-                    <span className="material-icons text-white text-sm mr-1">currency_exchange</span>
-                    <span className="text-white text-xs font-medium">Exchange</span>
-                  </motion.button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+              <span className="material-icons text-white text-xl">headset_mic</span>
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleDarkMode}
+              className="p-2 rounded-full hover:opacity-80 transition-opacity mr-2"
+              data-testid="button-dark-mode"
+            >
+              <span className="material-icons text-white text-xl">brightness_6</span>
+            </motion.button>
+          </div>
         </div>
+
+        {/* Logged In + Country Location */}
+        {user?.country && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="flex items-center gap-2 mb-3 justify-start"
+          >
+            <MapPin className="w-3.5 h-3.5 text-white/70" />
+            <span className="text-white/70 text-xs">Logged in</span>
+            <span className="text-white/70 text-xs font-medium">{user.country}</span>
+          </motion.div>
+        )}
+
+        {/* Wallet Balance Card - Dual Wallet */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl"
+        >
+          {/* Wallet Switcher */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex bg-white/10 rounded-lg p-1 backdrop-blur-sm">
+              <button
+                onClick={() => setActiveWallet('USD')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  activeWallet === 'USD'
+                    ? 'bg-white text-primary shadow-md'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                USD
+              </button>
+              <button
+                onClick={() => setActiveWallet('KES')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  activeWallet === 'KES'
+                    ? 'bg-white text-primary shadow-md'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                KES
+              </button>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowBalance(!showBalance)}
+              className="p-2 rounded-full hover:opacity-80 transition-opacity"
+              data-testid="button-toggle-balance"
+            >
+              <span className="material-icons text-white text-lg">
+                {showBalance ? "visibility" : "visibility_off"}
+              </span>
+            </motion.button>
+          </div>
+
+          {/* Balance Display */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-white/70 text-xs flex items-center">
+                  {activeWallet} Balance
+                  {isKYCVerified && (
+                    <span className="material-icons text-green-300 ml-1 text-sm">verified</span>
+                  )}
+                </p>
+              </div>
+              <p className="text-3xl font-bold mb-2" data-testid="text-balance">
+                {showBalance 
+                  ? activeWallet === 'USD' 
+                    ? `$${formatNumber(activeBalance)}`
+                    : `KSh ${formatNumber(activeBalance)}`
+                  : "••••••"}
+              </p>
+              {/* Show other wallet balance and exchange button */}
+              <div className="flex items-center justify-between">
+                <p className="text-white/60 text-xs">
+                  {activeWallet === 'USD' ? (
+                    <>Other: KSh {showBalance ? formatNumber(kesBalance) : '••••'}</>
+                  ) : (
+                    <>Other: ${showBalance ? formatNumber(usdBalance) : '••••'}</>
+                  )}
+                </p>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setLocation("/exchange")}
+                  className="flex items-center bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  <span className="material-icons text-white text-sm mr-1">currency_exchange</span>
+                  <span className="text-white text-xs font-medium">Exchange</span>
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
 
       <div className="px-4 py-6 space-y-6">
