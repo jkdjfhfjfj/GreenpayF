@@ -751,16 +751,8 @@ export class WhatsAppService {
         return { valid: false, error: `Template "${templateName}" not found in Meta`, required: 0, provided: 0 };
       }
 
-      // Extract required parameter count from template
-      let allText = '';
-      if (template.components) {
-        template.components.forEach((comp: any) => {
-          if (comp.text) allText += ' ' + comp.text;
-        });
-      }
-
-      const params = this.extractTemplateParameters(allText);
-      const requiredCount = params.length;
+      // Extract required parameter count from template components
+      const requiredCount = this.extractParametersFromComponents(template.components || []);
       const providedCount = Object.values(parameters).filter(p => p && p.trim() !== '').length;
 
       if (requiredCount > 0 && providedCount < requiredCount) {
@@ -827,7 +819,8 @@ export class WhatsAppService {
 
       console.log(`[WhatsApp] Sending generic template "${templateName}" with language: ${languageCode}`, {
         paramCount: paramArray.length,
-        validated: true
+        validated: true,
+        requiredParams: validation.required
       });
 
       const response = await fetch(url, {
@@ -841,19 +834,24 @@ export class WhatsAppService {
 
       const responseData = await response.json() as any;
 
-      if (response.ok && responseData.messages) {
-        console.log(`[WhatsApp] ✓ Generic template "${templateName}" sent successfully`, {
+      // Meta returns success ONLY if messages array exists AND no error
+      if (response.ok && responseData.messages && !responseData.error) {
+        console.log(`[WhatsApp] ✓ Generic template "${templateName}" DELIVERED successfully`, {
           messageId: responseData.messages[0]?.id,
-          language: languageCode
+          language: languageCode,
+          status: 'queued'
         });
         return { success: true };
       } else {
-        const errorMsg = responseData.error?.message || 'Unknown error';
-        console.error(`[WhatsApp] ✗ Generic template send failed:`, {
+        // ANY error from Meta means failure - don't report success
+        const errorMsg = responseData.error?.message || responseData.error?.type || 'Template delivery failed by Meta';
+        const errorCode = responseData.error?.code || responseData.error?.error_data?.messaging_product?.details?.error_code;
+        console.error(`[WhatsApp] ✗ Generic template FAILED to deliver:`, {
           templateName,
           error: errorMsg,
-          errorCode: responseData.error?.code,
-          language: languageCode
+          errorCode: errorCode,
+          language: languageCode,
+          statusCode: response.status
         });
         return { success: false, error: errorMsg };
       }
@@ -987,6 +985,28 @@ export class WhatsAppService {
   }
 
   /**
+   * Extract parameters from template components (finds {{1}}, {{2}}, etc)
+   */
+  private extractParametersFromComponents(components: any[]): number {
+    if (!components || !Array.isArray(components)) return 0;
+    
+    let maxParamNum = 0;
+    const regex = /\{\{(\d+)\}\}/g;
+    
+    components.forEach((comp: any) => {
+      if (comp.text) {
+        const matches = [...comp.text.matchAll(regex)];
+        matches.forEach(m => {
+          const paramNum = parseInt(m[1]);
+          maxParamNum = Math.max(maxParamNum, paramNum);
+        });
+      }
+    });
+    
+    return maxParamNum;
+  }
+
+  /**
    * Extract parameters from template text (finds {{1}}, {{2}}, etc)
    */
   private extractTemplateParameters(templateText: string): string[] {
@@ -1037,7 +1057,7 @@ export class WhatsAppService {
   }
 
   /**
-   * Fetch all templates from Meta Business Account
+   * Fetch all templates from Meta Business Account with full component structure
    */
   async fetchTemplatesFromMeta(): Promise<any[]> {
     try {
@@ -1052,7 +1072,8 @@ export class WhatsAppService {
         return [];
       }
 
-      const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates?fields=name,status,language,category`;
+      // Fetch with full component structure to extract parameters properly
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates?fields=name,status,language,category,components`;
 
       console.log(`[WhatsApp] Fetching templates from Meta...`);
       const response = await fetch(url, {
@@ -1070,11 +1091,12 @@ export class WhatsAppService {
           name: t.name,
           status: t.status,
           language: t.language,
-          category: t.category
+          category: t.category,
+          components: t.components || []
         }));
         console.log('[WhatsApp] ✓ Successfully fetched approved templates from Meta', {
           count: responseData.data.length,
-          templates: templateList,
+          templates: templateList.map((t: any) => ({ name: t.name, status: t.status, language: t.language })),
           timestamp: new Date().toISOString()
         });
         return responseData.data;

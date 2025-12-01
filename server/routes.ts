@@ -6994,8 +6994,9 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         success, 
         templateName, 
         userId, 
-        message: success ? 'Template sent successfully' : 'Template send failed',
-        templateStatus: template.status
+        message: success ? 'Template delivered to WhatsApp' : 'Template delivery failed',
+        templateStatus: template.status,
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
       console.error('[Admin] Send template error:', error);
