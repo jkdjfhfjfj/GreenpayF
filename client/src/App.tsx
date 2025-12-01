@@ -168,18 +168,38 @@ function Router() {
   );
 }
 
+function AppContent() {
+  const [location] = useLocation();
+  const { isAuthenticated } = useAuth();
+  
+  // Landing/public pages that should not show widgets
+  const landingPages = ['/', '/login', '/signup', '/splash', '/help', '/about', '/pricing', '/security', '/contact', '/terms', '/privacy', '/loans', '/api-service', '/api-documentation', '/send-money', '/virtual-cards', '/exchange', '/airtime', '/admin-login'];
+  const isLandingPage = landingPages.some(page => location === page || location.startsWith(page + '/'));
+  
+  // Only show widgets on authenticated pages (not landing/public pages)
+  const shouldShowWidgets = isAuthenticated && !isLandingPage;
+
+  return (
+    <TooltipProvider>
+      <Toaster />
+      <Router />
+      <BottomNavigation />
+      <PWAInstallPrompt />
+      {shouldShowWidgets && (
+        <>
+          <WhatsAppSupportFAB />
+          <AIChatWidget />
+        </>
+      )}
+    </TooltipProvider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-          <BottomNavigation />
-          <PWAInstallPrompt />
-          <WhatsAppSupportFAB />
-          <AIChatWidget />
-        </TooltipProvider>
+        <AppContent />
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -13,6 +13,7 @@ var schema_exports = {};
 __export(schema_exports, {
   adminLogs: () => adminLogs,
   admins: () => admins,
+  aiUsage: () => aiUsage,
   apiConfigurations: () => apiConfigurations,
   billPayments: () => billPayments,
   budgets: () => budgets,
@@ -20,6 +21,7 @@ __export(schema_exports, {
   conversations: () => conversations,
   insertAdminLogSchema: () => insertAdminLogSchema,
   insertAdminSchema: () => insertAdminSchema,
+  insertAiUsageSchema: () => insertAiUsageSchema,
   insertApiConfigurationSchema: () => insertApiConfigurationSchema,
   insertBillPaymentSchema: () => insertBillPaymentSchema,
   insertBudgetSchema: () => insertBudgetSchema,
@@ -73,7 +75,7 @@ __export(schema_exports, {
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, decimal, timestamp, boolean, jsonb, json, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-var users, kycDocuments, virtualCards, transactions, recipients, paymentRequests, chatMessages, notifications, supportTickets, ticketReplies, conversations, messages, insertUserSchema, insertKycDocumentSchema, insertVirtualCardSchema, insertTransactionSchema, insertRecipientSchema, insertPaymentRequestSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, insertChatMessageSchema, insertNotificationSchema, admins, adminLogs, systemLogs, systemSettings, apiConfigurations, insertAdminSchema, insertAdminLogSchema, insertSystemSettingSchema, insertSystemLogSchema, insertApiConfigurationSchema, savingsGoals, qrPayments, scheduledPayments, budgets, userPreferences, loginHistory, userSessions, whatsappConversations, whatsappMessages, whatsappConfig, userActivityLog, billPayments, loans, insertBillPaymentSchema, insertSavingsGoalSchema, insertQRPaymentSchema, insertScheduledPaymentSchema, insertBudgetSchema, insertUserPreferencesSchema, insertLoginHistorySchema, insertWhatsappConversationSchema, insertWhatsappMessageSchema, insertWhatsappConfigSchema, insertUserActivityLogSchema, insertTicketReplySchema;
+var users, kycDocuments, virtualCards, transactions, recipients, paymentRequests, chatMessages, notifications, supportTickets, ticketReplies, conversations, messages, insertUserSchema, insertKycDocumentSchema, insertVirtualCardSchema, insertTransactionSchema, insertRecipientSchema, insertPaymentRequestSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, insertChatMessageSchema, insertNotificationSchema, admins, adminLogs, systemLogs, systemSettings, apiConfigurations, insertAdminSchema, insertAdminLogSchema, insertSystemSettingSchema, insertSystemLogSchema, insertApiConfigurationSchema, savingsGoals, qrPayments, scheduledPayments, budgets, userPreferences, loginHistory, userSessions, whatsappConversations, whatsappMessages, whatsappConfig, userActivityLog, billPayments, loans, insertBillPaymentSchema, insertSavingsGoalSchema, insertQRPaymentSchema, insertScheduledPaymentSchema, insertBudgetSchema, insertUserPreferencesSchema, insertLoginHistorySchema, insertWhatsappConversationSchema, insertWhatsappMessageSchema, insertWhatsappConfigSchema, insertUserActivityLogSchema, insertTicketReplySchema, aiUsage, insertAiUsageSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -679,6 +681,15 @@ var init_schema = __esm({
       createdAt: true
     });
     insertTicketReplySchema = createInsertSchema(ticketReplies).omit({ id: true, createdAt: true });
+    aiUsage = pgTable("ai_usage", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+      dailyCount: integer("daily_count").default(0),
+      lastResetDate: timestamp("last_reset_date").defaultNow(),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    insertAiUsageSchema = createInsertSchema(aiUsage).omit({ id: true, createdAt: true, updatedAt: true });
   }
 });
 
@@ -3416,7 +3427,7 @@ var init_whatsapp = __esm({
         }
       }
       /**
-       * Send password reset code via template
+       * Send password reset code via OTP template (same as login OTP)
        */
       async sendPasswordReset(phoneNumber, resetCode) {
         await this.refreshCredentials();
@@ -3426,25 +3437,77 @@ var init_whatsapp = __esm({
           const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
           const payload = {
             messaging_product: "whatsapp",
+            recipient_type: "individual",
             to: formattedPhone,
             type: "template",
             template: {
-              name: "password_reset",
-              language: { code: "en_US" },
-              components: [{ type: "body", parameters: [{ type: "text", text: resetCode }] }]
+              name: "otp",
+              language: {
+                code: "en_US"
+              },
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    {
+                      type: "text",
+                      text: resetCode
+                    }
+                  ]
+                },
+                {
+                  type: "button",
+                  sub_type: "url",
+                  index: "0",
+                  parameters: [
+                    {
+                      type: "text",
+                      text: resetCode
+                    }
+                  ]
+                }
+              ]
             }
           };
-          const response = await fetch6(url, { method: "POST", headers: { "Authorization": `Bearer ${this.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          const response = await fetch6(url, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
           const responseData = await response.json();
           if (response.ok && responseData.messages) {
-            console.log(`[WhatsApp] \u2713 Password reset sent to ${phoneNumber}`);
+            const messageId = responseData.messages?.[0]?.id || "unknown";
+            console.log("[WhatsApp] \u2713 Password reset sent successfully", {
+              to: phoneNumber,
+              messageId,
+              templateName: "otp",
+              timestamp: (/* @__PURE__ */ new Date()).toISOString()
+            });
             return true;
           } else {
-            console.error(`[WhatsApp] \u2717 Password reset failed: ${responseData.error?.message || "Unknown error"}`);
+            const errorMsg = responseData.error?.message || "Unknown error";
+            const errorCode = responseData.error?.code || "UNKNOWN_ERROR";
+            console.error("[WhatsApp] \u2717 Password reset send failed", {
+              to: phoneNumber,
+              templateName: "otp",
+              error: errorMsg,
+              errorCode,
+              status: response.status,
+              fullError: responseData.error,
+              timestamp: (/* @__PURE__ */ new Date()).toISOString()
+            });
             return false;
           }
         } catch (error) {
-          console.error("[WhatsApp] Error sending password reset:", error);
+          console.error("[WhatsApp] \u2717 Error sending password reset", {
+            to: phoneNumber,
+            error: error?.message || "Unknown error",
+            errorType: error?.constructor?.name,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          });
           return false;
         }
       }
@@ -5837,6 +5900,157 @@ async function optionalApiKey(req, res, next) {
     next();
   }
 }
+
+// server/services/ai.ts
+import { GoogleGenerativeAI } from "@google/generative-ai";
+var OpenAIService = class {
+  genAI;
+  model;
+  constructor() {
+    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    if (!apiKey) {
+      console.warn("\u26A0\uFE0F Google AI API key not configured");
+    }
+    this.genAI = new GoogleGenerativeAI(apiKey || "");
+    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+  }
+  async generateResponse(messages2) {
+    try {
+      const systemPrompt = `You are a helpful AI assistant for GreenPay, a comprehensive fintech payment application for KES users.
+
+You MUST only answer questions related to GreenPay's features and services:
+- Bill payments and money transfers
+- Virtual cards and airtime purchases
+- Currency exchange services
+- Document uploads and KYC verification
+- Support and account management
+- Performance-based loans
+- WhatsApp Business integration
+- Two-factor authentication and biometric login
+- Admin panel and support ticket system
+- Public API services
+
+IMPORTANT RULES:
+1. Only respond to questions about GreenPay features and services
+2. If asked about unrelated topics, politely redirect the user by saying: "I'm here to help with GreenPay features. Could you ask me something about bill payments, transfers, virtual cards, airtime, currency exchange, loans, or your account?"
+3. Provide helpful, concise, and professional responses
+4. Be friendly and supportive in your tone`;
+      const conversationHistory = messages2.map((msg) => ({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }]
+      }));
+      const contents = [
+        {
+          role: "user",
+          parts: [{ text: systemPrompt }]
+        },
+        {
+          role: "model",
+          parts: [{ text: "Understood. I will only provide assistance related to GreenPay features and services." }]
+        },
+        ...conversationHistory
+      ];
+      const result = await this.model.generateContent({
+        contents
+      });
+      return result.response.text() || "Unable to generate response";
+    } catch (error) {
+      console.error("Google AI API error:", error);
+      throw error;
+    }
+  }
+  async getAIFeatureSuggestions(context) {
+    const systemPrompt = `You are a helpful AI assistant for GreenPay, a fintech payment application. 
+Provide helpful, concise suggestions and answers about:
+- Bill payments and money transfers
+- Virtual cards and airtime purchases
+- Currency exchange services
+- Document uploads and KYC verification
+- Support and account management
+- Performance-based loans
+
+Keep responses brief and professional.`;
+    return this.generateResponse([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: context }
+    ]);
+  }
+};
+var openaiService = new OpenAIService();
+
+// server/services/ai-rate-limiter.ts
+init_db();
+init_schema();
+import { eq as eq2 } from "drizzle-orm";
+var DAILY_LIMIT = 5;
+var ONE_DAY_MS = 864e5;
+var AIRateLimiter = class {
+  async checkAndUpdateLimit(userId, ipAddress) {
+    try {
+      const trackingId = userId || ipAddress || "anonymous";
+      if (!trackingId || trackingId === "anonymous") {
+        return { allowed: true, remainingRequests: 5 };
+      }
+      const now = /* @__PURE__ */ new Date();
+      const oneDayAgo = new Date(Date.now() - ONE_DAY_MS);
+      const finalUserId = userId || `guest-${ipAddress}`;
+      let usage = await db.query.aiUsage.findFirst({
+        where: eq2(aiUsage.userId, finalUserId)
+      });
+      if (!usage) {
+        const newUsage = await db.insert(aiUsage).values({
+          userId: finalUserId,
+          dailyCount: 0,
+          lastResetDate: now
+        }).returning();
+        usage = newUsage[0];
+      }
+      if (usage.lastResetDate && new Date(usage.lastResetDate) < oneDayAgo) {
+        await db.update(aiUsage).set({ dailyCount: 0, lastResetDate: now }).where(eq2(aiUsage.userId, finalUserId));
+        usage.dailyCount = 0;
+      }
+      if (usage.dailyCount >= DAILY_LIMIT) {
+        return {
+          allowed: false,
+          error: `You've used all 5 daily requests. Please try again tomorrow.`,
+          remainingRequests: 0
+        };
+      }
+      const newCount = (usage.dailyCount || 0) + 1;
+      await db.update(aiUsage).set({ dailyCount: newCount, updatedAt: /* @__PURE__ */ new Date() }).where(eq2(aiUsage.userId, finalUserId));
+      const remainingRequests = DAILY_LIMIT - newCount;
+      return { allowed: true, remainingRequests };
+    } catch (error) {
+      console.error("AI Rate Limiter Error:", error);
+      return { allowed: true, remainingRequests: 5 };
+    }
+  }
+  async getRemainingRequests(userId, ipAddress) {
+    try {
+      const trackingId = userId || ipAddress;
+      if (!trackingId) {
+        return DAILY_LIMIT;
+      }
+      const oneDayAgo = new Date(Date.now() - ONE_DAY_MS);
+      const finalUserId = userId || `guest-${ipAddress}`;
+      let usage = await db.query.aiUsage.findFirst({
+        where: eq2(aiUsage.userId, finalUserId)
+      });
+      if (!usage) {
+        return DAILY_LIMIT;
+      }
+      if (usage.lastResetDate && new Date(usage.lastResetDate) < oneDayAgo) {
+        await db.update(aiUsage).set({ dailyCount: 0, lastResetDate: /* @__PURE__ */ new Date() }).where(eq2(aiUsage.userId, finalUserId));
+        return DAILY_LIMIT;
+      }
+      return Math.max(0, DAILY_LIMIT - (usage.dailyCount || 0));
+    } catch (error) {
+      console.error("Get Remaining Requests Error:", error);
+      return DAILY_LIMIT;
+    }
+  }
+};
+var aiRateLimiter = new AIRateLimiter();
 
 // server/routes.ts
 var cloudinaryStorage2 = new CloudinaryStorageService();
@@ -8365,8 +8579,17 @@ async function registerRoutes(app2) {
       let fileUrl = void 0;
       let fileName = void 0;
       if (req.file) {
-        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
-        fileName = req.file.originalname;
+        try {
+          fileUrl = await cloudinaryStorage2.uploadFile(
+            `support-tickets/${userId}/${Date.now()}-${req.file.originalname}`,
+            req.file.buffer,
+            req.file.mimetype
+          );
+          fileName = req.file.originalname;
+        } catch (error) {
+          console.error("Error uploading support ticket file:", error);
+          return res.status(400).json({ message: "File upload failed" });
+        }
       }
       const ticket = await storage.createSupportTicket({
         issueType,
@@ -8438,8 +8661,17 @@ async function registerRoutes(app2) {
       let fileUrl = void 0;
       let fileName = void 0;
       if (req.file) {
-        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
-        fileName = req.file.originalname;
+        try {
+          fileUrl = await cloudinaryStorage2.uploadFile(
+            `support-tickets/${req.params.id}/${Date.now()}-${req.file.originalname}`,
+            req.file.buffer,
+            req.file.mimetype
+          );
+          fileName = req.file.originalname;
+        } catch (error) {
+          console.error("Error uploading reply file:", error);
+          return res.status(400).json({ message: "File upload failed" });
+        }
       }
       const reply = await storage.createTicketReply({
         ticketId: req.params.id,
@@ -8611,8 +8843,17 @@ async function registerRoutes(app2) {
       let fileUrl = void 0;
       let fileName = void 0;
       if (req.file) {
-        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
-        fileName = req.file.originalname;
+        try {
+          fileUrl = await cloudinaryStorage2.uploadFile(
+            `support-tickets/${req.params.id}/${Date.now()}-${req.file.originalname}`,
+            req.file.buffer,
+            req.file.mimetype
+          );
+          fileName = req.file.originalname;
+        } catch (error) {
+          console.error("Error uploading reply file:", error);
+          return res.status(400).json({ message: "File upload failed" });
+        }
       }
       const reply = await storage.createTicketReply({
         ticketId: req.params.id,
@@ -12037,6 +12278,84 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     } catch (error) {
       console.error("[API Keys] Revoke error:", error);
       res.status(500).json({ error: "Failed to revoke API key" });
+    }
+  });
+  app2.get("/api/ai/remaining-requests", async (req, res) => {
+    try {
+      const userId = req.user?.id || null;
+      const ipAddress = req.ip || req.connection.remoteAddress || "";
+      const remaining = await aiRateLimiter.getRemainingRequests(userId, ipAddress);
+      res.json({ remainingRequests: remaining });
+    } catch (error) {
+      console.error("Get remaining requests error:", error);
+      res.status(500).json({ error: "Failed to get remaining requests" });
+    }
+  });
+  app2.post("/api/ai/chat", async (req, res) => {
+    try {
+      const { messages: messages2 } = req.body;
+      const user = req.user;
+      if (!messages2 || !Array.isArray(messages2)) {
+        return res.status(400).json({ error: "Messages array required" });
+      }
+      const userId = user?.id || null;
+      const ipAddress = req.ip || req.connection.remoteAddress || "";
+      const limitCheck = await aiRateLimiter.checkAndUpdateLimit(userId, ipAddress);
+      if (!limitCheck.allowed) {
+        return res.status(429).json({ error: limitCheck.error, remainingRequests: limitCheck.remainingRequests });
+      }
+      const response = await openaiService.generateResponse(messages2);
+      res.json({ response, remainingRequests: limitCheck.remainingRequests });
+    } catch (error) {
+      console.error("AI chat error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate AI response" });
+    }
+  });
+  app2.get("/api/admin/export-env", async (req, res) => {
+    try {
+      const isAdmin = req.session?.admin?.id || req.user?.id;
+      if (!isAdmin) {
+        return res.status(401).json({ message: "Authentication required. Please log in as an administrator." });
+      }
+      const envVars = process.env;
+      let envContent = "";
+      for (const [key, value] of Object.entries(envVars)) {
+        if (value !== void 0 && value !== null) {
+          const escapedValue = typeof value === "string" && value.includes('"') ? `'${value}'` : `${value}`;
+          envContent += `${key}=${escapedValue}
+`;
+        }
+      }
+      res.setHeader("Content-Type", "text/plain");
+      res.setHeader("Content-Disposition", `attachment; filename=".env-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}"`);
+      res.send(envContent);
+      console.log("[Admin] Environment variables exported by admin");
+    } catch (error) {
+      console.error("Export env error:", error);
+      res.status(500).json({ error: "Failed to export environment variables" });
+    }
+  });
+  app2.get("/api/dev/export-env-file", async (req, res) => {
+    try {
+      const envVars = process.env;
+      let envContent = "";
+      for (const [key, value] of Object.entries(envVars)) {
+        if (value !== void 0 && value !== null) {
+          const escapedValue = typeof value === "string" && value.includes('"') ? `'${value}'` : `${value}`;
+          envContent += `${key}=${escapedValue}
+`;
+        }
+      }
+      res.json({
+        success: true,
+        content: envContent,
+        fileName: `.env-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}`,
+        count: Object.keys(envVars).length
+      });
+      console.log("[Dev] Environment variables exported");
+    } catch (error) {
+      console.error("Export env error:", error);
+      res.status(500).json({ error: "Failed to export environment variables" });
     }
   });
   setTimeout(() => {
