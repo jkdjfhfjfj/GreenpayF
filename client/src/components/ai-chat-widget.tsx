@@ -110,7 +110,7 @@ export function AIChatWidget() {
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50 border-0 p-0 bg-transparent overflow-hidden"
+        className="fixed bottom-40 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50 border-0 p-0 bg-transparent overflow-hidden"
       >
         <img 
           src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1764591649/greenpay/greenpay/ai-robot.jpg" 
