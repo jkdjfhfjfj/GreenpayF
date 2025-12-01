@@ -16,20 +16,20 @@ export default function SplashPage() {
     if (isAuthenticated) {
       setLocation("/dashboard");
     } else {
-      // Redirect unauthenticated users to login after a short delay
+      // Redirect unauthenticated users to login after 10 seconds
       const timer = setTimeout(() => {
         setLocation("/login");
-      }, 3000); // 3 second delay to show splash screen
+      }, 10000); // 10 second delay
 
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated, isLoading, setLocation]);
 
   const features = [
-    { icon: Send, title: "Fast Transfers", desc: "Send money to Kenya instantly" },
-    { icon: CreditCard, title: "Virtual Cards", desc: "Shop online worldwide" },
-    { icon: TrendingUp, title: "Best Rates", desc: "Real-time exchange rates" },
-    { icon: Shield, title: "Secure & Safe", desc: "Bank-level security" }
+    { icon: Send, title: "Fast Transfers", desc: "Send money instantly" },
+    { icon: CreditCard, title: "Virtual Cards", desc: "Shop worldwide" },
+    { icon: TrendingUp, title: "Best Rates", desc: "Real-time rates" },
+    { icon: Shield, title: "Secure", desc: "Bank-level security" }
   ];
 
   const containerVariants = {
@@ -53,136 +53,147 @@ export default function SplashPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 overflow-hidden">
-      {/* Animated Background Shapes */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute top-0 right-0 w-96 h-96 bg-emerald-200 rounded-full opacity-20"
-          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-          transition={{ duration: 8, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute bottom-0 left-0 w-80 h-80 bg-green-200 rounded-full opacity-20"
-          animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
-          transition={{ duration: 10, repeat: Infinity }}
-        />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header */}
-        <motion.div
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6 }}
-          className="pt-8 px-6 text-center"
-        >
-          <div className="inline-flex items-center gap-2 bg-white shadow-sm rounded-full px-4 py-2 mb-8">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">$</span>
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+      {/* Android Phone Frame */}
+      <div className="w-full max-w-sm relative">
+        {/* Phone Bezel */}
+        <div className="bg-black rounded-3xl p-2 shadow-2xl" style={{ aspectRatio: "9/19.5" }}>
+          {/* Phone Screen - Android Safe Area */}
+          <div className="w-full h-full bg-gradient-to-br from-emerald-50 to-green-50 rounded-3xl overflow-hidden flex flex-col relative">
+            
+            {/* Android Status Bar */}
+            <div className="bg-gradient-to-r from-emerald-600 to-green-600 h-7 flex items-center justify-between px-6 text-white text-xs font-semibold">
+              <span>9:41</span>
+              <div className="flex gap-1">
+                <span>📶</span>
+                <span>📡</span>
+                <span>🔋</span>
+              </div>
             </div>
-            <span className="font-bold text-gray-800">GreenPay</span>
-          </div>
-        </motion.div>
 
-        {/* Hero Section */}
-        <motion.div
-          className="flex-1 flex flex-col items-center justify-center px-6 py-12"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {/* Main Icon */}
-          <motion.div
-            variants={itemVariants}
-            className="mb-6"
-          >
-            <motion.div
-              className="w-32 h-32 bg-gradient-to-br from-emerald-500 to-green-600 rounded-3xl flex items-center justify-center shadow-xl"
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 3, repeat: Infinity }}
-            >
-              <Send className="w-16 h-16 text-white" />
-            </motion.div>
-          </motion.div>
+            {/* Android Notch */}
+            <div className="h-6 bg-black rounded-b-2xl mx-auto w-32 relative z-10"></div>
 
-          {/* Main Text */}
-          <motion.h1
-            variants={itemVariants}
-            className="text-5xl md:text-6xl font-bold text-gray-900 mb-4 text-center leading-tight"
-          >
-            Send Money
-            <br />
-            <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-              Go Global
-            </span>
-          </motion.h1>
-
-          <motion.p
-            variants={itemVariants}
-            className="text-lg text-gray-600 text-center mb-12 max-w-md"
-          >
-            The easiest way to send money to Africa. Fast, secure, and affordable.
-          </motion.p>
-
-          {/* Features Grid */}
-          <motion.div
-            variants={containerVariants}
-            className="w-full max-w-2xl grid grid-cols-2 gap-4 mb-12"
-          >
-            {features.map((feature, idx) => (
+            {/* Screen Content */}
+            <div className="flex-1 overflow-auto flex flex-col px-6 pt-6 pb-8 bg-gradient-to-br from-emerald-50 to-green-50">
+              
+              {/* Header Logo */}
               <motion.div
-                key={idx}
-                variants={itemVariants}
-                className="bg-white rounded-2xl p-6 shadow-md hover:shadow-lg transition-shadow"
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.6 }}
+                className="text-center mb-8"
               >
-                <feature.icon className="w-8 h-8 text-emerald-600 mb-3" />
-                <h3 className="font-semibold text-gray-900 mb-1">{feature.title}</h3>
-                <p className="text-sm text-gray-600">{feature.desc}</p>
+                <div className="inline-flex items-center gap-2 bg-white shadow-sm rounded-full px-3 py-1.5 mb-6">
+                  <div className="w-6 h-6 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">$</span>
+                  </div>
+                  <span className="font-bold text-gray-800 text-sm">GreenPay</span>
+                </div>
               </motion.div>
-            ))}
-          </motion.div>
 
-          {/* CTA Buttons */}
-          <motion.div
-            variants={itemVariants}
-            className="w-full max-w-sm space-y-3"
-          >
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setLocation("/login")}
-              className="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-              data-testid="button-signin"
-            >
-              Sign In
-            </motion.button>
+              {/* Hero Content */}
+              <motion.div
+                className="flex-1 flex flex-col items-center justify-center"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {/* Main Icon */}
+                <motion.div
+                  variants={itemVariants}
+                  className="mb-6"
+                >
+                  <motion.div
+                    className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg"
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  >
+                    <Send className="w-12 h-12 text-white" />
+                  </motion.div>
+                </motion.div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setLocation("/signup")}
-              className="w-full border-2 border-emerald-600 text-emerald-600 font-semibold py-4 px-6 rounded-xl hover:bg-emerald-50 transition-all duration-200"
-              data-testid="button-signup"
-            >
-              Create Account
-            </motion.button>
-          </motion.div>
-        </motion.div>
+                {/* Main Text */}
+                <motion.h1
+                  variants={itemVariants}
+                  className="text-3xl font-bold text-gray-900 mb-2 text-center leading-tight"
+                >
+                  Send Money
+                </motion.h1>
 
-        {/* Footer */}
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
-          className="p-6 text-center border-t border-gray-200"
-        >
-          <p className="text-gray-600 text-sm">
-            By continuing, you agree to our{" "}
-            <a href="/terms" className="text-emerald-600 hover:underline">Terms</a> and{" "}
-            <a href="/privacy" className="text-emerald-600 hover:underline">Privacy Policy</a>
-          </p>
-        </motion.div>
+                <motion.h2
+                  variants={itemVariants}
+                  className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent mb-3 text-center"
+                >
+                  Go Global
+                </motion.h2>
+
+                <motion.p
+                  variants={itemVariants}
+                  className="text-sm text-gray-600 text-center mb-8"
+                >
+                  Fast, secure, affordable transfers to Africa
+                </motion.p>
+
+                {/* Features Grid */}
+                <motion.div
+                  variants={containerVariants}
+                  className="w-full grid grid-cols-2 gap-3 mb-8"
+                >
+                  {features.map((feature, idx) => (
+                    <motion.div
+                      key={idx}
+                      variants={itemVariants}
+                      className="bg-white rounded-xl p-3 shadow-sm"
+                    >
+                      <feature.icon className="w-6 h-6 text-emerald-600 mb-1 mx-auto" />
+                      <h3 className="font-semibold text-gray-900 text-xs text-center">{feature.title}</h3>
+                      <p className="text-xs text-gray-600 text-center">{feature.desc}</p>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </motion.div>
+
+              {/* CTA Buttons */}
+              <motion.div
+                variants={itemVariants}
+                className="space-y-2.5 mt-auto"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setLocation("/login")}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm"
+                  data-testid="button-signin"
+                >
+                  Sign In
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setLocation("/signup")}
+                  className="w-full border-2 border-emerald-600 text-emerald-600 font-semibold py-3.5 px-4 rounded-xl hover:bg-emerald-50 transition-all duration-200 text-sm"
+                  data-testid="button-signup"
+                >
+                  Create Account
+                </motion.button>
+              </motion.div>
+
+              {/* Footer */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="text-gray-600 text-xs text-center mt-4 leading-tight"
+              >
+                By continuing, you agree to our{" "}
+                <a href="/terms" className="text-emerald-600 font-semibold">Terms</a> and{" "}
+                <a href="/privacy" className="text-emerald-600 font-semibold">Privacy</a>
+              </motion.p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
