@@ -99,42 +99,24 @@ export default function SplashPage() {
         />
       </div>
 
-      {/* Top Navigation Bar - Angled Header */}
+      {/* Top Navigation Bar */}
       <motion.div
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10"
-        style={{
-          clipPath: "polygon(0 0, calc(100% - 40px) 0, 100% 100%, 0 100%)"
-        }}
+        className="flex items-center justify-between px-6 py-5 relative z-10"
       >
-        {/* Patterned Background */}
-        <div className="bg-gradient-to-r from-[#4CAF50] via-[#45a049] to-[#4CAF50] px-6 py-5">
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1000 120" preserveAspectRatio="none">
-            <defs>
-              <pattern id="diagonalPattern" x="20" y="20" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <line x1="0" y1="0" x2="0" y2="40" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
-              </pattern>
-            </defs>
-            <rect width="1000" height="120" fill="url(#diagonalPattern)" />
-          </svg>
-
-          {/* Content */}
-          <div className="relative flex items-center justify-between">
-            <div className="text-center flex-1">
-              <h1 className="text-white font-bold text-2xl drop-shadow-lg">GreenPay</h1>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleSkip}
-              className="text-white hover:text-gray-200 transition-colors text-sm font-medium drop-shadow-md"
-            >
-              Skip
-            </motion.button>
-          </div>
+        <div className="text-center flex-1">
+          <h1 className="text-white font-bold text-2xl">GreenPay</h1>
         </div>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleSkip}
+          className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+        >
+          Skip
+        </motion.button>
       </motion.div>
 
       {/* Slide Container */}
