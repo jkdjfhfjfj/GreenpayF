@@ -997,10 +997,9 @@ export class WhatsAppService {
   }
 
   /**
-   * Extract parameters from template components - scans ALL fields for {{1}}, {{2}}, etc
-   * Checks: body text, header text/media, footer, buttons, and all possible URLs
-   * Includes media file parameters, example objects, and all nested fields
-   * Returns SET of unique parameter numbers found
+   * Extract parameters from template components - finds {{1}}, {{2}}, etc EVERYWHERE
+   * Simply converts entire component to string and extracts all parameter references
+   * This catches parameters in headers, body, footer, buttons, media, examples, etc.
    */
   private extractParametersFromComponents(components: any[]): Set<number> {
     if (!components || !Array.isArray(components)) return new Set();
@@ -1008,69 +1007,22 @@ export class WhatsAppService {
     const paramNumbers = new Set<number>();
     const regex = /\{\{(\d+)\}\}/g;
     
-    // Helper to recursively scan any object for parameters
-    const scanObject = (obj: any, depth = 0) => {
-      if (depth > 5) return; // Prevent infinite recursion
-      if (!obj) return;
-      
-      if (typeof obj === 'string') {
-        const matches = [...obj.matchAll(regex)];
-        matches.forEach(m => paramNumbers.add(parseInt(m[1])));
-      } else if (Array.isArray(obj)) {
-        obj.forEach(item => scanObject(item, depth + 1));
-      } else if (typeof obj === 'object') {
-        Object.values(obj).forEach(val => scanObject(val, depth + 1));
-      }
-    };
-    
+    // Convert entire component structure to JSON string and extract all {{n}} patterns
+    // This ensures we catch parameters in ANY location: headers, examples, media, etc.
     components.forEach((comp: any) => {
       if (!comp) return;
       
-      // 1. BODY component - text with parameters
-      if (comp.type === 'BODY') {
-        scanObject(comp.text);
-      }
-      
-      // 2. FOOTER component - text with parameters
-      if (comp.type === 'FOOTER') {
-        scanObject(comp.text);
-      }
-      
-      // 3. HEADER component - can be TEXT, IMAGE, DOCUMENT, VIDEO, or LOCATION
-      if (comp.type === 'HEADER') {
-        // Direct text field (for TEXT format headers)
-        if (comp.text) {
-          scanObject(comp.text);
-        }
-        
-        // Example object contains media parameters and handles
-        // Media can have {{1}}, {{2}} in:
-        // - example.header_text (text parameter)
-        // - example.header_handle (file URL/reference with parameters)
-        // - example.header (direct reference object)
-        if (comp.example) {
-          // Scan entire example object recursively
-          // This catches parameters in header_text, header_handle, header, etc.
-          scanObject(comp.example);
-        }
-      }
-      
-      // 4. BUTTONS - can have URL parameters, phone numbers, and text
-      if (comp.buttons && Array.isArray(comp.buttons)) {
-        comp.buttons.forEach((btn: any) => {
-          if (btn.url) scanObject(btn.url);
-          if (btn.text) scanObject(btn.text);
-          if (btn.phone_number) scanObject(btn.phone_number);
+      try {
+        // Stringify the entire component
+        const compStr = JSON.stringify(comp);
+        // Extract all {{n}} patterns
+        const matches = [...compStr.matchAll(regex)];
+        matches.forEach(m => {
+          paramNumbers.add(parseInt(m[1]));
         });
+      } catch (e) {
+        // Ignore stringify errors, continue with next component
       }
-      
-      // 5. Scan any other fields in the component that might have parameters
-      // (handles unexpected component structures)
-      Object.entries(comp).forEach(([key, value]) => {
-        if (key !== 'type' && key !== 'buttons' && !['example', 'text', 'format'].includes(key)) {
-          scanObject(value, 1);
-        }
-      });
     });
     
     return paramNumbers;
