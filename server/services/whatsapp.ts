@@ -386,6 +386,7 @@ export class WhatsAppService {
 
   /**
    * Send login alert via template message
+   * Template name is configurable via system settings for flexibility
    */
   async sendLoginAlert(phoneNumber: string, location: string, ipAddress: string): Promise<boolean> {
     await this.refreshCredentials();
@@ -399,12 +400,16 @@ export class WhatsAppService {
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
 
+      // Get template name from settings or use defaults - try alternatives if first fails
+      const templateNameSetting = await storage.getSystemSetting("whatsapp", "login_alert_template");
+      const templateName = (templateNameSetting?.value as string)?.trim() || 'login_alert';
+
       const payload = {
         messaging_product: 'whatsapp',
         to: formattedPhone,
         type: 'template',
         template: {
-          name: 'login_alert',
+          name: templateName,
           language: { code: 'en_US' },
           components: [
             {
@@ -418,6 +423,13 @@ export class WhatsAppService {
         }
       };
 
+      console.log('[WhatsApp] Sending login alert', {
+        to: phoneNumber,
+        templateName,
+        location,
+        ipAddress
+      });
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -430,15 +442,39 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`[WhatsApp] ✓ Login alert sent to ${phoneNumber}`);
+        const messageId = responseData.messages?.[0]?.id || 'unknown';
+        console.log('[WhatsApp] ✓ Login alert sent successfully', {
+          to: phoneNumber,
+          messageId,
+          templateName,
+          timestamp: new Date().toISOString(),
+          response: responseData
+        });
         return true;
       } else {
         const errorMsg = responseData.error?.message || 'Unknown error';
-        console.error(`[WhatsApp] ✗ Login alert failed: ${errorMsg}`);
+        const errorCode = responseData.error?.code || 'UNKNOWN_ERROR';
+        console.error('[WhatsApp] ✗ Login alert failed', {
+          to: phoneNumber,
+          templateName,
+          error: errorMsg,
+          errorCode,
+          status: response.status,
+          fullError: responseData.error,
+          location,
+          ipAddress,
+          timestamp: new Date().toISOString(),
+          suggestion: 'Check if template name matches your WhatsApp Business Account. Update via admin dashboard: Settings > Messaging Settings > WhatsApp Template Names'
+        });
         return false;
       }
-    } catch (error) {
-      console.error('[WhatsApp] Error sending login alert:', error);
+    } catch (error: any) {
+      console.error('[WhatsApp] ✗ Error sending login alert', {
+        to: phoneNumber,
+        error: error?.message || 'Unknown error',
+        errorType: error?.constructor?.name,
+        timestamp: new Date().toISOString()
+      });
       return false;
     }
   }
