@@ -178,6 +178,7 @@ function App() {
           <BottomNavigation />
           <PWAInstallPrompt />
           <WhatsAppSupportFAB />
+          <AIChatWidget />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
