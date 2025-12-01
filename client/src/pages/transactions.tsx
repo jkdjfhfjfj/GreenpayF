@@ -419,7 +419,7 @@ export default function TransactionsPage() {
             </div>
           </motion.div>
         )}
-      </motion.div>
+      </div>
 
       <div className="p-3 md:p-6">
         {/* Monthly Summary - Separate USD and KES */}
