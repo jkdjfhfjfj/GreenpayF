@@ -54,6 +54,7 @@ import PrivacyPolicyPage from "@/pages/privacy-policy";
 import LoansPage from "@/pages/loans";
 import APIServicePage from "@/pages/api-service";
 import ApiDocumentationPage from "@/pages/api-documentation";
+import UserSupportTickets from "@/pages/user-support-tickets";
 
 // User Route Guard Component
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -125,6 +126,9 @@ function Router() {
       <Route path="/virtual-card" component={VirtualCardPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/support" component={SupportPage} />
+      <Route path="/support/tickets">
+        <ProtectedRoute component={UserSupportTickets} />
+      </Route>
       <Route path="/live-chat" component={LiveChatPage} />
       <Route path="/deposit" component={DepositPage} />
       <Route path="/withdraw" component={WithdrawPage} />
