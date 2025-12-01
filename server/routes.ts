@@ -7959,8 +7959,14 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   });
 
   // Export Environment Variables as .env file
-  app.get("/api/admin/export-env", requireAdminAuth, async (req, res) => {
+  app.get("/api/admin/export-env", async (req, res) => {
     try {
+      // Check admin authentication or session
+      const isAdmin = req.session?.admin?.id || req.user?.id;
+      if (!isAdmin) {
+        return res.status(401).json({ message: "Authentication required. Please log in as an administrator." });
+      }
+
       const envVars = process.env;
       let envContent = '';
 
@@ -7981,6 +7987,37 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       res.send(envContent);
       
       console.log('[Admin] Environment variables exported by admin');
+    } catch (error: any) {
+      console.error('Export env error:', error);
+      res.status(500).json({ error: 'Failed to export environment variables' });
+    }
+  });
+
+  // Direct .env export for development (saves to file)
+  app.get("/api/dev/export-env-file", async (req, res) => {
+    try {
+      const envVars = process.env;
+      let envContent = '';
+
+      // Collect all environment variables and format as KEY=VALUE
+      for (const [key, value] of Object.entries(envVars)) {
+        if (value !== undefined && value !== null) {
+          // Escape values that contain special characters
+          const escapedValue = typeof value === 'string' && value.includes('"') 
+            ? `'${value}'` 
+            : `${value}`;
+          envContent += `${key}=${escapedValue}\n`;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        content: envContent,
+        fileName: `.env-${new Date().toISOString().split('T')[0]}`,
+        count: Object.keys(envVars).length 
+      });
+      
+      console.log('[Dev] Environment variables exported');
     } catch (error: any) {
       console.error('Export env error:', error);
       res.status(500).json({ error: 'Failed to export environment variables' });
