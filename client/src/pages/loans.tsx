@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign, Calendar, Zap, Lock } from "lucide-react";
 import { formatNumber } from "@/lib/formatters";
+import { WavyHeader } from "@/components/wavy-header";
 
 export default function LoansPage() {
   const [, setLocation] = useLocation();

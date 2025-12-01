@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { WavyHeader } from "@/components/wavy-header";
 
 interface Message {
   id: string;

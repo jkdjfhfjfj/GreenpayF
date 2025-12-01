@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { WavyHeader } from "@/components/wavy-header";
 
 export default function SendConfirmPage() {
   const [, setLocation] = useLocation();

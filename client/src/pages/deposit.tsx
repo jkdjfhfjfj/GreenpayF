@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { formatNumber } from "@/lib/formatters";
+import { WavyHeader } from "@/components/wavy-header";
 
 const depositSchema = z.object({
   amount: z.string().min(1, "Amount is required").refine((val) => parseFloat(val) >= 10, "Minimum deposit is $10"),

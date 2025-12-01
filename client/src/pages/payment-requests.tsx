@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/use-auth";
 import { usePaymentRequests } from "@/hooks/use-payment-requests";
 import { useToast } from "@/hooks/use-toast";
+import { WavyHeader } from "@/components/wavy-header";
 
 export default function PaymentRequestsPage() {
   const [, setLocation] = useLocation();

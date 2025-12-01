@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import QRCode from "@/components/qr-code";
 import { mockCurrencies } from "@/lib/mock-data";
+import { WavyHeader } from "@/components/wavy-header";
 
 const paymentRequestSchema = z.object({
   amount: z.string().min(1, "Amount is required").refine((val) => parseFloat(val) > 0, "Amount must be greater than 0"),

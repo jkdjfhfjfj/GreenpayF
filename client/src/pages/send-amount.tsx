@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber } from "@/lib/formatters";
+import { WavyHeader } from "@/components/wavy-header";
 
 export default function SendAmountPage() {
   const [, setLocation] = useLocation();

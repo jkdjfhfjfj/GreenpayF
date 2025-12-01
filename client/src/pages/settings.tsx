@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { HelpCircle, ChevronRight, LogOut } from "lucide-react";
+import { WavyHeader } from "@/components/wavy-header";
 
 export default function SettingsPage() {
   const [, setLocation] = useLocation();

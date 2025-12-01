@@ -9,6 +9,7 @@ import { Download, Mail, Filter, X, ChevronRight, Copy, Calendar, User, Tag, Dol
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { WavyHeader } from "@/components/wavy-header";
 
 type TransactionFilter = "all" | "sent" | "received" | "pending";
 

@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { WavyHeader } from "@/components/wavy-header";
 
 interface TicketReply {
   id: string;

@@ -15,6 +15,7 @@ import LiveChat from "@/components/live-chat";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { X, Upload } from "lucide-react";
+import { WavyHeader } from "@/components/wavy-header";
 
 const issueReportSchema = z.object({
   issueType: z.string().min(1, "Please select an issue type"),

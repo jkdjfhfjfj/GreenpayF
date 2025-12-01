@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Send, DollarSign, Users, CheckCircle } from "lucide-react";
+import { WavyHeader } from "@/components/wavy-header";
 
 interface UserSearchResult {
   id: string;
