@@ -1081,7 +1081,12 @@ export class WhatsAppService {
    */
   async getTemplateParameters(templateName: string): Promise<{ required: string[]; paramCount: number; language: string; components: any[] }> {
     try {
-      const template = await this.getTemplateDetails(templateName);
+      let template = await this.getTemplateDetails(templateName);
+      
+      // If basic fetch doesn't have components, try fetching full details
+      if (!template || !template.components || template.components.length === 0) {
+        template = await this.fetchTemplateDetails(templateName);
+      }
       
       if (!template) {
         return { required: [], paramCount: 0, language: 'en_US', components: [] };
@@ -1093,13 +1098,52 @@ export class WhatsAppService {
       console.log(`[WhatsApp] Template "${templateName}" parameters extracted:`, {
         params,
         paramCount: params.length,
-        componentCount: template.components?.length || 0
+        componentCount: template.components?.length || 0,
+        componentTypes: template.components?.map((c: any) => c.type) || []
       });
 
       return { required: params, paramCount: params.length, language: template.language || 'en_US', components: template.components || [] };
     } catch (error) {
       console.error('[WhatsApp] Error getting template parameters:', error);
       return { required: [], paramCount: 0, language: 'en_US', components: [] };
+    }
+  }
+
+  /**
+   * Fetch full template details from Meta to get parameter information
+   */
+  private async fetchTemplateDetails(templateName: string): Promise<any> {
+    try {
+      if (!this.accessToken) return null;
+
+      const wabaId = await this.getWabaId();
+      if (!wabaId) return null;
+
+      const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates?name=${encodeURIComponent(templateName)}&fields=name,status,language,category,components`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const responseData = await response.json() as any;
+      if (response.ok && responseData.data && responseData.data.length > 0) {
+        const template = responseData.data[0];
+        console.log(`[WhatsApp] Fetched full template details for "${templateName}":`, {
+          name: template.name,
+          status: template.status,
+          language: template.language,
+          components: JSON.stringify(template.components, null, 2).substring(0, 200)
+        });
+        return template;
+      }
+      return null;
+    } catch (error) {
+      console.error(`[WhatsApp] Error fetching full template "${templateName}":`, error);
+      return null;
     }
   }
 
