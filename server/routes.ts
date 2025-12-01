@@ -23,6 +23,7 @@ import { CloudinaryStorageService, ObjectNotFoundError } from "./cloudinaryStora
 import { statumService } from "./statumService";
 import { ActivityLogger } from "./services/activity-logger";
 import { validateApiKey, optionalApiKey } from "./middleware/api-key";
+import { openaiService } from "./services/openai";
 
 const cloudinaryStorage = new CloudinaryStorageService();
 
@@ -7913,6 +7914,23 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     } catch (error) {
       console.error("[API Keys] Revoke error:", error);
       res.status(500).json({ error: "Failed to revoke API key" });
+    }
+  });
+
+  // AI Chat Endpoint
+  app.post("/api/ai/chat", async (req, res) => {
+    try {
+      const { messages } = req.body;
+      
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: "Messages array required" });
+      }
+
+      const response = await openaiService.generateResponse(messages);
+      res.json({ response });
+    } catch (error: any) {
+      console.error('AI chat error:', error);
+      res.status(500).json({ error: error.message || "Failed to generate AI response" });
     }
   });
 
