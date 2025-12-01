@@ -160,7 +160,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation with Wavy Background */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden rounded-b-3xl">
         {/* Layered Wavy Background SVG - Green top, Dark bottom */}
         <svg
           className="absolute inset-0 w-full h-full"
