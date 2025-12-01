@@ -160,7 +160,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Wavy Header Background - Extended to include balance card */}
+      {/* Wavy Header Background with Content */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -169,7 +169,7 @@ export default function DashboardPage() {
       >
         {/* Wavy SVG Background */}
         <svg 
-          className="w-full" 
+          className="w-full absolute top-0 left-0" 
           viewBox="-50 0 1380 500" 
           preserveAspectRatio="none" 
           style={{ height: '380px', overflow: 'visible' }}
@@ -177,7 +177,7 @@ export default function DashboardPage() {
           <defs>
             <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" style={{ stopColor: '#4CAF50', stopOpacity: 1 }} />
-              <stop offset="100%" style={{ stopColor: '#45a049', stopOpacity: 0.3 }} />
+              <stop offset="100%" style={{ stopColor: '#45a049', stopOpacity: 0.8 }} />
             </linearGradient>
           </defs>
           
@@ -201,8 +201,8 @@ export default function DashboardPage() {
           />
         </svg>
 
-        {/* Header Content Overlay */}
-        <div className="absolute top-0 left-0 right-0 px-6 pt-4 flex flex-col h-full">
+        {/* Content relative to wavy background */}
+        <div className="relative z-10 px-6 pt-4">
           {/* Greeting Section */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center flex-1">
