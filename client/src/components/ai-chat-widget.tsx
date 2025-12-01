@@ -34,6 +34,25 @@ export function AIChatWidget() {
     scrollToBottom();
   }, [messages]);
 
+  // Load remaining requests when chat opens or component mounts
+  useEffect(() => {
+    const loadRemainingRequests = async () => {
+      try {
+        const response = await apiRequest('GET', '/api/ai/remaining-requests');
+        if (response.ok) {
+          const data = await response.json();
+          setRemainingRequests(data.remainingRequests);
+        }
+      } catch (error) {
+        console.log('Could not load remaining requests');
+      }
+    };
+
+    if (isOpen) {
+      loadRemainingRequests();
+    }
+  }, [isOpen]);
+
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
 

@@ -24,7 +24,7 @@ import { statumService } from "./statumService";
 import { ActivityLogger } from "./services/activity-logger";
 import { validateApiKey, optionalApiKey } from "./middleware/api-key";
 import { openaiService } from "./services/ai";
-import { rateLimiter } from "./services/rate-limiter";
+import { aiRateLimiter } from "./services/ai-rate-limiter";
 
 const cloudinaryStorage = new CloudinaryStorageService();
 
@@ -7918,6 +7918,18 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     }
   });
 
+  // Get AI Remaining Requests
+  app.get("/api/ai/remaining-requests", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const remaining = await aiRateLimiter.getRemainingRequests(userId || null);
+      res.json({ remainingRequests: remaining });
+    } catch (error: any) {
+      console.error('Get remaining requests error:', error);
+      res.status(500).json({ error: 'Failed to get remaining requests' });
+    }
+  });
+
   // AI Chat Endpoint
   app.post("/api/ai/chat", async (req, res) => {
     try {
@@ -7928,9 +7940,9 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         return res.status(400).json({ error: "Messages array required" });
       }
 
-      // Check rate limits using user ID or session ID
-      const userId = user?.id || req.sessionID || req.ip || 'anonymous';
-      const limitCheck = rateLimiter.checkLimit(userId);
+      // Check rate limits using database persistence
+      const userId = user?.id || null;
+      const limitCheck = await aiRateLimiter.checkAndUpdateLimit(userId);
 
       if (!limitCheck.allowed) {
         return res.status(429).json({ error: limitCheck.error, remainingRequests: limitCheck.remainingRequests });
