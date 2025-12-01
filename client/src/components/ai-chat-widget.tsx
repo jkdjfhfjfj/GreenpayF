@@ -23,7 +23,6 @@ export function AIChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [remainingRequests, setRemainingRequests] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -34,24 +33,6 @@ export function AIChatWidget() {
     scrollToBottom();
   }, [messages]);
 
-  // Load remaining requests when chat opens or component mounts
-  useEffect(() => {
-    const loadRemainingRequests = async () => {
-      try {
-        const response = await fetch('/api/ai/remaining-requests');
-        if (response.ok) {
-          const data = await response.json();
-          setRemainingRequests(data.remainingRequests);
-        }
-      } catch (error) {
-        console.log('Could not load remaining requests');
-      }
-    };
-
-    if (isOpen) {
-      loadRemainingRequests();
-    }
-  }, [isOpen]);
 
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -76,11 +57,6 @@ export function AIChatWidget() {
       });
 
       const data: ChatResponse = await response.json();
-
-      // Update remaining requests if provided
-      if (data.remainingRequests !== undefined) {
-        setRemainingRequests(data.remainingRequests);
-      }
 
       if (response.ok) {
         const assistantMessage: Message = {
@@ -128,17 +104,16 @@ export function AIChatWidget() {
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50 border-0 p-0 bg-transparent overflow-hidden"
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50 border-0 p-0 bg-white overflow-hidden flex items-center justify-center"
       >
-        <img 
-          src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1764591649/greenpay/greenpay/ai-robot.jpg" 
-          alt="Ask AI Assistant" 
-          className="w-full h-full object-cover rounded-full hover:scale-110 transition-transform duration-200"
-          onError={(e) => {
-            const img = e.currentTarget;
-            img.style.backgroundColor = '#3b82f6';
-          }}
-        />
+        <svg 
+          className="w-8 h-8 hover:scale-110 transition-transform duration-200" 
+          viewBox="0 0 24 24" 
+          fill="currentColor"
+          style={{ color: '#25d366' }}
+        >
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-5.031 1.378c-1.533.918-2.727 2.212-3.535 3.758-1.16 2.251-.893 4.797.608 6.942 1.25 1.8 3.124 2.974 5.19 3.19-1.003-1.35-1.622-3.01-1.622-4.827 0-2.635 1.075-5.022 2.83-6.78 1.755-1.758 4.14-2.84 6.774-2.84.55 0 1.095.044 1.633.126-1.505-1.757-3.61-2.747-5.843-2.747"/>
+        </svg>
       </motion.button>
 
       {/* Chat Window */}
@@ -155,11 +130,6 @@ export function AIChatWidget() {
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Ask AI</h3>
                 <p className="text-xs sm:text-sm text-emerald-100">Get help with GreenPay</p>
-                {remainingRequests !== null && (
-                  <p className="text-xs text-emerald-50 mt-1">
-                    {remainingRequests} request{remainingRequests !== 1 ? 's' : ''} remaining today
-                  </p>
-                )}
               </div>
               <button
                 onClick={() => setIsOpen(false)}
