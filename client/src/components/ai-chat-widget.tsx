@@ -78,6 +78,11 @@ export function AIChatWidget() {
 
       const data: ChatResponse = await response.json();
 
+      // Update remaining requests after each message
+      if (data.remainingRequests !== undefined) {
+        setRemainingRequests(data.remainingRequests);
+      }
+
       if (response.ok) {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -119,7 +124,7 @@ export function AIChatWidget() {
 
   return (
     <>
-      {/* Floating Button - Chat Widget */}
+      {/* Floating Button - AI Chat */}
       <motion.button
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
@@ -127,8 +132,8 @@ export function AIChatWidget() {
         className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50 border-0 p-0 bg-transparent overflow-hidden"
       >
         <img 
-          src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1764598543893/greenpay/widgets/whatsapp-button.jpg" 
-          alt="Chat Widget" 
+          src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1764591649/greenpay/greenpay/ai-robot.jpg" 
+          alt="Ask AI Assistant" 
           className="w-full h-full object-cover rounded-full hover:scale-110 transition-transform duration-200"
           onError={(e) => {
             const img = e.currentTarget;
@@ -136,6 +141,22 @@ export function AIChatWidget() {
           }}
         />
       </motion.button>
+
+      {/* Floating Button - WhatsApp Widget */}
+      <motion.a
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        href="https://wa.me/254700000000"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-32 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50 border-0 p-0 bg-white overflow-hidden flex items-center justify-center"
+      >
+        <img 
+          src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1764598579/greenpay/widgets/whatsapp-button.jpg" 
+          alt="WhatsApp" 
+          className="w-full h-full object-cover rounded-full hover:scale-110 transition-transform duration-200"
+        />
+      </motion.a>
 
       {/* Chat Window */}
       <AnimatePresence>
