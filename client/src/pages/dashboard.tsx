@@ -343,7 +343,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </motion.div>
-      </motion.div>
 
       <div className="px-4 py-6 space-y-6">
         {/* KYC Status Alert - Different messages based on status */}
