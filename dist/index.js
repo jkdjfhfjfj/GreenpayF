@@ -14,12 +14,14 @@ __export(schema_exports, {
   adminLogs: () => adminLogs,
   admins: () => admins,
   apiConfigurations: () => apiConfigurations,
+  billPayments: () => billPayments,
   budgets: () => budgets,
   chatMessages: () => chatMessages,
   conversations: () => conversations,
   insertAdminLogSchema: () => insertAdminLogSchema,
   insertAdminSchema: () => insertAdminSchema,
   insertApiConfigurationSchema: () => insertApiConfigurationSchema,
+  insertBillPaymentSchema: () => insertBillPaymentSchema,
   insertBudgetSchema: () => insertBudgetSchema,
   insertChatMessageSchema: () => insertChatMessageSchema,
   insertConversationSchema: () => insertConversationSchema,
@@ -35,11 +37,17 @@ __export(schema_exports, {
   insertSupportTicketSchema: () => insertSupportTicketSchema,
   insertSystemLogSchema: () => insertSystemLogSchema,
   insertSystemSettingSchema: () => insertSystemSettingSchema,
+  insertTicketReplySchema: () => insertTicketReplySchema,
   insertTransactionSchema: () => insertTransactionSchema,
+  insertUserActivityLogSchema: () => insertUserActivityLogSchema,
   insertUserPreferencesSchema: () => insertUserPreferencesSchema,
   insertUserSchema: () => insertUserSchema,
   insertVirtualCardSchema: () => insertVirtualCardSchema,
+  insertWhatsappConfigSchema: () => insertWhatsappConfigSchema,
+  insertWhatsappConversationSchema: () => insertWhatsappConversationSchema,
+  insertWhatsappMessageSchema: () => insertWhatsappMessageSchema,
   kycDocuments: () => kycDocuments,
+  loans: () => loans,
   loginHistory: () => loginHistory,
   messages: () => messages,
   notifications: () => notifications,
@@ -51,15 +59,21 @@ __export(schema_exports, {
   supportTickets: () => supportTickets,
   systemLogs: () => systemLogs,
   systemSettings: () => systemSettings,
+  ticketReplies: () => ticketReplies,
   transactions: () => transactions,
+  userActivityLog: () => userActivityLog,
   userPreferences: () => userPreferences,
+  userSessions: () => userSessions,
   users: () => users,
-  virtualCards: () => virtualCards
+  virtualCards: () => virtualCards,
+  whatsappConfig: () => whatsappConfig,
+  whatsappConversations: () => whatsappConversations,
+  whatsappMessages: () => whatsappMessages
 });
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, decimal, timestamp, boolean, jsonb, json, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-var users, kycDocuments, virtualCards, transactions, recipients, paymentRequests, chatMessages, notifications, supportTickets, conversations, messages, insertUserSchema, insertKycDocumentSchema, insertVirtualCardSchema, insertTransactionSchema, insertRecipientSchema, insertPaymentRequestSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, insertChatMessageSchema, insertNotificationSchema, admins, adminLogs, systemLogs, systemSettings, apiConfigurations, insertAdminSchema, insertAdminLogSchema, insertSystemSettingSchema, insertSystemLogSchema, insertApiConfigurationSchema, savingsGoals, qrPayments, scheduledPayments, budgets, userPreferences, loginHistory, insertSavingsGoalSchema, insertQRPaymentSchema, insertScheduledPaymentSchema, insertBudgetSchema, insertUserPreferencesSchema, insertLoginHistorySchema;
+var users, kycDocuments, virtualCards, transactions, recipients, paymentRequests, chatMessages, notifications, supportTickets, ticketReplies, conversations, messages, insertUserSchema, insertKycDocumentSchema, insertVirtualCardSchema, insertTransactionSchema, insertRecipientSchema, insertPaymentRequestSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, insertChatMessageSchema, insertNotificationSchema, admins, adminLogs, systemLogs, systemSettings, apiConfigurations, insertAdminSchema, insertAdminLogSchema, insertSystemSettingSchema, insertSystemLogSchema, insertApiConfigurationSchema, savingsGoals, qrPayments, scheduledPayments, budgets, userPreferences, loginHistory, userSessions, whatsappConversations, whatsappMessages, whatsappConfig, userActivityLog, billPayments, loans, insertBillPaymentSchema, insertSavingsGoalSchema, insertQRPaymentSchema, insertScheduledPaymentSchema, insertBudgetSchema, insertUserPreferencesSchema, insertLoginHistorySchema, insertWhatsappConversationSchema, insertWhatsappMessageSchema, insertWhatsappConfigSchema, insertUserActivityLogSchema, insertTicketReplySchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -78,7 +92,12 @@ var init_schema = __esm({
       hasVirtualCard: boolean("has_virtual_card").default(false),
       twoFactorSecret: text("two_factor_secret"),
       twoFactorEnabled: boolean("two_factor_enabled").default(false),
+      twoFactorBackupCodes: text("two_factor_backup_codes"),
+      // JSON stringified array
       biometricEnabled: boolean("biometric_enabled").default(false),
+      biometricCredentialId: text("biometric_credentials"),
+      // WebAuthn credential ID - stored as JSON
+      darkMode: boolean("dark_mode").default(false),
       pushNotificationsEnabled: boolean("push_notifications_enabled").default(true),
       balance: decimal("balance", { precision: 10, scale: 2 }).default("0.00"),
       // USD balance
@@ -217,6 +236,18 @@ var init_schema = __esm({
       resolvedAt: timestamp("resolved_at"),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
+    });
+    ticketReplies = pgTable("ticket_replies", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      ticketId: varchar("ticket_id").references(() => supportTickets.id, { onDelete: "cascade" }).notNull(),
+      userId: varchar("user_id").notNull(),
+      // Can be user ID or admin ID
+      senderType: text("sender_type").notNull(),
+      // user, admin
+      content: text("content").notNull(),
+      fileUrl: text("file_url"),
+      fileName: text("file_name"),
+      createdAt: timestamp("created_at").defaultNow()
     });
     conversations = pgTable("conversations", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -485,6 +516,117 @@ var init_schema = __esm({
       // success, failed
       createdAt: timestamp("created_at").defaultNow()
     });
+    userSessions = pgTable("user_sessions", {
+      sid: varchar("sid").primaryKey(),
+      sess: jsonb("sess").notNull(),
+      expire: timestamp("expire").notNull()
+    });
+    whatsappConversations = pgTable("whatsapp_conversations", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      phoneNumber: text("phone_number").notNull().unique(),
+      displayName: text("display_name"),
+      lastMessageAt: timestamp("last_message_at"),
+      status: text("status").default("active"),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    whatsappMessages = pgTable("whatsapp_messages", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      conversationId: varchar("conversation_id").references(() => whatsappConversations.id, { onDelete: "cascade" }).notNull(),
+      phoneNumber: text("phone_number").notNull(),
+      content: text("content").notNull(),
+      isFromAdmin: boolean("is_from_admin").default(false),
+      status: text("status").default("sent"),
+      messageId: text("message_id"),
+      messageType: text("message_type").default("text"),
+      // text, file, image, video
+      fileUrl: text("file_url"),
+      fileName: text("file_name"),
+      fileSize: integer("file_size"),
+      createdAt: timestamp("created_at").defaultNow()
+    });
+    whatsappConfig = pgTable("whatsapp_config", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      phoneNumberId: text("phone_number_id").notNull(),
+      businessAccountId: text("business_account_id").notNull(),
+      accessToken: text("access_token").notNull(),
+      verifyToken: text("verify_token").notNull().default("greenpay_verify_token_2024"),
+      webhookUrl: text("webhook_url"),
+      isActive: boolean("is_active").default(false),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    userActivityLog = pgTable("user_activity_log", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+      activityType: text("activity_type").notNull(),
+      // page_visit, action, attempt, form_submission
+      page: text("page"),
+      // /send-money, /airtime, /dashboard, etc.
+      action: text("action"),
+      // submit_transfer, buy_airtime, fill_kyc, etc.
+      description: text("description"),
+      // Human-readable description
+      status: text("status"),
+      // success, failed, pending
+      metadata: jsonb("metadata"),
+      // Additional details like form data, errors
+      ipAddress: text("ip_address"),
+      userAgent: text("user_agent"),
+      createdAt: timestamp("created_at").defaultNow()
+    });
+    billPayments = pgTable("bill_payments", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+      provider: text("provider").notNull(),
+      // KPLC, Zuku, StarimesTV, Nairobi_Water, Kenya_Power, Airtel_Money, etc
+      meterNumber: text("meter_number"),
+      // For electricity/water bills
+      accountNumber: text("account_number"),
+      // For cable/internet bills
+      amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+      currency: text("currency").default("KES").notNull(),
+      status: text("status").default("pending"),
+      // pending, processing, completed, failed
+      reference: text("reference"),
+      // Transaction reference from provider
+      description: text("description"),
+      fee: decimal("fee", { precision: 10, scale: 2 }).default("0.00"),
+      metadata: jsonb("metadata"),
+      // Provider-specific response data
+      completedAt: timestamp("completed_at"),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    loans = pgTable("loans", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+      amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+      currency: text("currency").notNull().default("USD"),
+      status: text("status").default("active"),
+      // active, completed, defaulted, cancelled
+      interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).default("5.00"),
+      // Annual percentage
+      repaymentPeriodMonths: integer("repayment_period_months").default(12),
+      monthlyPayment: decimal("monthly_payment", { precision: 10, scale: 2 }).notNull(),
+      remainingBalance: decimal("remaining_balance", { precision: 10, scale: 2 }).notNull(),
+      disbursedAt: timestamp("disbursed_at").defaultNow(),
+      dueDate: timestamp("due_date").notNull(),
+      nextPaymentDate: timestamp("next_payment_date"),
+      totalPaymentsMade: decimal("total_payments_made", { precision: 10, scale: 2 }).default("0.00"),
+      paymentsMissed: integer("payments_missed").default(0),
+      performanceScore: integer("performance_score").default(100),
+      // 0-100 based on account activity
+      adminNotes: text("admin_notes"),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    insertBillPaymentSchema = createInsertSchema(billPayments).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true,
+      completedAt: true
+    });
     insertSavingsGoalSchema = createInsertSchema(savingsGoals).omit({
       id: true,
       currentAmount: true,
@@ -518,6 +660,25 @@ var init_schema = __esm({
       id: true,
       createdAt: true
     });
+    insertWhatsappConversationSchema = createInsertSchema(whatsappConversations).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
+    });
+    insertWhatsappMessageSchema = createInsertSchema(whatsappMessages).omit({
+      id: true,
+      createdAt: true
+    });
+    insertWhatsappConfigSchema = createInsertSchema(whatsappConfig).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
+    });
+    insertUserActivityLogSchema = createInsertSchema(userActivityLog).omit({
+      id: true,
+      createdAt: true
+    });
+    insertTicketReplySchema = createInsertSchema(ticketReplies).omit({ id: true, createdAt: true });
   }
 });
 
@@ -543,7 +704,7 @@ var init_db = __esm({
 
 // server/storage.ts
 import { randomUUID } from "crypto";
-import { eq, desc, count, sum, or, isNull, gte, lt } from "drizzle-orm";
+import { eq, desc, count, sum, isNull, gte, lt, and, asc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 var MemStorage, DatabaseStorage, storage, memStorage;
 var init_storage = __esm({
@@ -584,7 +745,10 @@ var init_storage = __esm({
           hasVirtualCard: true,
           twoFactorSecret: null,
           twoFactorEnabled: false,
+          twoFactorBackupCodes: null,
           biometricEnabled: false,
+          biometricCredentialId: null,
+          darkMode: false,
           pushNotificationsEnabled: true,
           balance: "0.00",
           otpCode: null,
@@ -1639,14 +1803,15 @@ var init_storage = __esm({
           conditions.push(eq(supportTickets.priority, priority));
         }
         if (conditions.length > 0) {
-          query = query.where(or(...conditions));
-          countQuery = countQuery.where(or(...conditions));
+          const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+          query = query.where(whereClause);
+          countQuery = countQuery.where(whereClause);
         }
         const [tickets, totalResult] = await Promise.all([
           query.orderBy(desc(supportTickets.createdAt)).limit(limit).offset(offset),
           countQuery
         ]);
-        const total = totalResult[0]?.count || 0;
+        const total = Array.isArray(totalResult) ? totalResult[0]?.count || 0 : totalResult?.count || 0;
         const totalPages = Math.ceil(Number(total) / limit);
         return { tickets, total: Number(total), page, totalPages };
       }
@@ -1668,6 +1833,14 @@ var init_storage = __esm({
           updatedAt: /* @__PURE__ */ new Date()
         }).where(eq(supportTickets.id, id)).returning();
         return updatedTicket;
+      }
+      // Ticket Replies operations
+      async createTicketReply(reply) {
+        const [newReply] = await db.insert(ticketReplies).values(reply).returning();
+        return newReply;
+      }
+      async getTicketReplies(ticketId) {
+        return await db.select().from(ticketReplies).where(eq(ticketReplies.ticketId, ticketId)).orderBy(asc(ticketReplies.createdAt));
       }
       // Conversation operations
       async createConversation(insertConversation) {
@@ -1767,6 +1940,99 @@ var init_storage = __esm({
       async getLoginHistoryByUserId(userId, limit = 10) {
         const history = await db.select().from(loginHistory).where(eq(loginHistory.userId, userId)).orderBy(desc(loginHistory.createdAt)).limit(limit);
         return history;
+      }
+      // User Activity Log operations
+      async createUserActivity(activity) {
+        const [log2] = await db.insert(userActivityLog).values(activity).returning();
+        return log2;
+      }
+      async getUserActivitiesByUserId(userId, limit = 100) {
+        const activities = await db.select().from(userActivityLog).where(eq(userActivityLog.userId, userId)).orderBy(desc(userActivityLog.createdAt)).limit(limit);
+        return activities;
+      }
+      // WhatsApp operations
+      async getWhatsappConversations() {
+        return await db.select().from(whatsappConversations).orderBy(desc(whatsappConversations.lastMessageAt));
+      }
+      async getWhatsappConversation(phoneNumber) {
+        const [conv] = await db.select().from(whatsappConversations).where(eq(whatsappConversations.phoneNumber, phoneNumber));
+        return conv || void 0;
+      }
+      async createWhatsappConversation(conversation) {
+        const [conv] = await db.insert(whatsappConversations).values(conversation).returning();
+        return conv;
+      }
+      async updateWhatsappConversation(id, updates) {
+        const [conv] = await db.update(whatsappConversations).set(updates).where(eq(whatsappConversations.id, id)).returning();
+        return conv || void 0;
+      }
+      async createWhatsappMessage(message) {
+        const [msg] = await db.insert(whatsappMessages).values(message).returning();
+        return msg;
+      }
+      async getWhatsappMessages(conversationId) {
+        const messages2 = await db.select({
+          id: whatsappMessages.id,
+          conversationId: whatsappMessages.conversationId,
+          phoneNumber: whatsappMessages.phoneNumber,
+          content: whatsappMessages.content,
+          isFromAdmin: whatsappMessages.isFromAdmin,
+          status: whatsappMessages.status,
+          messageId: whatsappMessages.messageId,
+          messageType: whatsappMessages.messageType,
+          fileUrl: whatsappMessages.fileUrl,
+          fileName: whatsappMessages.fileName,
+          fileSize: whatsappMessages.fileSize,
+          createdAt: whatsappMessages.createdAt
+        }).from(whatsappMessages).where(eq(whatsappMessages.conversationId, conversationId)).orderBy(desc(whatsappMessages.createdAt));
+        return messages2;
+      }
+      async getWhatsappMessageByMessageId(messageId) {
+        const messages2 = await db.select().from(whatsappMessages).where(eq(whatsappMessages.messageId, messageId));
+        return messages2;
+      }
+      async updateWhatsappMessageStatus(id, status) {
+        const [msg] = await db.update(whatsappMessages).set({ status }).where(eq(whatsappMessages.id, id)).returning();
+        return msg || void 0;
+      }
+      async getWhatsappConfig() {
+        const [config] = await db.select().from(whatsappConfig);
+        return config || void 0;
+      }
+      async updateWhatsappConfig(updates) {
+        const [config] = await db.select().from(whatsappConfig).limit(1);
+        if (!config) return await this.initWhatsappConfig();
+        const [updated] = await db.update(whatsappConfig).set(updates).where(eq(whatsappConfig.id, config.id)).returning();
+        return updated || void 0;
+      }
+      // Bill Payment operations
+      async createBillPayment(payment) {
+        const [billPayment] = await db.insert(billPayments).values(payment).returning();
+        return billPayment;
+      }
+      async getBillPaymentsByUserId(userId) {
+        const payments = await db.select().from(billPayments).where(eq(billPayments.userId, userId)).orderBy(desc(billPayments.createdAt));
+        return payments;
+      }
+      async getBillPayment(id) {
+        const [payment] = await db.select().from(billPayments).where(eq(billPayments.id, id));
+        return payment || void 0;
+      }
+      async updateBillPayment(id, updates) {
+        const [payment] = await db.update(billPayments).set(updates).where(eq(billPayments.id, id)).returning();
+        return payment || void 0;
+      }
+      async initWhatsappConfig() {
+        const existing = await this.getWhatsappConfig();
+        if (existing) return existing;
+        const [config] = await db.insert(whatsappConfig).values({
+          phoneNumberId: "",
+          businessAccountId: "",
+          accessToken: "",
+          verifyToken: "greenpay_verify_token_2024",
+          isActive: false
+        }).returning();
+        return config;
       }
     };
     storage = new DatabaseStorage();
@@ -2841,8 +3107,8 @@ var init_whatsapp = __esm({
         return cleaned;
       }
       /**
-       * Send template message via WhatsApp Business API (hello_world template)
-       * Template messages have higher delivery rates and are pre-approved by Meta
+       * Send text message via WhatsApp Business API
+       * Sends custom text messages to users
        */
       async sendTextMessage(phoneNumber, message) {
         await this.refreshCredentials();
@@ -2856,14 +3122,12 @@ var init_whatsapp = __esm({
           const payload = {
             messaging_product: "whatsapp",
             to: formattedPhone,
-            type: "template",
-            template: {
-              name: "hello_world",
-              language: {
-                code: "en_US"
-              }
+            type: "text",
+            text: {
+              body: message
             }
           };
+          console.log("[WhatsApp] Sending text message to", formattedPhone, ":", message);
           const response = await fetch6(url, {
             method: "POST",
             headers: {
@@ -2874,15 +3138,35 @@ var init_whatsapp = __esm({
           });
           const responseData = await response.json();
           if (response.ok && responseData.messages) {
-            console.log(`[WhatsApp] \u2713 Template message sent to ${phoneNumber}`);
+            const messageId = responseData.messages?.[0]?.id || "unknown";
+            console.log("[WhatsApp] \u2713 Text message sent successfully", {
+              to: phoneNumber,
+              messageId,
+              messageLength: message.length,
+              timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+              response: responseData
+            });
             return true;
           } else {
             const errorMsg = responseData.error?.message || "Unknown error";
-            console.error(`[WhatsApp] \u2717 Message failed: ${errorMsg}`, { status: response.status, data: responseData });
+            const errorCode = responseData.error?.code || "UNKNOWN_ERROR";
+            console.error("[WhatsApp] \u2717 Text message failed", {
+              to: phoneNumber,
+              error: errorMsg,
+              errorCode,
+              status: response.status,
+              fullError: responseData.error,
+              timestamp: (/* @__PURE__ */ new Date()).toISOString()
+            });
             return false;
           }
         } catch (error) {
-          console.error("[WhatsApp] Error sending template message:", error);
+          console.error("[WhatsApp] \u2717 Error sending text message", {
+            to: phoneNumber,
+            error: error?.message || "Unknown error",
+            errorType: error?.constructor?.name,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          });
           return false;
         }
       }
@@ -2944,15 +3228,36 @@ var init_whatsapp = __esm({
           });
           const responseData = await response.json();
           if (response.ok && responseData.messages) {
-            console.log(`[WhatsApp] \u2713 OTP sent to ${phoneNumber}`);
+            const messageId = responseData.messages?.[0]?.id || "unknown";
+            console.log("[WhatsApp] \u2713 OTP sent successfully", {
+              to: phoneNumber,
+              messageId,
+              templateName: "otp",
+              timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+              response: responseData
+            });
             return true;
           } else {
             const errorMsg = responseData.error?.message || "Unknown error";
-            console.error(`[WhatsApp] \u2717 OTP failed: ${errorMsg}`, { status: response.status, data: responseData });
+            const errorCode = responseData.error?.code || "UNKNOWN_ERROR";
+            console.error("[WhatsApp] \u2717 OTP send failed", {
+              to: phoneNumber,
+              templateName: "otp",
+              error: errorMsg,
+              errorCode,
+              status: response.status,
+              fullError: responseData.error,
+              timestamp: (/* @__PURE__ */ new Date()).toISOString()
+            });
             return false;
           }
         } catch (error) {
-          console.error("[WhatsApp] Error sending OTP:", error);
+          console.error("[WhatsApp] \u2717 Error sending OTP", {
+            to: phoneNumber,
+            error: error?.message || "Unknown error",
+            errorType: error?.constructor?.name,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          });
           return false;
         }
       }
@@ -2995,20 +3300,39 @@ var init_whatsapp = __esm({
           });
           const responseData = await response.json();
           if (response.ok && responseData.messages) {
-            console.log(`[WhatsApp] \u2713 Account verification sent to ${phoneNumber}`);
+            const messageId = responseData.messages?.[0]?.id || "unknown";
+            console.log("[WhatsApp] \u2713 Account verification sent successfully", {
+              to: phoneNumber,
+              messageId,
+              templateName: "account_verification",
+              timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+              response: responseData
+            });
             return true;
           } else {
             const errorMsg = responseData.error?.message || "Unknown error";
-            console.error(`[WhatsApp] \u2717 Account verification failed: ${errorMsg}`);
+            console.error("[WhatsApp] \u2717 Account verification failed", {
+              to: phoneNumber,
+              error: errorMsg,
+              status: response.status,
+              fullError: responseData.error,
+              timestamp: (/* @__PURE__ */ new Date()).toISOString()
+            });
             return false;
           }
         } catch (error) {
-          console.error("[WhatsApp] Error sending account verification:", error);
+          console.error("[WhatsApp] \u2717 Error sending account verification", {
+            to: phoneNumber,
+            error: error?.message || "Unknown error",
+            errorType: error?.constructor?.name,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          });
           return false;
         }
       }
       /**
        * Send login alert via template message
+       * Template name is configurable via system settings for flexibility
        */
       async sendLoginAlert(phoneNumber, location, ipAddress) {
         await this.refreshCredentials();
@@ -3019,12 +3343,14 @@ var init_whatsapp = __esm({
         try {
           const formattedPhone = this.formatPhoneNumber(phoneNumber);
           const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const templateNameSetting = await storage.getSystemSetting("whatsapp", "login_alert_template");
+          const templateName = templateNameSetting?.value?.trim() || "login_alert";
           const payload = {
             messaging_product: "whatsapp",
             to: formattedPhone,
             type: "template",
             template: {
-              name: "login_alert",
+              name: templateName,
               language: { code: "en_US" },
               components: [
                 {
@@ -3037,6 +3363,12 @@ var init_whatsapp = __esm({
               ]
             }
           };
+          console.log("[WhatsApp] Sending login alert", {
+            to: phoneNumber,
+            templateName,
+            location,
+            ipAddress
+          });
           const response = await fetch6(url, {
             method: "POST",
             headers: {
@@ -3047,15 +3379,39 @@ var init_whatsapp = __esm({
           });
           const responseData = await response.json();
           if (response.ok && responseData.messages) {
-            console.log(`[WhatsApp] \u2713 Login alert sent to ${phoneNumber}`);
+            const messageId = responseData.messages?.[0]?.id || "unknown";
+            console.log("[WhatsApp] \u2713 Login alert sent successfully", {
+              to: phoneNumber,
+              messageId,
+              templateName,
+              timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+              response: responseData
+            });
             return true;
           } else {
             const errorMsg = responseData.error?.message || "Unknown error";
-            console.error(`[WhatsApp] \u2717 Login alert failed: ${errorMsg}`);
+            const errorCode = responseData.error?.code || "UNKNOWN_ERROR";
+            console.error("[WhatsApp] \u2717 Login alert failed", {
+              to: phoneNumber,
+              templateName,
+              error: errorMsg,
+              errorCode,
+              status: response.status,
+              fullError: responseData.error,
+              location,
+              ipAddress,
+              timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+              suggestion: "Check if template name matches your WhatsApp Business Account. Update via admin dashboard: Settings > Messaging Settings > WhatsApp Template Names"
+            });
             return false;
           }
         } catch (error) {
-          console.error("[WhatsApp] Error sending login alert:", error);
+          console.error("[WhatsApp] \u2717 Error sending login alert", {
+            to: phoneNumber,
+            error: error?.message || "Unknown error",
+            errorType: error?.constructor?.name,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          });
           return false;
         }
       }
@@ -3191,6 +3547,39 @@ var init_whatsapp = __esm({
         }
       }
       /**
+       * Send account creation welcome notification via template
+       */
+      async sendAccountCreation(phoneNumber, userName) {
+        await this.refreshCredentials();
+        if (!this.checkCredentials()) return false;
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: "create_acc",
+              language: { code: "en" },
+              components: [{ type: "body", parameters: [{ type: "text", text: userName }] }]
+            }
+          };
+          const response = await fetch6(url, { method: "POST", headers: { "Authorization": `Bearer ${this.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages) {
+            console.log(`[WhatsApp] \u2713 Account creation notification sent to ${phoneNumber}`);
+            return true;
+          } else {
+            console.error(`[WhatsApp] \u2717 Account creation notification failed: ${responseData.error?.message || "Unknown error"}`);
+            return false;
+          }
+        } catch (error) {
+          console.error("[WhatsApp] Error sending account creation notification:", error);
+          return false;
+        }
+      }
+      /**
        * Check if WhatsApp is properly configured
        */
       isConfigured() {
@@ -3254,63 +3643,396 @@ var init_whatsapp = __esm({
         }
       }
       /**
-       * Create all required WhatsApp templates via Meta API
+       * Validate parameters against template requirements
+       */
+      async validateTemplateParameters(templateName, parameters) {
+        try {
+          const template = await this.getTemplateDetails(templateName);
+          if (!template) {
+            return { valid: false, error: `Template "${templateName}" not found in Meta`, required: 0, provided: 0 };
+          }
+          const paramNumbers = this.extractParametersFromComponents(template.components || []);
+          const requiredCount = paramNumbers.size;
+          const providedCount = Object.values(parameters).filter((p) => p && p.trim() !== "").length;
+          if (requiredCount > 0 && providedCount < requiredCount) {
+            return {
+              valid: false,
+              error: `Template requires ${requiredCount} parameters but only ${providedCount} provided`,
+              required: requiredCount,
+              provided: providedCount
+            };
+          }
+          return { valid: true, required: requiredCount, provided: providedCount };
+        } catch (error) {
+          console.error("[WhatsApp] Error validating template parameters:", error);
+          return { valid: false, error: "Failed to validate template", required: 0, provided: 0 };
+        }
+      }
+      /**
+       * Send generic template with dynamic parameters and validation
+       */
+      async sendTemplateGeneric(phoneNumber, templateName, parameters) {
+        await this.refreshCredentials();
+        if (!this.checkCredentials()) return { success: false, error: "WhatsApp credentials not configured" };
+        try {
+          const formattedPhone = this.formatPhoneNumber(phoneNumber);
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
+          const template = await this.getTemplateDetails(templateName);
+          const languageCode = template?.language || "en_US";
+          const restrictedTemplates = ["call"];
+          if (restrictedTemplates.includes(templateName)) {
+            const error = `This template (${templateName}) is not available for sending. Contact Meta support to enable this feature.`;
+            console.warn(`[WhatsApp] \u2717 Template "${templateName}" is restricted:`, error);
+            return { success: false, error };
+          }
+          const validation = await this.validateTemplateParameters(templateName, parameters);
+          if (!validation.valid) {
+            console.warn(`[WhatsApp] Parameter validation failed for "${templateName}":`, validation.error);
+            return { success: false, error: validation.error };
+          }
+          const paramArray = Object.values(parameters).filter((p) => p && typeof p === "string" && p.trim() !== "");
+          const payload = {
+            messaging_product: "whatsapp",
+            to: formattedPhone,
+            type: "template",
+            template: {
+              name: templateName,
+              language: { code: languageCode },
+              components: paramArray.length > 0 ? [
+                {
+                  type: "body",
+                  parameters: paramArray.map((p) => ({ type: "text", text: String(p).trim() }))
+                }
+              ] : void 0
+            }
+          };
+          if (!payload.template.components) {
+            delete payload.template.components;
+          }
+          console.log(`[WhatsApp] Sending generic template "${templateName}"`, {
+            language: languageCode,
+            paramCount: paramArray.length,
+            requiredParams: validation.required,
+            parameters: paramArray
+          });
+          const response = await fetch6(url, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const responseData = await response.json();
+          if (response.ok && responseData.messages && !responseData.error) {
+            console.log(`[WhatsApp] \u2713 Generic template "${templateName}" DELIVERED successfully`, {
+              messageId: responseData.messages[0]?.id,
+              language: languageCode,
+              status: "queued"
+            });
+            return { success: true };
+          } else {
+            const errorMsg = responseData.error?.message || responseData.error?.type || "Template delivery failed by Meta";
+            const errorCode = responseData.error?.code || responseData.error?.error_data?.messaging_product?.details?.error_code;
+            console.error(`[WhatsApp] \u2717 Generic template FAILED to deliver:`, {
+              templateName,
+              error: errorMsg,
+              errorCode,
+              language: languageCode,
+              sentParams: paramArray.length,
+              statusCode: response.status
+            });
+            return { success: false, error: errorMsg };
+          }
+        } catch (error) {
+          const errorMsg = String(error);
+          console.error(`[WhatsApp] Error sending generic template "${templateName}":`, error);
+          return { success: false, error: errorMsg };
+        }
+      }
+      /**
+       * Create all required WhatsApp templates via Meta API - Compliant with Meta's API requirements
        */
       async createAllTemplates() {
         await this.refreshCredentials();
         const results = { success: [], failed: [] };
-        const otpSuccess = await this.createTemplate("otp", "AUTHENTICATION", [
+        const createAccSuccess = await this.createTemplate("create_acc", "MARKETING", [
           {
             type: "BODY",
-            text: "Your verification code is {{1}}. Valid for 10 minutes."
-          }
-        ]);
-        if (otpSuccess) results.success.push("otp");
-        else results.failed.push("otp");
-        const pwdSuccess = await this.createTemplate("password_reset", "AUTHENTICATION", [
+            text: "Welcome to GreenPay, {{1}}!\n\nYour account is ready. Click below to start enjoying seamless payments, virtual cards, and money transfers."
+          },
           {
-            type: "BODY",
-            text: "Your password reset code is {{1}}. Valid for 10 minutes."
+            type: "BUTTONS",
+            buttons: [
+              {
+                type: "URL",
+                text: "Get Started",
+                url: "https://app.greenpay.world/dashboard"
+              }
+            ]
           }
         ]);
-        if (pwdSuccess) results.success.push("password_reset");
-        else results.failed.push("password_reset");
-        const kycSuccess = await this.createTemplate("kyc_verified", "UTILITY", [
-          {
-            type: "BODY",
-            text: "Congratulations! Your account has been verified. You can now enjoy all GreenPay features."
-          }
-        ]);
-        if (kycSuccess) results.success.push("kyc_verified");
-        else results.failed.push("kyc_verified");
-        const cardSuccess = await this.createTemplate("card_activation", "UTILITY", [
-          {
-            type: "BODY",
-            text: "Your virtual card ending in {{1}} has been activated and is ready to use."
-          }
-        ]);
-        if (cardSuccess) results.success.push("card_activation");
-        else results.failed.push("card_activation");
-        const fundSuccess = await this.createTemplate("fund_receipt", "UTILITY", [
-          {
-            type: "BODY",
-            text: "You have received {{1}} {{2}} from {{3}}. Your new balance is available in your wallet."
-          }
-        ]);
-        if (fundSuccess) results.success.push("fund_receipt");
-        else results.failed.push("fund_receipt");
+        if (createAccSuccess) results.success.push("create_acc");
+        else results.failed.push("create_acc");
         const loginSuccess = await this.createTemplate("login_alert", "UTILITY", [
           {
             type: "BODY",
-            text: "New login detected on your account from {{1}} ({{2}}). If this wasn't you, please secure your account immediately."
+            text: "New login on your GreenPay account\n\nLocation: {{1}}\nIP: {{2}}\n\nIf this wasn't you, secure your account now."
+          },
+          {
+            type: "BUTTONS",
+            buttons: [
+              {
+                type: "URL",
+                text: "Secure Now",
+                url: "https://app.greenpay.world/security"
+              }
+            ]
           }
         ]);
         if (loginSuccess) results.success.push("login_alert");
         else results.failed.push("login_alert");
+        const fundSuccess = await this.createTemplate("fund_receipt", "UTILITY", [
+          {
+            type: "BODY",
+            text: "You received {{1}} {{2}} from {{3}}\n\nRef: {{4}}\n\nView your wallet for details."
+          },
+          {
+            type: "BUTTONS",
+            buttons: [
+              {
+                type: "URL",
+                text: "View Wallet",
+                url: "https://app.greenpay.world/wallet"
+              }
+            ]
+          }
+        ]);
+        if (fundSuccess) results.success.push("fund_receipt");
+        else results.failed.push("fund_receipt");
+        const cardSuccess = await this.createTemplate("card_activation", "UTILITY", [
+          {
+            type: "BODY",
+            text: "Your GreenPay card {{1}} is now active!\n\nReady for online purchases, bill payments, and transfers."
+          },
+          {
+            type: "BUTTONS",
+            buttons: [
+              {
+                type: "URL",
+                text: "View Card",
+                url: "https://app.greenpay.world/cards"
+              }
+            ]
+          }
+        ]);
+        if (cardSuccess) results.success.push("card_activation");
+        else results.failed.push("card_activation");
+        const kycSuccess = await this.createTemplate("kyc_verified", "MARKETING", [
+          {
+            type: "BODY",
+            text: "Great {{1}}! Your identity is verified.\n\nUnlock higher limits, virtual cards, and premium features."
+          },
+          {
+            type: "BUTTONS",
+            buttons: [
+              {
+                type: "URL",
+                text: "Explore Features",
+                url: "https://app.greenpay.world/dashboard"
+              }
+            ]
+          }
+        ]);
+        if (kycSuccess) results.success.push("kyc_verified");
+        else results.failed.push("kyc_verified");
+        const pwdSuccess = await this.createTemplate("password_reset", "AUTHENTICATION", [
+          {
+            type: "BODY",
+            text: "Your password reset code: {{1}}\n\nValid for 10 minutes. Do not share."
+          }
+        ]);
+        if (pwdSuccess) results.success.push("password_reset");
+        else results.failed.push("password_reset");
         return results;
       }
       /**
-       * Fetch all templates from Meta Business Account
+       * Extract parameters from template components - finds {{1}}, {{2}}, etc from BODY only
+       * Parameters are defined in the BODY component's text field
+       */
+      extractParametersFromComponents(components) {
+        if (!components || !Array.isArray(components)) return /* @__PURE__ */ new Set();
+        const paramNumbers = /* @__PURE__ */ new Set();
+        const regex = /\{\{(\d+)\}\}/g;
+        const bodyComponent = components.find((comp) => comp?.type === "BODY");
+        if (bodyComponent?.text) {
+          try {
+            const matches = [...bodyComponent.text.matchAll(regex)];
+            matches.forEach((m) => {
+              const num = parseInt(m[1]);
+              if (!isNaN(num)) paramNumbers.add(num);
+            });
+          } catch (e) {
+          }
+        }
+        return paramNumbers;
+      }
+      /**
+       * Extract parameters from template components - returns param names like param1, param2
+       */
+      getComponentParameters(components) {
+        const paramNumbers = this.extractParametersFromComponents(components);
+        return Array.from(paramNumbers).sort((a, b) => a - b).map((n) => `param${n}`);
+      }
+      /**
+       * Extract parameters from template text (finds {{1}}, {{2}}, etc)
+       */
+      extractTemplateParameters(templateText) {
+        const regex = /\{\{(\d+)\}\}/g;
+        const matches = [...templateText.matchAll(regex)];
+        const paramNumbers = new Set(matches.map((m) => parseInt(m[1])));
+        return Array.from(paramNumbers).sort((a, b) => a - b).map((n) => `param${n}`);
+      }
+      /**
+       * Get full template details from Meta with components
+       */
+      async getTemplateDetails(templateName) {
+        try {
+          const templates = await this.fetchTemplatesFromMeta();
+          const template = templates.find((t) => t.name === templateName);
+          return template || null;
+        } catch (error) {
+          console.error("[WhatsApp] Error getting template details:", error);
+          return null;
+        }
+      }
+      /**
+       * Analyze which parameters are media vs text based on component types
+       */
+      analyzeParameterTypes(components, allParams) {
+        const metadata = {};
+        if (!components || !allParams) return metadata;
+        const mediaHeaderParams = /* @__PURE__ */ new Set();
+        components.forEach((comp) => {
+          if (!comp.type) return;
+          if (comp.type === "HEADER" && comp.format && comp.format !== "TEXT") {
+            const mediaType = comp.format.toLowerCase();
+            if (comp.example) {
+              const exampleStr = JSON.stringify(comp.example);
+              const regex = /\{\{(\d+)\}\}/g;
+              const matches = [...exampleStr.matchAll(regex)];
+              matches.forEach((m) => {
+                const paramNum = parseInt(m[1]);
+                mediaHeaderParams.add(paramNum);
+              });
+            }
+            if ((comp.example?.header_handle || comp.example?.header) && allParams.has(1)) {
+              mediaHeaderParams.add(1);
+            }
+          }
+        });
+        allParams.forEach((paramNum) => {
+          const paramKey = `param${paramNum}`;
+          if (mediaHeaderParams.has(paramNum)) {
+            let mediaType = "image";
+            components.forEach((comp) => {
+              if (comp.type === "HEADER" && comp.format && comp.format !== "TEXT") {
+                mediaType = comp.format.toLowerCase();
+              }
+            });
+            metadata[paramKey] = {
+              type: "media",
+              mediaType: mediaType === "location" ? "image" : mediaType
+            };
+          } else {
+            metadata[paramKey] = { type: "text" };
+          }
+        });
+        return metadata;
+      }
+      /**
+       * Get template parameters from Meta - ALWAYS fetches directly from Meta, extracts ONLY from BODY text
+       * STRICTLY: Only counts {{1}}, {{2}}, etc patterns in BODY component's text field
+       */
+      async getTemplateParameters(templateName) {
+        try {
+          const template = await this.fetchTemplateDetails(templateName);
+          if (!template || !Array.isArray(template.components) || template.components.length === 0) {
+            console.log(`[WhatsApp] Template "${templateName}" - No valid components found`);
+            return { required: [], paramCount: 0, language: template?.language || "en_US", components: [] };
+          }
+          const bodyComponent = template.components.find((c) => c && typeof c === "object" && c.type === "BODY");
+          if (!bodyComponent || typeof bodyComponent.text !== "string") {
+            console.log(`[WhatsApp] Template "${templateName}" - No BODY component with text found`);
+            return { required: [], paramCount: 0, language: template?.language || "en_US", components: template.components };
+          }
+          const bodyText = bodyComponent.text;
+          const regex = /\{\{\s*(\d+)\s*\}\}/g;
+          const paramNumbers = /* @__PURE__ */ new Set();
+          let match;
+          while ((match = regex.exec(bodyText)) !== null) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > 0) {
+              paramNumbers.add(num);
+            }
+          }
+          const params = Array.from(paramNumbers).sort((a, b) => a - b).map((n) => `param${n}`);
+          const metadata = paramNumbers.size > 0 ? this.analyzeParameterTypes(template.components, paramNumbers) : {};
+          console.log(`[WhatsApp] Template "${templateName}" parameters:`, {
+            bodyText: bodyText.substring(0, 150),
+            hasBodyText: !!bodyText,
+            bodyLength: bodyText.length,
+            parameterCount: params.length,
+            parameterNames: params,
+            isNoParams: params.length === 0
+          });
+          return {
+            required: params,
+            paramCount: params.length,
+            language: template.language || "en_US",
+            components: template.components,
+            parameterMetadata: metadata
+          };
+        } catch (error) {
+          console.error("[WhatsApp] Error getting template parameters:", error);
+          return { required: [], paramCount: 0, language: "en_US", components: [] };
+        }
+      }
+      /**
+       * Fetch full template details from Meta to get parameter information
+       */
+      async fetchTemplateDetails(templateName) {
+        try {
+          if (!this.accessToken) return null;
+          const wabaId = await this.getWabaId();
+          if (!wabaId) return null;
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates?name=${encodeURIComponent(templateName)}&fields=name,status,language,category,components`;
+          const response = await fetch6(url, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json"
+            }
+          });
+          const responseData = await response.json();
+          if (response.ok && responseData.data && responseData.data.length > 0) {
+            const template = responseData.data[0];
+            console.log(`[WhatsApp] Fetched full template details for "${templateName}":`, {
+              name: template.name,
+              status: template.status,
+              language: template.language,
+              components: JSON.stringify(template.components, null, 2).substring(0, 200)
+            });
+            return template;
+          }
+          return null;
+        } catch (error) {
+          console.error(`[WhatsApp] Error fetching full template "${templateName}":`, error);
+          return null;
+        }
+      }
+      /**
+       * Fetch all templates from Meta Business Account with full component structure
        */
       async fetchTemplatesFromMeta() {
         try {
@@ -3323,7 +4045,7 @@ var init_whatsapp = __esm({
             console.error("[WhatsApp] \u2717 WhatsApp Business Account ID not configured");
             return [];
           }
-          const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates?fields=name,status,language,category`;
+          const url = `${this.graphApiUrl}/${this.apiVersion}/${wabaId}/message_templates?fields=name,status,language,category,components`;
           console.log(`[WhatsApp] Fetching templates from Meta...`);
           const response = await fetch6(url, {
             method: "GET",
@@ -3334,10 +4056,28 @@ var init_whatsapp = __esm({
           });
           const responseData = await response.json();
           if (response.ok && responseData.data) {
-            console.log(`[WhatsApp] \u2713 Found ${responseData.data.length} templates`);
+            const templateList = responseData.data.map((t) => ({
+              name: t.name,
+              status: t.status,
+              language: t.language,
+              category: t.category,
+              components: t.components || []
+            }));
+            console.log("[WhatsApp] \u2713 Successfully fetched approved templates from Meta", {
+              count: responseData.data.length,
+              templates: templateList.map((t) => ({ name: t.name, status: t.status, language: t.language })),
+              timestamp: (/* @__PURE__ */ new Date()).toISOString()
+            });
             return responseData.data;
           } else {
-            console.error(`[WhatsApp] \u2717 Failed to fetch templates: ${responseData.error?.message || "Unknown error"}`);
+            const errorMsg = responseData.error?.message || "Unknown error";
+            console.error("[WhatsApp] \u2717 Failed to fetch templates from Meta", {
+              error: errorMsg,
+              code: responseData.error?.code,
+              status: response.status,
+              timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+              suggestion: "Ensure your WhatsApp Business Account ID (WABA ID) and access token are correctly configured"
+            });
             return [];
           }
         } catch (error) {
@@ -3354,10 +4094,10 @@ var init_whatsapp = __esm({
 var mailtrap_exports = {};
 __export(mailtrap_exports, {
   MailtrapService: () => MailtrapService,
-  mailtrapService: () => mailtrapService
+  mailtrapService: () => mailtrapService2
 });
 import fetch7 from "node-fetch";
-var TEMPLATE_UUIDs, MailtrapService, mailtrapService;
+var TEMPLATE_UUIDs, MailtrapService, mailtrapService2;
 var init_mailtrap = __esm({
   "server/services/mailtrap.ts"() {
     "use strict";
@@ -3369,10 +4109,9 @@ var init_mailtrap = __esm({
       kyc_submitted: "dd087e67-8a7b-4bb8-9645-acbd61666d76",
       kyc_verified: "c6353bf3-8e12-4852-8607-82223f49a4aa",
       login_alert: "42ce5e3b-eed9-41aa-808c-cfecbd906e60",
-      fund_receipt: "placeholder-fund-receipt",
-      // To be added
-      card_activation: "placeholder-card-activation"
-      // To be added
+      fund_receipt: "5e2a2ec4-37fb-4178-96c4-598977065f9c",
+      card_activation: "a1b2c3d4-e5f6-4789-0123-456789abcdef",
+      transaction_export: "307e5609-66bb-4235-8653-27f0d5d74a39"
     };
     MailtrapService = class {
       apiKey = null;
@@ -3417,9 +4156,9 @@ var init_mailtrap = __esm({
         await this.loadApiKey();
       }
       /**
-       * Send email using Mailtrap template
+       * Send email using Mailtrap template with optional attachments
        */
-      async sendTemplate(toEmail, templateUuid, variables) {
+      async sendTemplate(toEmail, templateUuid, variables, attachments) {
         try {
           if (!this.apiKey) {
             console.error("[Mailtrap] \u2717 API key not configured");
@@ -3436,7 +4175,10 @@ var init_mailtrap = __esm({
               { email: toEmail }
             ]
           };
-          console.log(`[Mailtrap] Sending template ${templateUuid} to ${toEmail}`);
+          if (attachments && attachments.length > 0) {
+            payload.attachments = attachments;
+          }
+          console.log(`[Mailtrap] Sending template ${templateUuid} to ${toEmail}${attachments ? " with attachments" : ""}`);
           const response = await fetch7(this.apiUrl, {
             method: "POST",
             headers: {
@@ -3451,8 +4193,14 @@ var init_mailtrap = __esm({
             return false;
           }
           const result = await response.json();
-          console.log(`[Mailtrap] \u2713 Email sent successfully - MessageId: ${result.message_id}`);
-          return true;
+          console.log(`[Mailtrap] \u2713 Full Response:`, JSON.stringify(result, null, 2));
+          if (result.success || result.message_id || result.messages) {
+            console.log(`[Mailtrap] \u2713 Email sent successfully - Response: ${JSON.stringify(result)}`);
+            return true;
+          } else {
+            console.warn(`[Mailtrap] \u26A0\uFE0F Unexpected response format:`, result);
+            return true;
+          }
         } catch (error) {
           console.error("[Mailtrap] Error sending email:", error);
           return false;
@@ -3518,13 +4266,35 @@ var init_mailtrap = __esm({
         });
       }
       /**
+       * Send fund receipt notification email
+       */
+      async sendFundReceipt(toEmail, firstName, lastName, amount, currency, sender) {
+        return this.sendTemplate(toEmail, TEMPLATE_UUIDs.fund_receipt, {
+          first_name: firstName,
+          last_name: lastName,
+          amount,
+          currency,
+          sender
+        });
+      }
+      /**
+       * Send card activation notification email
+       */
+      async sendCardActivation(toEmail, firstName, lastName, cardLastFour) {
+        return this.sendTemplate(toEmail, TEMPLATE_UUIDs.card_activation, {
+          first_name: firstName,
+          last_name: lastName,
+          card_last_four: cardLastFour
+        });
+      }
+      /**
        * Admin: Send custom template to user
        */
       async sendCustomTemplate(toEmail, templateUuid, variables) {
         return this.sendTemplate(toEmail, templateUuid, variables);
       }
     };
-    mailtrapService = new MailtrapService();
+    mailtrapService2 = new MailtrapService();
   }
 });
 
@@ -3692,14 +4462,14 @@ var init_messaging = __esm({
         if (enableSetting?.value === "false") {
           return { sms: false, whatsapp: false, email: false };
         }
-        const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+        const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
         const credentials = await this.getCredentials();
         const firstName = userName?.split(" ")[0] || "User";
         const lastName = userName?.split(" ").slice(1).join(" ") || "";
         const [smsResult, whatsappResult, emailResult] = await Promise.all([
           credentials ? this.sendSMS(phone, `Your verification code is ${otpCode}. Valid for 10 minutes.`, credentials) : Promise.resolve(false),
           whatsappService.isConfigured() ? whatsappService.sendOTP(phone, otpCode) : Promise.resolve(false),
-          email ? mailtrapService2.sendOTP(email, firstName, lastName, otpCode) : Promise.resolve(false)
+          email ? mailtrapService3.sendOTP(email, firstName, lastName, otpCode) : Promise.resolve(false)
         ]);
         return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
       }
@@ -3711,14 +4481,14 @@ var init_messaging = __esm({
         if (enableSetting?.value === "false") {
           return { sms: false, whatsapp: false, email: false };
         }
-        const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+        const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
         const credentials = await this.getCredentials();
         const firstName = userName?.split(" ")[0] || "User";
         const lastName = userName?.split(" ").slice(1).join(" ") || "";
         const [smsResult, whatsappResult, emailResult] = await Promise.all([
           credentials ? this.sendSMS(phone, `Your password reset code is ${resetCode}. Valid for 10 minutes.`, credentials) : Promise.resolve(false),
           whatsappService.isConfigured() ? whatsappService.sendPasswordReset(phone, resetCode) : Promise.resolve(false),
-          email ? mailtrapService2.sendPasswordReset(email, firstName, lastName, resetCode) : Promise.resolve(false)
+          email ? mailtrapService3.sendPasswordReset(email, firstName, lastName, resetCode) : Promise.resolve(false)
         ]);
         return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
       }
@@ -3878,6 +4648,279 @@ var init_messaging = __esm({
   }
 });
 
+// server/lib/pdf-export.ts
+var pdf_export_exports = {};
+__export(pdf_export_exports, {
+  generateTransactionPDF: () => generateTransactionPDF
+});
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+function formatNumber(num) {
+  const parsed = typeof num === "string" ? parseFloat(num) : num;
+  return parsed.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+function getCurrencySymbol(currency) {
+  const upper = currency?.toUpperCase();
+  switch (upper) {
+    case "KES":
+      return "KSh ";
+    case "USD":
+      return "$";
+    default:
+      return "$";
+  }
+}
+async function generateTransactionPDF(transactions2, userData) {
+  const doc = new jsPDF();
+  const greenColor = [34, 197, 94];
+  const grayColor = [107, 114, 128];
+  const darkColor = [17, 24, 39];
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setFillColor(greenColor[0], greenColor[1], greenColor[2]);
+  doc.rect(0, 0, pageWidth, 40, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(24);
+  doc.setFont("helvetica", "bold");
+  doc.text("GreenPay", 14, 20);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("International Money Transfer & Digital Wallet", 14, 28);
+  doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("Transaction Statement", 14, 55);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+  const currentDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+  doc.text(`Generated: ${currentDate}`, 14, 65);
+  if (userData.fullName) {
+    doc.text(`Account Holder: ${userData.fullName}`, 14, 71);
+  }
+  if (userData.email) {
+    doc.text(`Email: ${userData.email}`, 14, 77);
+  }
+  const usdTransactions = transactions2.filter((t) => t.currency?.toUpperCase() !== "KES");
+  const kesTransactions = transactions2.filter((t) => t.currency?.toUpperCase() === "KES");
+  const totalUsdIn = usdTransactions.filter((t) => (t.type === "receive" || t.type === "deposit") && t.status === "completed").reduce((sum2, t) => sum2 + parseFloat(t.amount), 0);
+  const totalUsdOut = usdTransactions.filter((t) => (t.type === "send" || t.type === "withdraw" || t.type === "card_purchase") && t.status === "completed").reduce((sum2, t) => sum2 + parseFloat(t.amount), 0);
+  const totalKesIn = kesTransactions.filter((t) => (t.type === "receive" || t.type === "deposit") && t.status === "completed").reduce((sum2, t) => sum2 + parseFloat(t.amount), 0);
+  const totalKesOut = kesTransactions.filter((t) => (t.type === "send" || t.type === "withdraw" || t.type === "card_purchase") && t.status === "completed").reduce((sum2, t) => sum2 + parseFloat(t.amount), 0);
+  doc.setDrawColor(greenColor[0], greenColor[1], greenColor[2]);
+  doc.setLineWidth(0.5);
+  doc.rect(14, 85, pageWidth - 28, 35);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  doc.text("Summary", 18, 92);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  let yPos = 100;
+  if (usdTransactions.length > 0) {
+    doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+    doc.text("USD:", 18, yPos);
+    doc.setTextColor(34, 197, 94);
+    doc.text(`+$${formatNumber(totalUsdIn)}`, 50, yPos);
+    doc.setTextColor(239, 68, 68);
+    doc.text(`-$${formatNumber(totalUsdOut)}`, 90, yPos);
+    yPos += 6;
+  }
+  if (kesTransactions.length > 0) {
+    doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+    doc.text("KES:", 18, yPos);
+    doc.setTextColor(34, 197, 94);
+    doc.text(`+KSh ${formatNumber(totalKesIn)}`, 50, yPos);
+    doc.setTextColor(239, 68, 68);
+    doc.text(`-KSh ${formatNumber(totalKesOut)}`, 90, yPos);
+  }
+  const tableData = transactions2.map((transaction) => {
+    const date = new Date(transaction.createdAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+    const recipientName = transaction.recipientDetails?.name || (transaction.type === "deposit" ? "Wallet Top-up" : transaction.type === "withdraw" ? "Bank Withdrawal" : transaction.type === "card_purchase" ? "Virtual Card" : transaction.type === "exchange" ? "Currency Exchange" : "Transaction");
+    const prefix = transaction.type === "send" || transaction.type === "withdraw" || transaction.type === "card_purchase" || transaction.type === "exchange" ? "-" : "+";
+    const amount = `${prefix}${getCurrencySymbol(transaction.currency)}${formatNumber(transaction.amount)}`;
+    return [
+      date,
+      recipientName,
+      amount,
+      transaction.currency?.toUpperCase() || "USD",
+      transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)
+    ];
+  });
+  autoTable(doc, {
+    startY: 130,
+    head: [["Date", "Description", "Amount", "Currency", "Status"]],
+    body: tableData,
+    theme: "grid",
+    headStyles: {
+      fillColor: greenColor,
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 9
+    },
+    bodyStyles: {
+      fontSize: 8,
+      textColor: darkColor
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251]
+    },
+    columnStyles: {
+      0: { cellWidth: 30 },
+      1: { cellWidth: 60 },
+      2: { cellWidth: 35, halign: "right" },
+      3: { cellWidth: 25, halign: "center" },
+      4: { cellWidth: 30, halign: "center" }
+    },
+    margin: { left: 14, right: 14 },
+    didDrawPage: (data) => {
+      const pageCount = doc.internal.getNumberOfPages();
+      const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
+      doc.setFontSize(8);
+      doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+      doc.text(
+        `Page ${currentPage} of ${pageCount}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: "center" }
+      );
+      doc.text(
+        "GreenPay - Trusted International Money Transfer Service",
+        pageWidth / 2,
+        pageHeight - 15,
+        { align: "center" }
+      );
+      doc.setFontSize(7);
+      doc.text(
+        "support@greenpay.world | www.greenpay.world",
+        pageWidth / 2,
+        pageHeight - 20,
+        { align: "center" }
+      );
+    }
+  });
+  const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
+  return pdfBuffer;
+}
+var init_pdf_export = __esm({
+  "server/lib/pdf-export.ts"() {
+    "use strict";
+  }
+});
+
+// server/services/api-key.ts
+var api_key_exports = {};
+__export(api_key_exports, {
+  ApiKeyService: () => ApiKeyService,
+  apiKeyService: () => apiKeyService
+});
+var ApiKeyService, apiKeyService;
+var init_api_key = __esm({
+  "server/services/api-key.ts"() {
+    "use strict";
+    init_storage();
+    ApiKeyService = class {
+      async generateApiKey(name, scope = ["read", "write"], rateLimit = 1e3) {
+        const keyId = `gpay_${Buffer.from(`${Date.now()}-${Math.random()}`).toString("base64").substring(0, 32)}`;
+        try {
+          const keyData = {
+            id: keyId,
+            key: keyId,
+            name,
+            isActive: true,
+            createdAt: /* @__PURE__ */ new Date(),
+            scope,
+            rateLimit
+          };
+          await storage.createSystemSetting({
+            category: "api_keys",
+            key: keyId,
+            value: JSON.stringify(keyData)
+          });
+          console.log(`[API Key] \u2713 Generated: ${name} (${keyId})`);
+          return keyId;
+        } catch (error) {
+          console.error("[API Key] Error generating key:", error);
+          throw error;
+        }
+      }
+      async validateApiKey(key, requiredScope) {
+        try {
+          if (!key || !key.startsWith("gpay_")) {
+            return false;
+          }
+          const settings = await storage.getSystemSetting("api_keys", key);
+          if (!settings) {
+            console.warn(`[API Key] \u2717 Key not found: ${key}`);
+            return false;
+          }
+          const keyData = JSON.parse(typeof settings.value === "string" ? settings.value : JSON.stringify(settings.value));
+          if (!keyData.isActive) {
+            console.warn(`[API Key] \u2717 Key is inactive: ${key}`);
+            return false;
+          }
+          if (requiredScope && !keyData.scope?.includes(requiredScope) && !keyData.scope?.includes("*")) {
+            console.warn(`[API Key] \u2717 Key lacks required scope: ${requiredScope}`);
+            return false;
+          }
+          console.log(`[API Key] \u2713 Key validated: ${keyData.name}`);
+          return true;
+        } catch (error) {
+          console.error("[API Key] Error validating:", error);
+          return false;
+        }
+      }
+      async revokeApiKey(key) {
+        try {
+          const settings = await storage.getSystemSetting("api_keys", key);
+          if (!settings) {
+            console.warn(`[API Key] \u2717 Key not found: ${key}`);
+            return false;
+          }
+          const keyData = JSON.parse(typeof settings.value === "string" ? settings.value : JSON.stringify(settings.value));
+          const updatedKeyData = {
+            ...keyData,
+            isActive: false
+          };
+          await storage.updateSystemSetting(settings.id, {
+            value: JSON.stringify(updatedKeyData)
+          });
+          console.log(`[API Key] \u2713 Revoked: ${key}`);
+          return true;
+        } catch (error) {
+          console.error("[API Key] Error revoking:", error);
+          return false;
+        }
+      }
+      async getApiKey(key) {
+        try {
+          const settings = await storage.getSystemSetting("api_keys", key);
+          if (!settings) {
+            return null;
+          }
+          const keyData = JSON.parse(typeof settings.value === "string" ? settings.value : JSON.stringify(settings.value));
+          return keyData;
+        } catch (error) {
+          console.error("[API Key] Error retrieving key:", error);
+          return null;
+        }
+      }
+    };
+    apiKeyService = new ApiKeyService();
+  }
+});
+
 // server/index.ts
 import express2 from "express";
 import session from "express-session";
@@ -3886,15 +4929,18 @@ import { Pool as Pool2 } from "pg";
 
 // server/routes.ts
 init_storage();
+init_db();
 init_schema();
 init_exchange_rate();
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { desc as desc2 } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt2 from "bcrypt";
 import multer from "multer";
 import * as speakeasy2 from "speakeasy";
 import * as QRCode2 from "qrcode";
+import { fileTypeFromBuffer } from "file-type";
 
 // server/services/payhero.ts
 init_storage();
@@ -4324,26 +5370,6 @@ var TwoFactorService = class {
   }
 };
 var twoFactorService = new TwoFactorService();
-
-// server/services/biometric.ts
-var BiometricService = class {
-  async generateChallenge(userId) {
-    const challenge = Buffer.from(Math.random().toString()).toString("base64url");
-    return challenge;
-  }
-  async verifyBiometric(userId, challenge, response) {
-    if (challenge && response) {
-      console.log(`Biometric verification attempted for user ${userId}`);
-      return true;
-    }
-    return false;
-  }
-  async registerBiometric(userId, credential) {
-    console.log(`Biometric registration for user ${userId}`);
-    return true;
-  }
-};
-var biometricService = new BiometricService();
 
 // server/services/notifications.ts
 var NotificationService = class {
@@ -4785,6 +5811,33 @@ var StatumService = class {
 };
 var statumService = new StatumService();
 
+// server/middleware/api-key.ts
+init_storage();
+async function optionalApiKey(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const key = authHeader.substring(7);
+      if (key && key.startsWith("gpay_")) {
+        try {
+          const settings = await storage.getSystemSetting("api_keys", key);
+          if (settings) {
+            const keyData = settings.value;
+            if (keyData.isActive) {
+              req.apiKey = key;
+            }
+          }
+        } catch (error) {
+        }
+      }
+    }
+    next();
+  } catch (error) {
+    console.error("[Optional API Key Middleware] Error:", error);
+    next();
+  }
+}
+
 // server/routes.ts
 var cloudinaryStorage2 = new CloudinaryStorageService();
 var upload = multer({
@@ -4803,12 +5856,40 @@ var upload = multer({
       "application/pdf",
       "text/plain",
       "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "video/mp4",
+      "video/quicktime",
+      "video/x-msvideo",
+      "video/webm"
     ];
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Invalid file type. Only images, PDFs, and documents are allowed."));
+      cb(new Error("Invalid file type. Images, PDFs, documents, and videos are allowed."));
+    }
+  }
+});
+var backupUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 100 * 1024 * 1024
+    // 100MB limit for backups
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = [
+      "application/json",
+      "application/sql",
+      "application/gzip",
+      "application/x-gzip",
+      "text/plain"
+      // Some systems send .json as text/plain
+    ];
+    const allowedExtensions = [".json", ".sql", ".gz", ".gzip"];
+    const hasValidExtension = allowedExtensions.some((ext) => file.originalname.toLowerCase().endsWith(ext));
+    if (allowedMimeTypes.includes(file.mimetype) || hasValidExtension) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Only JSON, SQL, and GZ backup files are allowed."));
     }
   }
 });
@@ -4903,7 +5984,7 @@ async function registerRoutes(app2) {
   } catch (error) {
     console.error("Failed to create default admin:", error);
   }
-  app2.post("/api/auth/signup", async (req, res) => {
+  app2.post("/api/auth/signup", optionalApiKey, async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
       const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
@@ -4917,14 +5998,22 @@ async function registerRoutes(app2) {
         isPhoneVerified: true,
         isEmailVerified: true
       });
-      if (user.phone) {
+      if (user.phone || user.email) {
         const { messagingService: messagingService4 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+        const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
         const domain = process.env.REPLIT_DOMAINS || "greenpay.app";
         const loginUrl = `https://${domain.split(",")[0]}/login`;
-        messagingService4.sendMessage(
-          user.phone,
-          `Welcome to GreenPay! To send and receive money, you need to: 1) Purchase a virtual card 2) Verify your KYC. Login here: ${loginUrl}`
-        ).catch((err) => console.error("Welcome message error:", err));
+        if (user.phone) {
+          whatsappService2.sendAccountCreation(user.phone, user.fullName || "User").catch((err) => console.error("[Signup] WhatsApp account creation error:", err));
+          messagingService4.sendMessage(
+            user.phone,
+            `Welcome to GreenPay! To send and receive money, you need to: 1) Purchase a virtual card 2) Verify your KYC. Login here: ${loginUrl}`
+          ).catch((err) => console.error("Welcome message error:", err));
+        }
+        if (user.email) {
+          const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+          mailtrapService3.sendWelcome(user.email, user.fullName?.split(" ")[0] || "User", user.fullName?.split(" ")[1] || "").catch((err) => console.error("[Signup] Email welcome error:", err));
+        }
       }
       const { password, ...userResponse } = user;
       res.json({ user: { ...userResponse, isPhoneVerified: true, isEmailVerified: true } });
@@ -4933,7 +6022,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid user data" });
     }
   });
-  app2.post("/api/auth/login", async (req, res) => {
+  app2.post("/api/auth/login", optionalApiKey, async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
       const user = await storage.getUserByEmail(email);
@@ -4994,13 +6083,13 @@ async function registerRoutes(app2) {
         });
       }
       const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
       const otpCode = messagingService3.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
       const [smsWhatsappResult, emailResult] = await Promise.all([
         messagingService3.sendOTP(user.phone, otpCode),
-        user.email ? mailtrapService2.sendOTP(user.email, user.firstName || "User", user.lastName || "", otpCode) : Promise.resolve(false)
+        user.email ? mailtrapService3.sendOTP(user.email, user.firstName || "User", user.lastName || "", otpCode) : Promise.resolve(false)
       ]);
       const result = { ...smsWhatsappResult, email: emailResult };
       if (!result.sms && !result.whatsapp && !result.email) {
@@ -5040,7 +6129,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid login data" });
     }
   });
-  app2.post("/api/auth/verify-otp", async (req, res) => {
+  app2.post("/api/auth/verify-otp", optionalApiKey, async (req, res) => {
     try {
       const { code } = otpSchema.parse(req.body);
       const { userId } = req.body;
@@ -5071,10 +6160,10 @@ async function registerRoutes(app2) {
         delete req.session.loginIp;
         delete req.session.loginLocation;
         const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-        const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+        const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
         Promise.all([
           messagingService3.sendLoginAlert(user.phone, loginLocation, loginIp || "Unknown IP"),
-          user.email ? mailtrapService2.sendLoginAlert(
+          user.email ? mailtrapService3.sendLoginAlert(
             user.email,
             user.firstName || "User",
             user.lastName || "",
@@ -5103,7 +6192,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid OTP data" });
     }
   });
-  app2.post("/api/auth/resend-otp", async (req, res) => {
+  app2.post("/api/auth/resend-otp", optionalApiKey, async (req, res) => {
     try {
       const { userId } = req.body;
       const user = await storage.getUser(userId);
@@ -5111,13 +6200,13 @@ async function registerRoutes(app2) {
         return res.status(404).json({ message: "User not found" });
       }
       const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
       const otpCode = messagingService3.generateOTP();
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, otpCode, otpExpiry);
       const [smsWhatsappResult, emailResult] = await Promise.all([
         messagingService3.sendOTP(user.phone, otpCode),
-        user.email ? mailtrapService2.sendOTP(user.email, user.firstName || "User", user.lastName || "", otpCode) : Promise.resolve(false)
+        user.email ? mailtrapService3.sendOTP(user.email, user.firstName || "User", user.lastName || "", otpCode) : Promise.resolve(false)
       ]);
       const result = { ...smsWhatsappResult, email: emailResult };
       if (!result.sms && !result.whatsapp && !result.email) {
@@ -5137,23 +6226,32 @@ async function registerRoutes(app2) {
   });
   app2.post("/api/auth/forgot-password", async (req, res) => {
     try {
-      const { phone } = req.body;
-      if (!phone) {
-        return res.status(400).json({ message: "Phone number is required" });
+      const { contact } = req.body;
+      if (!contact) {
+        return res.status(400).json({ message: "Phone number or email address is required" });
       }
       const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-      const formattedPhone = messagingService3.formatPhoneNumber(phone);
-      const user = await storage.getUserByPhone(formattedPhone);
-      if (!user) {
-        return res.status(404).json({ message: "No account found with this phone number" });
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const isEmail = contact.includes("@");
+      let user;
+      if (isEmail) {
+        user = await storage.getUserByEmail(contact.toLowerCase().trim());
+        if (!user) {
+          return res.status(404).json({ message: "No account found with this email address" });
+        }
+      } else {
+        const formattedPhone = messagingService3.formatPhoneNumber(contact);
+        user = await storage.getUserByPhone(formattedPhone);
+        if (!user) {
+          return res.status(404).json({ message: "No account found with this phone number" });
+        }
       }
       const resetCode = messagingService3.generateOTP();
       const resetExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, resetCode, resetExpiry);
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
       const [smsWhatsappResult, emailResult] = await Promise.all([
         messagingService3.sendPasswordReset(user.phone, resetCode),
-        user.email ? mailtrapService2.sendPasswordReset(user.email, user.firstName || "User", user.lastName || "", resetCode) : Promise.resolve(false)
+        user.email ? mailtrapService3.sendPasswordReset(user.email, user.firstName || "User", user.lastName || "", resetCode) : Promise.resolve(false)
       ]);
       const result = { ...smsWhatsappResult, email: emailResult };
       if (!result.sms && !result.whatsapp && !result.email) {
@@ -5186,10 +6284,9 @@ async function registerRoutes(app2) {
       const resetCode = messagingService3.generateOTP();
       const resetExpiry = new Date(Date.now() + 10 * 60 * 1e3);
       await storage.updateUserOtp(user.id, resetCode, resetExpiry);
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
       const [smsWhatsappResult, emailResult] = await Promise.all([
         messagingService3.sendPasswordReset(user.phone, resetCode),
-        user.email ? mailtrapService2.sendPasswordReset(user.email, user.firstName || "User", user.lastName || "", resetCode) : Promise.resolve(false)
+        user.email ? mailtrapService.sendPasswordReset(user.email, user.firstName || "User", user.lastName || "", resetCode) : Promise.resolve(false)
       ]);
       const result = { ...smsWhatsappResult, email: emailResult };
       if (!result.sms && !result.whatsapp && !result.email) {
@@ -5228,13 +6325,13 @@ async function registerRoutes(app2) {
       const hashedPassword = await bcrypt2.hash(newPassword, 10);
       await storage.updateUserPassword(user.id, hashedPassword);
       await storage.updateUserOtp(user.id, null, null);
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
       Promise.all([
         messagingService.sendMessage(
           user.phone,
           "Your password has been reset successfully. You can now log in with your new password."
         ),
-        user.email ? mailtrapService2.sendTemplate(user.email, "7711c72e-431b-4fb9-bea9-9738d4d8bfe7", {
+        user.email ? mailtrapService3.sendTemplate(user.email, "7711c72e-431b-4fb9-bea9-9738d4d8bfe7", {
           first_name: user.firstName || "User",
           last_name: user.lastName || "",
           message: "Your password has been reset successfully. You can now log in."
@@ -5284,7 +6381,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to reset password" });
     }
   });
-  app2.get("/api/conversations/user-conversation", async (req, res) => {
+  app2.get("/api/conversations/user-conversation", requireAuth, async (req, res) => {
     try {
       const userId = req.session?.userId;
       if (!userId) {
@@ -5311,7 +6408,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to get or create conversation" });
     }
   });
-  app2.get("/api/messages/:conversationId", async (req, res) => {
+  app2.get("/api/messages/:conversationId", requireAuth, async (req, res) => {
     try {
       const { conversationId } = req.params;
       const userId = req.session?.userId;
@@ -5396,32 +6493,42 @@ async function registerRoutes(app2) {
     try {
       const userId = req.session?.userId;
       const adminId = req.session?.admin?.id;
+      console.log("[Upload] Request received:", { hasFile: !!req.file, userId, adminId });
       if (!userId && !adminId) {
         return res.status(401).json({ message: "Authentication required" });
       }
       if (!req.file) {
+        console.error("[Upload] No file in request");
         return res.status(400).json({ message: "No file uploaded" });
       }
+      console.log("[Upload] File details:", {
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        hasBuffer: !!req.file.buffer
+      });
       try {
-        const fileUrl = await cloudinaryStorage2.uploadChatFile(
+        const url = await cloudinaryStorage2.uploadChatFile(
           req.file.buffer,
           req.file.originalname,
           req.file.mimetype
         );
+        console.log("[Upload] Successfully uploaded to Cloudinary:", { url });
         res.json({
-          fileUrl,
+          url,
+          fileUrl: url,
           fileName: req.file.originalname,
           fileSize: req.file.size,
           mimeType: req.file.mimetype,
           message: "File uploaded successfully"
         });
       } catch (uploadError) {
-        console.error("\u274C Object storage upload error:", uploadError);
-        return res.status(500).json({ message: "Failed to upload file to storage" });
+        console.error("[Upload] Cloudinary upload error:", uploadError);
+        return res.status(500).json({ message: "Failed to upload file to storage", error: String(uploadError) });
       }
     } catch (error) {
-      console.error("File upload error:", error);
-      res.status(500).json({ message: "Failed to upload file" });
+      console.error("[Upload] Request error:", error);
+      res.status(500).json({ message: "Failed to upload file", error: String(error) });
     }
   });
   app2.post("/api/kyc/submit", upload.fields([
@@ -5700,7 +6807,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Failed to update settings" });
     }
   });
-  app2.post("/api/users/:id/profile-photo", upload.single("photo"), async (req, res) => {
+  app2.post("/api/users/:id/profile-photo", requireAuth, upload.single("photo"), async (req, res) => {
     try {
       const { id } = req.params;
       const file = req.file;
@@ -5731,7 +6838,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to upload profile photo" });
     }
   });
-  app2.post("/api/users/:id/change-password", async (req, res) => {
+  app2.post("/api/users/:id/change-password", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { currentPassword, newPassword } = req.body;
@@ -5955,7 +7062,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error verifying deposit" });
     }
   });
-  app2.post("/api/airtime/purchase", async (req, res) => {
+  app2.post("/api/airtime/purchase", optionalApiKey, async (req, res) => {
     try {
       const { userId, phoneNumber, amount, currency, provider } = req.body;
       console.log(`\u{1F4F1} Airtime purchase request - User: ${userId}, Phone: ${phoneNumber}, Amount: ${amount} ${currency}, Provider: ${provider}`);
@@ -6014,7 +7121,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: errorMessage });
     }
   });
-  app2.post("/api/airtime/claim-bonus", async (req, res) => {
+  app2.post("/api/airtime/claim-bonus", optionalApiKey, async (req, res) => {
     try {
       const { userId } = req.body;
       console.log(`\u{1F381} Airtime bonus claim request - User: ${userId}`);
@@ -6063,7 +7170,79 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error claiming airtime bonus" });
     }
   });
-  app2.get("/api/virtual-card/:userId", async (req, res) => {
+  app2.post("/api/bills/pay", optionalApiKey, async (req, res) => {
+    try {
+      const { userId, provider, meterNumber, accountNumber, amount } = req.body;
+      console.log(`\u{1F4B3} Bill payment request - User: ${userId}, Provider: ${provider}, Amount: ${amount} KES`);
+      if (!userId || !provider || !amount || !meterNumber && !accountNumber) {
+        console.warn(`\u26A0\uFE0F Missing required fields in bill payment request`);
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        console.error(`\u274C User not found: ${userId}`);
+        return res.status(404).json({ message: "User not found" });
+      }
+      console.log(`\u{1F464} User ${user.fullName} - KES Balance: ${user.kesBalance}`);
+      const kesBalance = parseFloat(user.kesBalance || "0");
+      const paymentAmount = parseFloat(amount);
+      if (kesBalance < paymentAmount) {
+        console.warn(`\u26A0\uFE0F Insufficient balance - Required: ${paymentAmount}, Available: ${kesBalance}`);
+        return res.status(400).json({
+          message: "Insufficient KES balance. Please convert USD to KES using the Exchange feature."
+        });
+      }
+      const billPayment = await storage.createBillPayment({
+        userId,
+        provider,
+        meterNumber: meterNumber || null,
+        accountNumber: accountNumber || null,
+        amount: amount.toString(),
+        currency: "KES",
+        status: "completed",
+        fee: "0.00",
+        description: `Bill payment for ${provider}${meterNumber ? ` (${meterNumber})` : accountNumber ? ` (${accountNumber})` : ""}`,
+        reference: `BP-${Date.now()}`,
+        metadata: { meterNumber, accountNumber, provider }
+      });
+      console.log(`\u{1F4BE} Bill payment created: ${billPayment.id}`);
+      await storage.createTransaction({
+        userId,
+        type: "bill_payment",
+        amount: amount.toString(),
+        currency: "KES",
+        status: "completed",
+        fee: "0.00",
+        description: `Bill payment - ${provider}`,
+        reference: billPayment.reference,
+        metadata: { billPaymentId: billPayment.id, provider }
+      });
+      const newKesBalance = kesBalance - paymentAmount;
+      await storage.updateUser(userId, { kesBalance: newKesBalance.toFixed(2) });
+      console.log(`\u2705 Updated user balance: ${kesBalance} -> ${newKesBalance}`);
+      console.log(`\u{1F389} Bill payment completed successfully`);
+      res.json({
+        success: true,
+        message: "Bill payment successful",
+        billPayment,
+        newBalance: newKesBalance.toFixed(2)
+      });
+    } catch (error) {
+      console.error("\u274C Bill payment error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error processing bill payment";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+  app2.get("/api/bills/history/:userId", requireAuth, async (req, res) => {
+    try {
+      const payments = await storage.getBillPaymentsByUserId(req.params.userId);
+      res.json({ payments });
+    } catch (error) {
+      console.error("Error fetching bill payments:", error);
+      res.status(500).json({ message: "Error fetching bill payments" });
+    }
+  });
+  app2.get("/api/virtual-card/:userId", requireAuth, async (req, res) => {
     try {
       const card = await storage.getVirtualCardByUserId(req.params.userId);
       res.json({ card });
@@ -6072,7 +7251,7 @@ async function registerRoutes(app2) {
     }
   });
   const exchangeRateService2 = createExchangeRateService(storage);
-  app2.get("/api/exchange-rates/:from/:to", async (req, res) => {
+  app2.get("/api/exchange-rates/:from/:to", optionalApiKey, async (req, res) => {
     try {
       const { from, to } = req.params;
       const rate = await exchangeRateService2.getExchangeRate(from.toUpperCase(), to.toUpperCase());
@@ -6087,7 +7266,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching exchange rate" });
     }
   });
-  app2.get("/api/exchange-rates/:base", async (req, res) => {
+  app2.get("/api/exchange-rates/:base", optionalApiKey, async (req, res) => {
     try {
       const { base } = req.params;
       const targets = base.toUpperCase() === "USD" ? ["KES"] : ["USD"];
@@ -6102,61 +7281,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching exchange rates" });
     }
   });
-  app2.post("/api/transfer", async (req, res) => {
-    try {
-      const { fromUserId, toUserId, amount, currency, description } = transferSchema.parse(req.body);
-      const fromUser = await storage.getUser(fromUserId);
-      const toUser = await storage.getUser(toUserId);
-      if (!fromUser || !toUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      const currentBalance = parseFloat(fromUser.balance || "0");
-      const transferAmount = parseFloat(amount);
-      if (currentBalance < transferAmount) {
-        return res.status(400).json({ message: "Insufficient balance" });
-      }
-      const sendTransaction = await storage.createTransaction({
-        userId: fromUserId,
-        type: "send",
-        amount,
-        currency,
-        recipientId: toUserId,
-        recipientDetails: { name: toUser.fullName, id: toUserId },
-        status: "completed",
-        fee: "0.00",
-        description: description || `Transfer to ${toUser.fullName}`
-      });
-      const receiveTransaction = await storage.createTransaction({
-        userId: toUserId,
-        type: "receive",
-        amount,
-        currency,
-        recipientId: fromUserId,
-        recipientDetails: { name: fromUser.fullName, id: fromUserId },
-        status: "completed",
-        fee: "0.00",
-        description: description || `Transfer from ${fromUser.fullName}`
-      });
-      await storage.updateUser(fromUserId, {
-        balance: (currentBalance - transferAmount).toFixed(2)
-      });
-      const toBalance = parseFloat(toUser.balance || "0");
-      await storage.updateUser(toUserId, {
-        balance: (toBalance + transferAmount).toFixed(2)
-      });
-      await notificationService.sendTransactionNotification(fromUserId, sendTransaction);
-      await notificationService.sendTransactionNotification(toUserId, receiveTransaction);
-      res.json({
-        sendTransaction,
-        receiveTransaction,
-        message: "Transfer completed successfully"
-      });
-    } catch (error) {
-      console.error("Transfer error:", error);
-      res.status(400).json({ message: "Transfer failed" });
-    }
-  });
-  app2.post("/api/transactions/send", async (req, res) => {
+  app2.post("/api/transactions/send", optionalApiKey, async (req, res) => {
     try {
       const { userId, amount, currency, recipientDetails, targetCurrency } = req.body;
       const user = await storage.getUser(userId);
@@ -6209,7 +7334,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Transaction failed" });
     }
   });
-  app2.post("/api/transactions/receive", async (req, res) => {
+  app2.post("/api/transactions/receive", optionalApiKey, async (req, res) => {
     try {
       const { userId, amount, currency, senderDetails } = req.body;
       const transaction = await storage.createTransaction({
@@ -6228,7 +7353,11 @@ async function registerRoutes(app2) {
       await notificationService.sendTransactionNotification(userId, transaction);
       if (user) {
         const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+        const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
         messagingService3.sendFundReceipt(user.phone, amount, currency, senderDetails.name).catch((err) => console.error("Fund receipt notification error:", err));
+        if (user.email) {
+          mailtrapService3.sendFundReceipt(user.email, user.fullName?.split(" ")[0] || "User", user.fullName?.split(" ")[1] || "", amount, currency, senderDetails.name).catch((err) => console.error("Fund receipt email error:", err));
+        }
       }
       res.json({ transaction, message: "Payment received successfully" });
     } catch (error) {
@@ -6236,7 +7365,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Transaction failed" });
     }
   });
-  app2.get("/api/transactions/:userId", async (req, res) => {
+  app2.get("/api/transactions/:userId", requireAuth, async (req, res) => {
     try {
       const transactions2 = await storage.getTransactionsByUserId(req.params.userId);
       res.json({ transactions: transactions2 });
@@ -6244,7 +7373,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching transactions" });
     }
   });
-  app2.get("/api/transactions/status/:transactionId", async (req, res) => {
+  app2.get("/api/transactions/status/:transactionId", optionalApiKey, async (req, res) => {
     try {
       const transaction = await storage.getTransaction(req.params.transactionId);
       if (!transaction) {
@@ -6255,6 +7384,88 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error fetching transaction status" });
     }
   });
+  app2.post("/api/transactions/export-email", requireAuth, async (req, res) => {
+    try {
+      const { transactions: transactions2 } = req.body;
+      const userId = req.session.userId;
+      if (!transactions2 || !Array.isArray(transactions2)) {
+        return res.status(400).json({ message: "Transactions array required" });
+      }
+      if (transactions2.length === 0) {
+        return res.status(400).json({ message: "No transactions to export" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      let totalSent = 0;
+      let totalReceived = 0;
+      let transactionCount = transactions2.length;
+      transactions2.forEach((txn) => {
+        const amount = parseFloat(txn.amount);
+        if (txn.type === "send" || txn.type === "withdraw") {
+          totalSent += amount;
+        } else if (txn.type === "receive" || txn.type === "deposit") {
+          totalReceived += amount;
+        }
+      });
+      const { generateTransactionPDF: generateTransactionPDF2 } = await Promise.resolve().then(() => (init_pdf_export(), pdf_export_exports));
+      const pdfBuffer = await generateTransactionPDF2(transactions2, {
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone
+      });
+      const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+      const generatedOn = (/* @__PURE__ */ new Date()).toLocaleString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+      const templateVariables = {
+        user_name: user.fullName || user.email,
+        total_transactions: transactionCount.toString(),
+        total_sent: totalSent.toFixed(2),
+        total_received: totalReceived.toFixed(2),
+        generated_on: generatedOn,
+        account_email: user.email
+      };
+      const attachments = [
+        {
+          filename: `transactions-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.pdf`,
+          content: pdfBase64,
+          disposition: "attachment"
+        }
+      ];
+      const { MailtrapService: MailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const mailtrapService3 = new MailtrapService2();
+      const success = await mailtrapService3.sendTemplate(
+        user.email,
+        "307e5609-66bb-4235-8653-27f0d5d74a39",
+        templateVariables,
+        attachments
+      );
+      if (success) {
+        console.log(`\u2705 Transaction export email sent to ${user.email} - ${transactionCount} transactions with PDF`);
+        res.json({
+          success: true,
+          message: "Transaction report sent successfully to your email",
+          summary: {
+            transactionCount,
+            totalSent,
+            totalReceived
+          }
+        });
+      } else {
+        res.status(500).json({ message: "Failed to send export email" });
+      }
+    } catch (error) {
+      console.error("Transaction export error:", error);
+      res.status(500).json({ message: "Error exporting transactions to email" });
+    }
+  });
   app2.post("/api/auth/2fa/setup", async (req, res) => {
     try {
       const { userId } = req.body;
@@ -6263,9 +7474,11 @@ async function registerRoutes(app2) {
         return res.status(404).json({ message: "User not found" });
       }
       const { secret, qrCodeUrl, backupCodes } = twoFactorService.generateSecret(user.email);
-      const qrCode = await twoFactorService.generateQRCode(secret, user.email);
-      await storage.updateUser(userId, { twoFactorSecret: secret });
-      res.json({ qrCode, backupCodes, secret });
+      await storage.updateUser(userId, {
+        twoFactorSecret: secret,
+        twoFactorBackupCodes: JSON.stringify(backupCodes)
+      });
+      res.json({ qrCodeUrl, backupCodes, secret });
     } catch (error) {
       console.error("2FA setup error:", error);
       res.status(500).json({ message: "Error setting up 2FA" });
@@ -6280,7 +7493,10 @@ async function registerRoutes(app2) {
       }
       const isValid = twoFactorService.verifyToken(user.twoFactorSecret, token);
       if (isValid) {
-        await storage.updateUser(userId, { twoFactorEnabled: true });
+        await storage.updateUser(userId, {
+          twoFactorEnabled: true,
+          twoFactorBackupCodes: user.twoFactorBackupCodes || JSON.stringify([])
+        });
         res.json({ success: true, message: "2FA enabled successfully" });
       } else {
         res.status(400).json({ message: "Invalid 2FA token" });
@@ -6290,45 +7506,135 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error verifying 2FA" });
     }
   });
+  app2.post("/api/users/:userId/disable-2fa", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { password } = req.body;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (password) {
+        const isPasswordValid = await bcrypt2.compare(password, user.passwordHash || "");
+        if (!isPasswordValid) {
+          return res.status(401).json({ message: "Invalid password" });
+        }
+      }
+      await storage.updateUser(userId, {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+        twoFactorBackupCodes: null
+      });
+      const updatedUser = await storage.getUser(userId);
+      res.json({ success: true, message: "2FA disabled", user: updatedUser });
+    } catch (error) {
+      console.error("Disable 2FA error:", error);
+      res.status(500).json({ message: "Error disabling 2FA" });
+    }
+  });
   app2.post("/api/auth/biometric/setup", async (req, res) => {
     try {
-      const { userId } = req.body;
-      const challenge = await biometricService.generateChallenge(userId);
-      res.json({ challenge });
+      const { userId, credentialId } = req.body;
+      if (!credentialId) {
+        return res.status(400).json({ message: "Invalid credential" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      await storage.updateUser(userId, {
+        biometricEnabled: true,
+        biometricCredentialId: JSON.stringify({ credentialId })
+      });
+      res.json({ success: true, message: "Biometric authentication enabled" });
     } catch (error) {
       console.error("Biometric setup error:", error);
       res.status(500).json({ message: "Error setting up biometric authentication" });
     }
   });
-  app2.post("/api/auth/biometric/register", async (req, res) => {
-    try {
-      const { userId, credential, challenge } = req.body;
-      const success = await biometricService.registerBiometric(userId, credential);
-      if (success) {
-        await storage.updateUser(userId, { biometricEnabled: true });
-        res.json({ success: true, message: "Biometric authentication enabled" });
-      } else {
-        res.status(400).json({ message: "Failed to register biometric" });
-      }
-    } catch (error) {
-      console.error("Biometric registration error:", error);
-      res.status(500).json({ message: "Error registering biometric" });
-    }
-  });
   app2.post("/api/auth/biometric/verify", async (req, res) => {
     try {
-      const { userId, challenge, response } = req.body;
-      const isValid = await biometricService.verifyBiometric(userId, challenge, response);
-      if (isValid) {
-        res.json({ success: true, message: "Biometric verification successful" });
+      const { userId, credentialId } = req.body;
+      const user = await storage.getUser(userId);
+      if (!user || !user.biometricEnabled) {
+        return res.status(400).json({ message: "Biometric not enabled" });
+      }
+      const storedCred = user.biometricCredentialId ? JSON.parse(user.biometricCredentialId) : null;
+      if (storedCred && storedCred.credentialId === credentialId) {
+        res.json({ success: true, verified: true });
       } else {
-        res.status(400).json({ message: "Biometric verification failed" });
+        res.status(401).json({ success: false, verified: false });
       }
     } catch (error) {
       console.error("Biometric verification error:", error);
       res.status(500).json({ message: "Error verifying biometric" });
     }
   });
+  app2.post("/api/users/:userId/disable-biometric", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      await storage.updateUser(userId, {
+        biometricEnabled: false,
+        biometricCredentialId: null
+      });
+      const updatedUser = await storage.getUser(userId);
+      const { password, ...userResponse } = updatedUser || {};
+      res.json({ success: true, message: "Biometric disabled", user: userResponse });
+    } catch (error) {
+      console.error("Disable biometric error:", error);
+      res.status(500).json({ message: "Error disabling biometric" });
+    }
+  });
+  app2.post("/api/auth/biometric/login", async (req, res) => {
+    try {
+      const { credentialId } = req.body;
+      if (!credentialId) {
+        return res.status(400).json({ message: "Invalid credential" });
+      }
+      const allUsers = await storage.getAllUsers({ limit: 1e3 });
+      const users2 = Array.isArray(allUsers) ? allUsers : allUsers?.users || [];
+      const user = users2.find((u) => {
+        try {
+          const stored = u.biometricCredentialId ? typeof u.biometricCredentialId === "string" ? JSON.parse(u.biometricCredentialId) : u.biometricCredentialId : null;
+          return stored && stored.credentialId === credentialId && u.biometricEnabled;
+        } catch {
+          return false;
+        }
+      });
+      if (!user) {
+        return res.status(401).json({ message: "Biometric credential not found" });
+      }
+      const tokenData = { userId: user.id };
+      const token = Buffer.from(JSON.stringify(tokenData)).toString("base64");
+      const { password, ...userResponse } = user;
+      res.json({ success: true, user: userResponse, token });
+    } catch (error) {
+      console.error("Biometric login error:", error);
+      res.status(500).json({ message: "Error during biometric login" });
+    }
+  });
+  async function verifyBiometricForActivity(req, res, next) {
+    try {
+      const userId = req.user?.id || req.body?.userId;
+      if (!userId) return next();
+      const user = await storage.getUser(userId);
+      if (!user || !user.biometricEnabled) return next();
+      if (req.headers["x-require-biometric"] === "true") {
+        const { biometricVerified } = req.body;
+        if (!biometricVerified) {
+          return res.status(401).json({ message: "Biometric verification required" });
+        }
+      }
+      next();
+    } catch (error) {
+      next();
+    }
+  }
+  app2.use(verifyBiometricForActivity);
   app2.post("/api/notifications/register", async (req, res) => {
     try {
       const { userId, token } = req.body;
@@ -6343,7 +7649,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error registering push notifications" });
     }
   });
-  app2.post("/api/recipients", async (req, res) => {
+  app2.post("/api/recipients", optionalApiKey, async (req, res) => {
     try {
       const recipientData = insertRecipientSchema.parse(req.body);
       const recipient = await storage.createRecipient(recipientData);
@@ -6353,7 +7659,7 @@ async function registerRoutes(app2) {
       res.status(400).json({ message: "Invalid recipient data" });
     }
   });
-  app2.get("/api/recipients/:userId", async (req, res) => {
+  app2.get("/api/recipients/:userId", optionalApiKey, async (req, res) => {
     try {
       const recipients2 = await storage.getRecipientsByUserId(req.params.userId);
       res.json({ recipients: recipients2 });
@@ -6392,6 +7698,7 @@ async function registerRoutes(app2) {
       if (pushNotificationsEnabled !== void 0) updateData.pushNotificationsEnabled = pushNotificationsEnabled;
       if (twoFactorEnabled !== void 0) updateData.twoFactorEnabled = twoFactorEnabled;
       if (biometricEnabled !== void 0) updateData.biometricEnabled = biometricEnabled;
+      if (darkMode !== void 0) updateData.darkMode = darkMode;
       const user = await storage.updateUser(userId, updateData);
       if (user) {
         const { password, ...userResponse } = user;
@@ -6404,7 +7711,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error updating settings" });
     }
   });
-  app2.post("/api/exchange/convert", async (req, res) => {
+  app2.post("/api/exchange/convert", optionalApiKey, async (req, res) => {
     try {
       const { amount, fromCurrency, toCurrency, userId } = req.body;
       const user = await storage.getUser(userId);
@@ -6726,10 +8033,10 @@ async function registerRoutes(app2) {
           const user = await storage.getUser(updatedKyc.userId);
           if (user) {
             const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-            const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+            const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
             Promise.all([
               messagingService3.sendKYCVerified(user.phone),
-              user.email ? mailtrapService2.sendKYCVerified(
+              user.email ? mailtrapService3.sendKYCVerified(
                 user.email,
                 user.firstName || "User",
                 user.lastName || ""
@@ -7045,16 +8352,30 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to send notification" });
     }
   });
-  app2.post("/api/support/tickets", async (req, res) => {
+  app2.post("/api/support/tickets", upload.single("file"), async (req, res) => {
     try {
-      const ticketData = insertSupportTicketSchema.parse(req.body);
       const userId = req.session?.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
+      const { issueType, description } = req.body;
+      if (!issueType || !description) {
+        return res.status(400).json({ message: "Issue type and description required" });
+      }
+      let fileUrl = void 0;
+      let fileName = void 0;
+      if (req.file) {
+        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
+        fileName = req.file.originalname;
+      }
       const ticket = await storage.createSupportTicket({
-        ...ticketData,
-        userId
+        issueType,
+        description,
+        userId,
+        status: "open",
+        priority: "normal",
+        fileUrl,
+        fileName
       });
       res.json({
         message: "Support ticket submitted successfully",
@@ -7068,6 +8389,70 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Submit support ticket error:", error);
       res.status(500).json({ message: "Failed to submit support ticket" });
+    }
+  });
+  app2.get("/api/user/support-tickets", async (req, res) => {
+    try {
+      const userId = req.session?.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      const tickets = await storage.getSupportTicketsByUserId(userId);
+      const ticketsWithReplies = await Promise.all(
+        tickets.map(async (ticket) => {
+          try {
+            const replies = await storage.getTicketReplies(ticket.id);
+            return { ...ticket, replies };
+          } catch (e) {
+            return { ...ticket, replies: [] };
+          }
+        })
+      );
+      res.json({ tickets: ticketsWithReplies });
+    } catch (error) {
+      console.error("Get user tickets error:", error);
+      res.status(500).json({ message: "Failed to fetch support tickets" });
+    }
+  });
+  app2.post("/api/user/support-tickets", upload.single("file"), async (req, res) => {
+    try {
+      const userId = req.session?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const { issueType, description } = req.body;
+      if (!issueType || !description) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      const ticket = await storage.createSupportTicket({ userId, issueType, description, status: "open", priority: "medium" });
+      res.json({ message: "Ticket created", ticket });
+    } catch (error) {
+      console.error("Create user ticket error:", error);
+      res.status(500).json({ message: "Failed to create ticket" });
+    }
+  });
+  app2.post("/api/user/support-tickets/:id/reply", upload.single("file"), async (req, res) => {
+    try {
+      const userId = req.session?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const { content } = req.body;
+      if (!content) return res.status(400).json({ message: "Reply content required" });
+      let fileUrl = void 0;
+      let fileName = void 0;
+      if (req.file) {
+        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
+        fileName = req.file.originalname;
+      }
+      const reply = await storage.createTicketReply({
+        ticketId: req.params.id,
+        userId,
+        senderType: "user",
+        content,
+        fileUrl,
+        fileName
+      });
+      res.json({ message: "Reply sent", reply });
+    } catch (error) {
+      console.error("Send reply error:", error);
+      res.status(500).json({ message: "Failed to send reply" });
     }
   });
   app2.get("/api/support/tickets", async (req, res) => {
@@ -7092,7 +8477,31 @@ async function registerRoutes(app2) {
         page: page ? parseInt(page) : void 0,
         limit: limit ? parseInt(limit) : void 0
       });
-      res.json(result);
+      const ticketsWithDetails = await Promise.all(
+        result.tickets.map(async (ticket) => {
+          try {
+            const user = await storage.getUser(ticket.userId);
+            let replies = [];
+            try {
+              replies = await storage.getTicketReplies(ticket.id);
+            } catch (e) {
+              replies = [];
+            }
+            return {
+              ...ticket,
+              user: user ? { fullName: user.fullName, email: user.email, phone: user.phone } : void 0,
+              replies
+            };
+          } catch (e) {
+            return {
+              ...ticket,
+              user: void 0,
+              replies: []
+            };
+          }
+        })
+      );
+      res.json({ ...result, tickets: ticketsWithDetails });
     } catch (error) {
       console.error("Get admin tickets error:", error);
       res.status(500).json({ message: "Failed to fetch support tickets" });
@@ -7193,6 +8602,36 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Cleanup ticket notifications error:", error);
       res.status(500).json({ message: "Failed to cleanup ticket notifications" });
+    }
+  });
+  app2.post("/api/admin/support-tickets/:id/reply", requireAdminAuth, upload.single("file"), async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content) return res.status(400).json({ message: "Reply content required" });
+      let fileUrl = void 0;
+      let fileName = void 0;
+      if (req.file) {
+        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
+        fileName = req.file.originalname;
+      }
+      const reply = await storage.createTicketReply({
+        ticketId: req.params.id,
+        userId: req.session?.admin?.id || "",
+        senderType: "admin",
+        content,
+        fileUrl,
+        fileName
+      });
+      await storage.createAdminLog({
+        adminId: req.session?.admin?.id || null,
+        action: "reply_support_ticket",
+        details: `Admin replied to ticket ${req.params.id}`,
+        targetId: req.params.id
+      });
+      res.json({ message: "Reply sent", reply });
+    } catch (error) {
+      console.error("Send admin reply error:", error);
+      res.status(500).json({ message: "Failed to send reply" });
     }
   });
   app2.put("/api/admin/support/tickets/:id/assign", requireAdminAuth, async (req, res) => {
@@ -7462,8 +8901,12 @@ async function registerRoutes(app2) {
           });
           await storage.updateUser(id, { hasVirtualCard: true });
           const { messagingService: issueMessaging } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+          const { mailtrapService: issueMailtrap } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
           const cardLastFour = result.cardNumber.slice(-4);
           issueMessaging.sendCardActivation(user.phone, cardLastFour).catch((err) => console.error("Card activation notification error:", err));
+          if (user.email) {
+            issueMailtrap.sendCardActivation(user.email, user.fullName?.split(" ")[0] || "User", user.fullName?.split(" ")[1] || "", cardLastFour).catch((err) => console.error("Card activation email error:", err));
+          }
           break;
         case "activate":
         case "freeze":
@@ -7481,8 +8924,12 @@ async function registerRoutes(app2) {
           result = await storage.updateVirtualCard(card.id, { status: newStatus });
           if (action === "activate") {
             const { messagingService: activateMessaging } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+            const { mailtrapService: activateMailtrap } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
             const activateCardLastFour = card.cardNumber.slice(-4);
             activateMessaging.sendCardActivation(user.phone, activateCardLastFour).catch((err) => console.error("Card activation notification error:", err));
+            if (user.email) {
+              activateMailtrap.sendCardActivation(user.email, user.fullName?.split(" ")[0] || "User", user.fullName?.split(" ")[1] || "", activateCardLastFour).catch((err) => console.error("Card activation email error:", err));
+            }
           }
           await storage.createAdminLog({
             adminId: req.session.admin?.id || null,
@@ -7699,7 +9146,78 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete API configuration" });
     }
   });
-  app2.get("/api/users/:id", async (req, res) => {
+  app2.get("/api/users/search", requireAuth, async (req, res) => {
+    try {
+      const { q: searchQuery } = req.query;
+      const currentUserId = req.session?.userId;
+      console.log("=== USER SEARCH DEBUG ===");
+      console.log("Search Query:", { q: searchQuery, type: typeof searchQuery });
+      console.log("Current User ID:", currentUserId);
+      console.log("Query Parameter received:", req.query);
+      if (!searchQuery || typeof searchQuery !== "string" || searchQuery.length < 2) {
+        console.log("Query too short or invalid, returning empty array");
+        return res.json({ users: [] });
+      }
+      const allUsers = await storage.getAllUsers();
+      console.log(`[Search] Total users in database: ${allUsers.length}`);
+      if (allUsers.length === 0) {
+        console.warn("[Search] \u26A0\uFE0F No users found in database!");
+      } else {
+        console.log("[Search] Sample users:", allUsers.slice(0, 3).map((u) => ({
+          id: u.id,
+          fullName: u.fullName,
+          email: u.email
+        })));
+      }
+      const query = searchQuery.toLowerCase().trim();
+      console.log(`[Search] Searching for: "${query}"`);
+      const filteredUsers = allUsers.filter((user, idx) => {
+        if (user.id === currentUserId) {
+          console.log(`[Search] Skipping current user: ${user.email}`);
+          return false;
+        }
+        if (user.isAdmin) {
+          console.log(`[Search] Skipping admin user: ${user.email}`);
+          return false;
+        }
+        const fullName = (user.fullName || "").toLowerCase().trim();
+        const email = (user.email || "").toLowerCase().trim();
+        const phone = (user.phone || "").trim();
+        const normalizeToStandardPhone = (p) => {
+          if (!p) return "";
+          const cleaned = p.replace(/[\+\-\s()]/g, "");
+          if (cleaned.startsWith("254")) {
+            return cleaned.substring(3);
+          } else if (cleaned.startsWith("0")) {
+            return cleaned.substring(1);
+          }
+          return cleaned;
+        };
+        const normalizedUserPhone = normalizeToStandardPhone(phone);
+        const normalizedSearchPhone = normalizeToStandardPhone(searchQuery.trim());
+        const emailMatch = email.includes(query);
+        const nameMatch = fullName.includes(query) || fullName.split(" ").some((part) => part.toLowerCase().startsWith(query));
+        const phoneMatch = normalizedUserPhone && normalizedSearchPhone && (normalizedUserPhone === normalizedSearchPhone || normalizedUserPhone.includes(normalizedSearchPhone) || normalizedSearchPhone.includes(normalizedUserPhone));
+        const isMatch = emailMatch || nameMatch || phoneMatch;
+        if (isMatch) {
+          console.log(`[Search] \u2713 Match found: ${email} | fullName: ${fullName} | emailMatch: ${emailMatch} | nameMatch: ${nameMatch} | phoneMatch: ${phoneMatch}`);
+        }
+        return isMatch;
+      }).slice(0, 10).map((user) => ({
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone
+      }));
+      console.log(`[Search] Final results: found ${filteredUsers.length} matching users`);
+      console.log("[Search] Filtered users:", filteredUsers);
+      res.json({ users: filteredUsers });
+    } catch (error) {
+      console.error("[Search] Error searching users:", error);
+      res.status(500).json({ message: "Error searching users" });
+    }
+  });
+  app2.get("/api/users/:id", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -7711,7 +9229,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to retrieve user data" });
     }
   });
-  app2.get("/api/users/:id/login-history", async (req, res) => {
+  app2.get("/api/users/:id/login-history", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit) : 10;
@@ -7722,7 +9240,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to retrieve login history" });
     }
   });
-  app2.get("/api/analytics/:userId/spending", async (req, res) => {
+  app2.get("/api/analytics/:userId/spending", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const { period = "month" } = req.query;
@@ -8239,6 +9757,11 @@ async function registerRoutes(app2) {
         whatsapp: !!whatsappAccessToken && !!whatsappPhoneNumberId,
         wabaId: !!whatsappBusinessAccountId
       });
+      if (whatsappAccessToken && whatsappPhoneNumberId) {
+        const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+        await whatsappService2.refreshCredentials();
+        console.log("[WhatsApp] Credentials refreshed after admin update");
+      }
       res.json({
         success: true,
         message: "Messaging settings updated successfully"
@@ -8566,86 +10089,47 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Error sending custom email" });
     }
   });
-  app2.get("/api/users/search", requireAuth, async (req, res) => {
-    try {
-      const { q: searchQuery } = req.query;
-      if (!searchQuery || typeof searchQuery !== "string" || searchQuery.length < 2) {
-        return res.json({ users: [] });
-      }
-      const users2 = await storage.getAllUsers();
-      const currentUserId = req.session.userId;
-      console.log(`User search initiated by ${currentUserId} for query: "${searchQuery}"`);
-      console.log(`Total users in database: ${users2.length}`);
-      const filteredUsers = users2.filter((user) => {
-        if (user.id === currentUserId || user.isAdmin) {
-          return false;
-        }
-        const query = searchQuery.toLowerCase().trim();
-        const fullName = (user.fullName || "").toLowerCase().trim();
-        const email = (user.email || "").toLowerCase().trim();
-        const phone = (user.phone || "").trim();
-        const normalizeToStandardPhone = (p) => {
-          if (!p) return "";
-          const cleaned = p.replace(/[\+\-\s()]/g, "");
-          if (cleaned.startsWith("254")) {
-            return cleaned.substring(3);
-          } else if (cleaned.startsWith("0")) {
-            return cleaned.substring(1);
-          }
-          return cleaned;
-        };
-        const normalizedUserPhone = normalizeToStandardPhone(phone);
-        const normalizedSearchPhone = normalizeToStandardPhone(searchQuery.trim());
-        const emailMatch = email.includes(query);
-        const nameMatch = fullName.includes(query) || fullName.split(" ").some((part) => part.toLowerCase().startsWith(query));
-        const phoneMatch = normalizedUserPhone && normalizedSearchPhone && (normalizedUserPhone === normalizedSearchPhone || normalizedUserPhone.includes(normalizedSearchPhone) || normalizedSearchPhone.includes(normalizedUserPhone));
-        return emailMatch || nameMatch || phoneMatch;
-      }).slice(0, 10).map((user) => ({
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone
-      }));
-      console.log(`User search for "${searchQuery}": found ${filteredUsers.length} matching users`);
-      res.json({ users: filteredUsers });
-    } catch (error) {
-      console.error("User search error:", error);
-      res.status(500).json({ message: "Error searching users" });
-    }
-  });
-  app2.post("/api/transfer", async (req, res) => {
+  app2.post("/api/transfer", requireAuth, async (req, res) => {
     try {
       const { fromUserId, toUserId, amount, currency, description } = req.body;
+      console.log("=== TRANSFER DEBUG ===");
+      console.log("Request Body:", { fromUserId, toUserId, amount, currency });
       if (!fromUserId || !toUserId || !amount || !currency) {
+        console.error("[Transfer] Missing required fields:", { fromUserId: !!fromUserId, toUserId: !!toUserId, amount: !!amount, currency: !!currency });
         return res.status(400).json({ message: "Missing required fields" });
       }
       const transferAmount = parseFloat(amount);
       if (transferAmount <= 0) {
+        console.error("[Transfer] Invalid amount:", transferAmount);
         return res.status(400).json({ message: "Invalid transfer amount" });
       }
+      console.log("[Transfer] Fetching users...");
       const fromUser = await storage.getUser(fromUserId);
       const toUser = await storage.getUser(toUserId);
+      console.log("[Transfer] From User:", { found: !!fromUser, balance: fromUser?.balance, email: fromUser?.email });
+      console.log("[Transfer] To User:", { found: !!toUser, balance: toUser?.balance, email: toUser?.email });
       if (!fromUser || !toUser) {
+        console.error("[Transfer] User not found - fromUser:", !!fromUser, "toUser:", !!toUser);
         return res.status(404).json({ message: "User not found" });
       }
-      const senderTransactions = await storage.getTransactionsByUserId(fromUserId);
-      const senderBalance = senderTransactions.reduce((balance, txn) => {
-        if (txn.status === "completed") {
-          if (txn.type === "receive" || txn.type === "deposit") {
-            return balance + parseFloat(txn.amount);
-          } else if (txn.type === "send" || txn.type === "withdraw") {
-            return balance - parseFloat(txn.amount) - parseFloat(txn.fee || "0");
-          }
-        }
-        return balance;
-      }, parseFloat(fromUser.balance || "0"));
+      const senderBalance = parseFloat(fromUser.balance || "0");
+      const recipientBalance = parseFloat(toUser.balance || "0");
       if (senderBalance < transferAmount) {
+        console.error("[Transfer] Insufficient balance:", { senderBalance, transferAmount });
         return res.status(400).json({ message: "Insufficient balance" });
       }
+      const senderNewBalance = senderBalance - transferAmount;
+      const recipientNewBalance = recipientBalance + transferAmount;
+      console.log("[Transfer] Balance calculation:", {
+        senderOld: senderBalance,
+        senderNew: senderNewBalance,
+        recipientOld: recipientBalance,
+        recipientNew: recipientNewBalance,
+        transferAmount
+      });
       const now = (/* @__PURE__ */ new Date()).toISOString();
       const transferId = storage.generateTransactionReference();
-      const senderTransaction = {
-        id: storage.generateTransactionReference(),
+      const senderTransaction = await storage.createTransaction({
         userId: fromUserId,
         type: "send",
         amount,
@@ -8655,12 +10139,9 @@ async function registerRoutes(app2) {
         recipient: toUser.fullName,
         recipientEmail: toUser.email,
         transferId,
-        createdAt: now,
         fee: "0"
-        // Free transfers between GreenPay users
-      };
-      const recipientTransaction = {
-        id: storage.generateTransactionReference(),
+      });
+      const recipientTransaction = await storage.createTransaction({
         userId: toUserId,
         type: "receive",
         amount,
@@ -8670,15 +10151,49 @@ async function registerRoutes(app2) {
         sender: fromUser.fullName,
         senderEmail: fromUser.email,
         transferId,
-        createdAt: now,
         fee: "0"
-      };
-      await storage.createTransaction(senderTransaction);
-      await storage.createTransaction(recipientTransaction);
+      });
+      console.log("[Transfer] Updating balances - Sender:", senderNewBalance, "Recipient:", recipientNewBalance);
+      await storage.updateUser(fromUserId, { balance: senderNewBalance.toFixed(2) });
+      await storage.updateUser(toUserId, { balance: recipientNewBalance.toFixed(2) });
+      const { MailtrapService: MailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const mailtrapService3 = new MailtrapService2();
+      const transactionDate = (/* @__PURE__ */ new Date()).toISOString();
+      mailtrapService3.sendTemplate(
+        toUser.email,
+        "5e2a2ec4-37fb-4178-96c4-598977065f9c",
+        {
+          sender: fromUser.fullName,
+          amount,
+          currency,
+          date: transactionDate,
+          transaction_id: recipientTransaction.id
+        }
+      ).then((success) => {
+        if (success) {
+          console.log(`\u2705 Fund receipt email sent to ${toUser.email} - Transaction ID: ${recipientTransaction.id}, Sender: ${fromUser.fullName}, Amount: ${amount} ${currency}, Date: ${transactionDate}`);
+        } else {
+          console.warn(`\u26A0\uFE0F Failed to send fund receipt email to ${toUser.email}`);
+        }
+      }).catch((err) => {
+        console.error("Email sending error:", err);
+      });
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      messagingService3.sendMessage(
+        fromUser.phone,
+        `You sent $${transferAmount} to ${toUser.fullName}. Your new balance: $${senderNewBalance.toFixed(2)}`
+      ).catch((err) => console.error("Notification error:", err));
+      messagingService3.sendMessage(
+        toUser.phone,
+        `You received $${transferAmount} from ${fromUser.fullName}. Your new balance: $${recipientNewBalance.toFixed(2)}`
+      ).catch((err) => console.error("Notification error:", err));
+      console.log(`[Transfer] Completed: $${transferAmount} from ${fromUser.fullName} (${fromUserId}) to ${toUser.fullName} (${toUserId})`);
       res.json({
         success: true,
         transferId,
-        message: "Transfer completed successfully"
+        message: "Transfer completed successfully",
+        senderNewBalance: senderNewBalance.toFixed(2),
+        recipientNewBalance: recipientNewBalance.toFixed(2)
       });
     } catch (error) {
       console.error("Transfer error:", error);
@@ -8923,6 +10438,163 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Error converting USD to KES:", error);
       res.status(500).json({ message: "Error converting currency" });
+    }
+  });
+  app2.post("/api/log-activity", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const { activityType, page, action, description, status, metadata } = req.body;
+      if (!userId || !activityType) {
+        return res.status(400).json({ message: "userId and activityType required" });
+      }
+      const activity = await storage.createUserActivity({
+        userId,
+        activityType,
+        page: page || null,
+        action: action || null,
+        description: description || null,
+        status: status || "success",
+        metadata: metadata || null,
+        ipAddress: req.ip || null,
+        userAgent: req.headers["user-agent"] || null
+      });
+      res.json({ success: true, activity });
+    } catch (error) {
+      console.error("Error logging activity:", error);
+      res.status(500).json({ message: "Error logging activity" });
+    }
+  });
+  app2.get("/api/admin/users/:userId/activity", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const hours = req.query.hours ? parseInt(req.query.hours) : 48;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const now = /* @__PURE__ */ new Date();
+      const timeWindowMs = hours * 60 * 60 * 1e3;
+      const cutoffTime = new Date(now.getTime() - timeWindowMs);
+      const transactions2 = await storage.getTransactionsByUserId(userId);
+      const loginHistory2 = await storage.getLoginHistoryByUserId(userId, 100);
+      const kyc = await storage.getKycByUserId(userId);
+      const virtualCard = await storage.getVirtualCardByUserId(userId);
+      const userActivities = await storage.getUserActivitiesByUserId(userId, 200);
+      const activities = [];
+      userActivities.forEach((act) => {
+        const actDate = new Date(act.createdAt);
+        if (actDate >= cutoffTime) {
+          const typeIcons = {
+            page_visit: "\u{1F4C4}",
+            action: "\u26A1",
+            attempt: "\u{1F504}",
+            form_submission: "\u{1F4DD}"
+          };
+          activities.push({
+            id: act.id,
+            type: act.activityType,
+            action: act.description || `${act.action} on ${act.page}`,
+            details: {
+              page: act.page,
+              action: act.action,
+              status: act.status,
+              metadata: act.metadata,
+              ipAddress: act.ipAddress,
+              userAgent: act.userAgent
+            },
+            timestamp: actDate,
+            icon: typeIcons[act.activityType] || "\u2713"
+          });
+        }
+      });
+      transactions2.forEach((txn) => {
+        const txnDate = new Date(txn.createdAt);
+        if (txnDate >= cutoffTime) {
+          activities.push({
+            id: txn.id,
+            type: txn.type === "send" ? "transfer_sent" : txn.type === "receive" ? "transfer_received" : txn.type,
+            action: txn.type === "send" ? `Sent $${txn.amount} ${txn.currency}` : txn.type === "receive" ? `Received $${txn.amount} ${txn.currency}` : `${txn.type}: $${txn.amount}`,
+            details: {
+              amount: txn.amount,
+              currency: txn.currency,
+              recipient: txn.recipient || txn.sender,
+              status: txn.status,
+              description: txn.description
+            },
+            timestamp: txnDate,
+            icon: txn.type === "send" ? "\u{1F4E4}" : txn.type === "receive" ? "\u{1F4E5}" : "\u{1F4B3}"
+          });
+        }
+      });
+      loginHistory2.forEach((login) => {
+        const loginDate = new Date(login.createdAt);
+        if (loginDate >= cutoffTime) {
+          activities.push({
+            id: login.id,
+            type: "login",
+            action: `Login from ${login.location || "Unknown Location"}`,
+            details: {
+              device: login.deviceType,
+              browser: login.browser,
+              ipAddress: login.ipAddress,
+              location: login.location,
+              status: login.status
+            },
+            timestamp: loginDate,
+            icon: "\u{1F510}"
+          });
+        }
+      });
+      if (kyc) {
+        const kycDate = new Date(kyc.updatedAt || kyc.createdAt);
+        if (kycDate >= cutoffTime) {
+          activities.push({
+            id: kyc.id,
+            type: "kyc",
+            action: `KYC Status: ${kyc.status}`,
+            details: {
+              documentType: kyc.documentType,
+              status: kyc.status,
+              verificationNotes: kyc.verificationNotes
+            },
+            timestamp: kycDate,
+            icon: "\u{1F4CB}"
+          });
+        }
+      }
+      if (virtualCard) {
+        const cardDate = new Date(virtualCard.purchaseDate || virtualCard.updatedAt);
+        if (cardDate >= cutoffTime) {
+          activities.push({
+            id: virtualCard.id,
+            type: "card_purchase",
+            action: `Virtual Card Purchase - $${virtualCard.purchaseAmount}`,
+            details: {
+              cardNumber: virtualCard.cardNumber,
+              status: virtualCard.status,
+              balance: virtualCard.balance
+            },
+            timestamp: cardDate,
+            icon: "\u{1F4B3}"
+          });
+        }
+      }
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      res.json({
+        userId,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          phone: user.phone
+        },
+        timeWindow: `${hours} hours`,
+        totalActivities: activities.length,
+        activities
+      });
+    } catch (error) {
+      console.error("Error fetching user activity:", error);
+      res.status(500).json({ message: "Error fetching user activity" });
     }
   });
   app2.post("/api/admin/login-as-user", async (req, res) => {
@@ -9261,6 +10933,221 @@ async function registerRoutes(app2) {
       });
     }
   });
+  app2.get("/api/admin/database/check", requireAdminAuth, async (req, res) => {
+    try {
+      const result = await db.select().from(users).limit(1);
+      res.json({ connected: true, message: "Database connection successful" });
+    } catch (error) {
+      console.error("Database connection check failed:", error);
+      res.status(500).json({
+        connected: false,
+        error: "Failed to connect to database",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  app2.get("/api/admin/user-activities", requireAdminAuth, async (req, res) => {
+    try {
+      const { userId } = req.query;
+      let query = db.select().from(systemLogs);
+      if (userId && typeof userId === "string") {
+        query = query.where((logs) => logs.source.like(`%:${userId}%`));
+      }
+      const activities = await query.orderBy(desc2(systemLogs.timestamp)).limit(500);
+      const formattedActivities = activities.map((log2) => {
+        const data = log2.data;
+        const source = log2.source || "";
+        const userId2 = source.split(":")[1] || "system";
+        return {
+          id: log2.id,
+          userId: userId2,
+          level: log2.level,
+          message: log2.message,
+          source: log2.source,
+          timestamp: log2.timestamp,
+          data
+        };
+      });
+      res.json(formattedActivities);
+    } catch (error) {
+      console.error("Failed to fetch user activities:", error);
+      res.status(500).json({ error: "Failed to fetch activities" });
+    }
+  });
+  const backups = /* @__PURE__ */ new Map();
+  app2.post("/api/admin/database/backup", requireAdminAuth, async (req, res) => {
+    try {
+      const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+      const backupId = `backup_${timestamp2}_${Math.random().toString(36).substr(2, 9)}`;
+      const tables = {
+        users: await db.select().from(users),
+        admins: await db.select().from(admins),
+        kycDocuments: await db.select().from(kycDocuments),
+        virtualCards: await db.select().from(virtualCards),
+        recipients: await db.select().from(recipients),
+        transactions: await db.select().from(transactions),
+        paymentRequests: await db.select().from(paymentRequests),
+        chatMessages: await db.select().from(chatMessages),
+        notifications: await db.select().from(notifications),
+        supportTickets: await db.select().from(supportTickets),
+        conversations: await db.select().from(conversations),
+        messages: await db.select().from(messages),
+        adminLogs: await db.select().from(adminLogs),
+        systemLogs: await db.select().from(systemLogs),
+        systemSettings: await db.select().from(systemSettings),
+        apiConfigurations: await db.select().from(apiConfigurations)
+      };
+      const backup = {
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        version: "1.0",
+        tables: Object.keys(tables).reduce((acc, table) => {
+          acc[table] = {
+            recordCount: tables[table].length,
+            columns: Object.keys(tables[table][0] || {})
+          };
+          return acc;
+        }, {}),
+        data: tables
+      };
+      const jsonData = JSON.stringify(backup, null, 2);
+      const buffer = Buffer.from(jsonData);
+      const filename = `greenpay_backup_${timestamp2}.json`;
+      backups.set(backupId, {
+        id: backupId,
+        filename,
+        data: buffer,
+        createdAt: /* @__PURE__ */ new Date()
+      });
+      const totalRecords = Object.values(tables).reduce((sum2, arr) => sum2 + arr.length, 0);
+      res.json({
+        success: true,
+        backup: {
+          id: backupId,
+          filename,
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          size: buffer.length,
+          tablesCount: Object.keys(tables).length,
+          recordsCount: totalRecords
+        }
+      });
+    } catch (error) {
+      console.error("Database backup error:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to create backup"
+      });
+    }
+  });
+  app2.get("/api/admin/database/backup/:id/download", requireAdminAuth, async (req, res) => {
+    try {
+      const backup = backups.get(req.params.id);
+      if (!backup) {
+        return res.status(404).json({ error: "Backup not found" });
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", `attachment; filename="${backup.filename}"`);
+      res.send(backup.data);
+    } catch (error) {
+      console.error("Download backup error:", error);
+      res.status(500).json({ error: "Failed to download backup" });
+    }
+  });
+  const performDatabaseRestore = async (fileBuffer) => {
+    const backup = JSON.parse(fileBuffer.toString());
+    if (!backup.data || !backup.version) {
+      throw new Error("Invalid backup file format");
+    }
+    const recordsRestored = {};
+    if (backup.data.users?.length > 0) {
+      for (const user of backup.data.users) {
+        try {
+          await db.insert(users).values(user).onConflictDoUpdate({
+            target: users.id,
+            set: user
+          });
+        } catch (err) {
+          console.log("User insert/update skipped (may already exist)");
+        }
+      }
+      recordsRestored.users = backup.data.users.length;
+    }
+    const tableMap = {
+      admins,
+      kycDocuments,
+      virtualCards,
+      recipients,
+      transactions,
+      paymentRequests,
+      chatMessages,
+      notifications,
+      supportTickets,
+      conversations,
+      messages,
+      adminLogs,
+      systemLogs,
+      systemSettings,
+      apiConfigurations
+    };
+    for (const [tableName, tableData] of Object.entries(backup.data)) {
+      if (tableName === "users" || !Array.isArray(tableData)) continue;
+      const table = tableMap[tableName];
+      if (!table || tableData.length === 0) continue;
+      try {
+        for (const record of tableData) {
+          try {
+            await db.insert(table).values(record).onConflictDoUpdate({
+              target: table.id,
+              set: record
+            });
+          } catch (err) {
+            console.log(`Record insert/update skipped for ${tableName}`);
+          }
+        }
+        recordsRestored[tableName] = tableData.length;
+      } catch (err) {
+        console.warn(`Failed to restore ${tableName}:`, err);
+      }
+    }
+    return recordsRestored;
+  };
+  app2.post("/api/admin/database/restore", requireAdminAuth, backupUpload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+      const recordsRestored = await performDatabaseRestore(req.file.buffer);
+      res.json({
+        success: true,
+        message: "Database restored successfully",
+        recordsRestored
+      });
+    } catch (error) {
+      console.error("Database restore error:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to restore database"
+      });
+    }
+  });
+  app2.post("/api/admin/database/restore-public", backupUpload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+      const recordsRestored = await performDatabaseRestore(req.file.buffer);
+      res.json({
+        success: true,
+        message: "Database restored successfully",
+        recordsRestored
+      });
+    } catch (error) {
+      console.error("Database restore error (public):", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to restore database"
+      });
+    }
+  });
   app2.get("/sitemap.xml", async (req, res) => {
     try {
       const baseUrl = "https://greenpay.world";
@@ -9422,6 +11309,28 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       }
     });
   });
+  app2.get("/api/admin/whatsapp/template-parameters/:templateName", requireAdminAuth, async (req, res) => {
+    try {
+      const { templateName } = req.params;
+      const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+      const paramInfo = await whatsappService2.getTemplateParameters(templateName);
+      const template = await whatsappService2.getTemplateDetails(templateName);
+      res.json({
+        templateName,
+        status: template?.status || "UNKNOWN",
+        language: paramInfo.language,
+        requiredParameters: paramInfo.required,
+        parameterCount: paramInfo.paramCount,
+        parameterLabels: paramInfo.required.map((p, i) => `${p} (position ${i + 1})`),
+        description: `Template requires ${paramInfo.paramCount} parameters: ${paramInfo.required.join(", ") || "none"}`,
+        components: paramInfo.components,
+        source: "meta"
+      });
+    } catch (error) {
+      console.error("[Admin] Get template parameters error:", error);
+      res.status(500).json({ message: "Failed to get template parameters from Meta" });
+    }
+  });
   app2.post("/api/admin/whatsapp/send-template", requireAdminAuth, async (req, res) => {
     try {
       const { userId, templateName, parameters } = req.body;
@@ -9431,30 +11340,50 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       }
       const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
       const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      const templates = await whatsappService2.fetchTemplatesFromMeta();
+      const template = templates.find((t) => t.name === templateName);
+      if (!template) {
+        return res.status(404).json({ message: `Template "${templateName}" not found in Meta` });
+      }
+      if (template.status !== "APPROVED") {
+        return res.status(400).json({
+          message: `Template "${templateName}" is not approved. Status: ${template.status}`,
+          status: template.status
+        });
+      }
       let success = false;
+      let errorMsg;
       switch (templateName) {
         case "otp":
           const otpCode = parameters?.code || messagingService3.generateOTP();
-          const otpResult = await whatsappService2.sendOTP(user.phone, otpCode);
-          success = otpResult;
+          success = await whatsappService2.sendOTP(user.phone, otpCode);
+          console.log("[Admin] OTP template sent", { userId, templateName, success });
           break;
         case "password_reset":
           const pwdCode = parameters?.code || messagingService3.generateOTP();
           success = await whatsappService2.sendPasswordReset(user.phone, pwdCode);
+          console.log("[Admin] Password reset template sent", { userId, templateName, success });
+          break;
+        case "create_acc":
+          success = await whatsappService2.sendAccountCreation(user.phone, user.fullName || "User");
+          console.log("[Admin] Create account template sent", { userId, templateName, success });
           break;
         case "kyc_verified":
           success = await whatsappService2.sendKYCVerified(user.phone);
+          console.log("[Admin] KYC verified template sent", { userId, templateName, success });
           break;
         case "card_activation":
           success = await whatsappService2.sendCardActivation(user.phone, parameters?.lastFour || "0000");
+          console.log("[Admin] Card activation template sent", { userId, templateName, success });
           break;
         case "fund_receipt":
           success = await whatsappService2.sendFundReceipt(
             user.phone,
+            parameters?.currency || "KES",
             parameters?.amount || "0",
-            parameters?.currency || "USD",
-            parameters?.sender || "Unknown"
+            parameters?.sender || "Unknown Sender"
           );
+          console.log("[Admin] Fund receipt template sent", { userId, templateName, success });
           break;
         case "login_alert":
           success = await whatsappService2.sendLoginAlert(
@@ -9462,9 +11391,49 @@ Sitemap: https://greenpay.world/sitemap.xml`;
             parameters?.location || "Unknown",
             parameters?.ip || "Unknown IP"
           );
+          console.log("[Admin] Login alert template sent", { userId, templateName, success });
+          break;
+        // Generic handler for any other approved template
+        default:
+          const validation = await whatsappService2.validateTemplateParameters(templateName, parameters || {});
+          if (!validation.valid) {
+            return res.status(400).json({
+              message: validation.error || "Parameter validation failed",
+              templateName,
+              required: validation.required,
+              provided: validation.provided,
+              hint: `Provide ${validation.required} parameters for this template`
+            });
+          }
+          const result = await whatsappService2.sendTemplateGeneric(user.phone, templateName, parameters || {});
+          success = result.success;
+          errorMsg = result.error;
+          if (!success && result.error) {
+            console.error("[Admin] Generic template send error:", { userId, templateName, error: result.error });
+          } else {
+            console.log("[Admin] Generic template sent", { userId, templateName, success });
+          }
           break;
       }
-      res.json({ success, templateName, userId, message: success ? "Template sent successfully" : "Template send failed" });
+      if (success) {
+        return res.json({
+          success: true,
+          templateName,
+          userId,
+          message: "Template delivered to WhatsApp",
+          templateStatus: template.status,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          templateName,
+          userId,
+          message: errorMsg || "Template delivery failed",
+          templateStatus: template.status,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        });
+      }
     } catch (error) {
       console.error("[Admin] Send template error:", error);
       res.status(500).json({ message: "Failed to send template", error: String(error) });
@@ -9497,8 +11466,8 @@ Sitemap: https://greenpay.world/sitemap.xml`;
         description: "Mailtrap API key for email sending"
       });
       process.env.MAILTRAP_API_KEY = trimmedKey;
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
-      await mailtrapService2.refreshApiKey();
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      await mailtrapService3.refreshApiKey();
       res.json({ success: true, message: "Mailtrap API key saved successfully" });
     } catch (error) {
       console.error("Error saving Mailtrap settings:", error);
@@ -9511,8 +11480,8 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
-      const success = await mailtrapService2.sendCustomTemplate(email, "placeholder-test", {
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const success = await mailtrapService3.sendCustomTemplate(email, "placeholder-test", {
         first_name: "Test",
         last_name: "User"
       });
@@ -9532,8 +11501,8 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       if (!email || !templateUuid) {
         return res.status(400).json({ message: "Email and template UUID are required" });
       }
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
-      const success = await mailtrapService2.sendTemplate(email, templateUuid, parameters || {});
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const success = await mailtrapService3.sendTemplate(email, templateUuid, parameters || {});
       res.json({
         success,
         message: success ? "Template sent successfully" : "Failed to send template"
@@ -9573,8 +11542,8 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       if (!user.email) {
         return res.status(400).json({ message: "User does not have an email address" });
       }
-      const { mailtrapService: mailtrapService2 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
-      const success = await mailtrapService2.sendTemplate(user.email, templateUuid, parameters || {});
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const success = await mailtrapService3.sendTemplate(user.email, templateUuid, parameters || {});
       res.json({
         success,
         message: success ? "Template email sent to user successfully" : "Failed to send template to user"
@@ -9582,6 +11551,492 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     } catch (error) {
       console.error("[Admin] Send template to user error:", error);
       res.status(500).json({ message: "Failed to send template to user" });
+    }
+  });
+  app2.get("/api/whatsapp/webhook", async (req, res) => {
+    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "greenpay_verify_token_2024";
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+    if (mode === "subscribe" && token === verifyToken) {
+      console.log("[WhatsApp] \u2713 Webhook verified");
+      res.status(200).send(challenge);
+    } else {
+      console.error("[WhatsApp] \u2717 Webhook verification failed");
+      res.status(403).send("Forbidden");
+    }
+  });
+  app2.post("/api/whatsapp/webhook", async (req, res) => {
+    try {
+      const body = req.body;
+      if (body.object === "whatsapp_business_account") {
+        const entries = body.entry || [];
+        for (const entry of entries) {
+          const changes = entry.changes || [];
+          for (const change of changes) {
+            if (change.field === "message_status") {
+              const statuses = change.value?.statuses || [];
+              for (const status of statuses) {
+                const messageId = status.id;
+                const statusType = status.status;
+                console.log("[WhatsApp] Message status update:", { messageId, status: statusType, timestamp: status.timestamp });
+                const messages2 = await storage.getWhatsappMessageByMessageId(messageId);
+                if (messages2 && messages2.length > 0) {
+                  await storage.updateWhatsappMessageStatus(messages2[0].id, statusType);
+                  console.log("[WhatsApp] Updated message status to:", statusType);
+                }
+              }
+            }
+            if (change.field === "message_template_status_update") {
+              const statuses = change.value?.statuses || [];
+              for (const status of statuses) {
+                console.log("[WhatsApp] Template status:", { status: status.status });
+              }
+            }
+            if (change.field === "message_template_status_update" || change.field === "messaging_product") {
+              const phoneNumber = change.value?.contacts?.[0]?.wa_id;
+              if (change.value?.messages) {
+                for (const msg of change.value.messages) {
+                  if (msg.type === "typing") {
+                    console.log("[WhatsApp] User typing indicator received from:", phoneNumber);
+                  } else if (msg.type === "read") {
+                    console.log("[WhatsApp] User read receipt received from:", phoneNumber);
+                  }
+                }
+              }
+            }
+            if (change.field === "messages") {
+              const messages2 = change.value?.messages || [];
+              for (const message of messages2) {
+                if (message.type === "message_read") {
+                  console.log("[WhatsApp] Message read:", { messageId: message.id });
+                }
+              }
+            }
+            if (change.field === "messages") {
+              const messages2 = change.value?.messages || [];
+              for (const message of messages2) {
+                const phoneNumber = change.value?.contacts?.[0]?.wa_id;
+                const type = message.type;
+                let content = "";
+                let mediaUrl = "";
+                const [accessTokenSetting] = await Promise.all([
+                  storage.getSystemSetting("messaging", "whatsapp_access_token")
+                ]);
+                const accessToken = accessTokenSetting?.value;
+                let messageType = "text";
+                let fileName = "";
+                let fileSize = 0;
+                if (type === "text" && message.text?.body) {
+                  content = message.text.body;
+                } else if (type === "image" && message.image?.id) {
+                  messageType = "image";
+                  const mediaId = message.image.id;
+                  const caption = message.image.caption || "Sent an image";
+                  if (accessToken) {
+                    try {
+                      const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
+                        headers: { "Authorization": `Bearer ${accessToken}` }
+                      });
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        const downloadUrl = mediaData.url;
+                        if (downloadUrl) {
+                          const imgResponse = await fetch(downloadUrl);
+                          const buffer = await imgResponse.arrayBuffer();
+                          const bufferObj = Buffer.from(buffer);
+                          const fileTypeInfo = await fileTypeFromBuffer(bufferObj);
+                          const actualMimeType = fileTypeInfo?.mime || "image/jpeg";
+                          const ext = fileTypeInfo?.ext || "jpg";
+                          mediaUrl = await cloudinaryStorage2.uploadChatFile(
+                            bufferObj,
+                            `whatsapp-image-${mediaId}.${ext}`,
+                            actualMimeType
+                          );
+                          fileName = `whatsapp-image-${mediaId}.${ext}`;
+                          fileSize = buffer.byteLength;
+                          console.log("[WhatsApp] Image stored in Cloudinary:", { mediaUrl, size: fileSize, mimeType: actualMimeType });
+                        }
+                      }
+                    } catch (err) {
+                      console.error("[WhatsApp] Failed to process image:", err);
+                    }
+                  }
+                  content = caption;
+                } else if (type === "video" && message.video?.id) {
+                  messageType = "video";
+                  const mediaId = message.video.id;
+                  const caption = message.video.caption || "Sent a video";
+                  if (accessToken) {
+                    try {
+                      const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
+                        headers: { "Authorization": `Bearer ${accessToken}` }
+                      });
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        const downloadUrl = mediaData.url;
+                        if (downloadUrl) {
+                          const vidResponse = await fetch(downloadUrl);
+                          const buffer = await vidResponse.arrayBuffer();
+                          const bufferObj = Buffer.from(buffer);
+                          const fileTypeInfo = await fileTypeFromBuffer(bufferObj);
+                          const actualMimeType = fileTypeInfo?.mime || "video/mp4";
+                          const ext = fileTypeInfo?.ext || "mp4";
+                          mediaUrl = await cloudinaryStorage2.uploadChatFile(
+                            bufferObj,
+                            `whatsapp-video-${mediaId}.${ext}`,
+                            actualMimeType
+                          );
+                          fileName = `whatsapp-video-${mediaId}.${ext}`;
+                          fileSize = buffer.byteLength;
+                          console.log("[WhatsApp] Video stored in Cloudinary:", { mediaUrl, size: fileSize, mimeType: actualMimeType });
+                        }
+                      }
+                    } catch (err) {
+                      console.error("[WhatsApp] Failed to process video:", err);
+                    }
+                  }
+                  content = caption;
+                } else if (type === "file" && message.document?.id) {
+                  messageType = "file";
+                  const mediaId = message.document.id;
+                  const filename = message.document.filename || "document";
+                  fileName = filename;
+                  if (accessToken) {
+                    try {
+                      const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
+                        headers: { "Authorization": `Bearer ${accessToken}` }
+                      });
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        const downloadUrl = mediaData.url;
+                        if (downloadUrl) {
+                          const fileResponse = await fetch(downloadUrl);
+                          const buffer = await fileResponse.arrayBuffer();
+                          mediaUrl = await cloudinaryStorage2.uploadChatFile(
+                            Buffer.from(buffer),
+                            filename,
+                            "application/octet-stream"
+                          );
+                          fileSize = buffer.byteLength;
+                        }
+                      }
+                    } catch (err) {
+                      console.error("[WhatsApp] Failed to process file:", err);
+                    }
+                  }
+                  content = filename;
+                } else if (type === "audio" && message.audio?.id) {
+                  const mediaId = message.audio.id;
+                  if (accessToken) {
+                    try {
+                      const mediaResponse = await fetch(`https://graph.facebook.com/v20.0/${mediaId}?fields=url`, {
+                        headers: { "Authorization": `Bearer ${accessToken}` }
+                      });
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        const downloadUrl = mediaData.url;
+                        if (downloadUrl) {
+                          const audioResponse = await fetch(downloadUrl);
+                          const buffer = await audioResponse.arrayBuffer();
+                          mediaUrl = await cloudinaryStorage2.uploadChatFile(
+                            Buffer.from(buffer),
+                            `whatsapp-audio-${mediaId}.ogg`,
+                            "audio/ogg"
+                          );
+                        }
+                      }
+                    } catch (err) {
+                      console.error("[WhatsApp] Failed to process audio:", err);
+                    }
+                  }
+                  content = "[Audio message]";
+                } else {
+                  continue;
+                }
+                if (phoneNumber && content) {
+                  let conversation = await storage.getWhatsappConversation(phoneNumber);
+                  if (!conversation) {
+                    conversation = await storage.createWhatsappConversation({
+                      phoneNumber,
+                      displayName: change.value?.contacts?.[0]?.profile?.name || phoneNumber,
+                      lastMessageAt: /* @__PURE__ */ new Date(),
+                      status: "active"
+                    });
+                  } else {
+                    await storage.updateWhatsappConversation(conversation.id, { lastMessageAt: /* @__PURE__ */ new Date() });
+                  }
+                  await storage.createWhatsappMessage({
+                    conversationId: conversation.id,
+                    phoneNumber,
+                    content,
+                    isFromAdmin: false,
+                    status: "received",
+                    messageId: message.id,
+                    messageType,
+                    fileUrl: mediaUrl || void 0,
+                    fileName: fileName || void 0,
+                    fileSize: fileSize || void 0
+                  });
+                  console.log(`[WhatsApp] Received ${type} message from ${phoneNumber}: ${content}`, mediaUrl ? `URL: ${mediaUrl}` : "");
+                }
+              }
+            }
+          }
+        }
+        res.status(200).json({ status: "ok" });
+      } else {
+        res.status(400).send("Bad Request");
+      }
+    } catch (error) {
+      console.error("[WhatsApp] Webhook error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  app2.get("/api/admin/whatsapp/conversations", requireAdminAuth, async (req, res) => {
+    try {
+      console.log("[WhatsApp] Fetching conversations");
+      const conversations2 = await storage.getWhatsappConversations();
+      console.log("[WhatsApp] Found conversations:", { count: conversations2?.length || 0 });
+      res.json(conversations2 || []);
+    } catch (error) {
+      console.error("[WhatsApp] Get conversations error:", error);
+      res.status(500).json({ message: "Failed to fetch conversations", error: String(error) });
+    }
+  });
+  app2.get("/api/admin/whatsapp/messages/:conversationId", requireAdminAuth, async (req, res) => {
+    try {
+      const messages2 = await storage.getWhatsappMessages(req.params.conversationId);
+      res.json(messages2);
+    } catch (error) {
+      console.error("[Admin] Get WhatsApp messages error:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+  app2.post("/api/admin/whatsapp/typing", requireAdminAuth, async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      const [accessTokenSetting, phoneIdSetting] = await Promise.all([
+        storage.getSystemSetting("messaging", "whatsapp_access_token"),
+        storage.getSystemSetting("messaging", "whatsapp_phone_number_id")
+      ]);
+      const accessToken = accessTokenSetting?.value;
+      const phoneNumberId = String(phoneIdSetting?.value || "").trim();
+      if (!accessToken?.trim() || !phoneNumberId) {
+        return res.status(400).json({ message: "WhatsApp not configured" });
+      }
+      const cleanPhone = phoneNumber.replace(/\D/g, "");
+      const finalPhone = cleanPhone.startsWith("254") ? cleanPhone : "254" + cleanPhone.slice(-9);
+      const apiUrl = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: finalPhone,
+        type: "typing"
+      };
+      const apiResponse = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (apiResponse.ok) {
+        console.log("[WhatsApp] Typing indicator sent to:", finalPhone);
+        res.json({ success: true, message: "Typing indicator sent" });
+      } else {
+        const error = await apiResponse.json();
+        console.error("[WhatsApp] Failed to send typing indicator:", error);
+        res.status(apiResponse.status).json({ success: false, error });
+      }
+    } catch (error) {
+      console.error("[WhatsApp] Typing indicator error:", error);
+      res.status(500).json({ message: "Failed to send typing indicator" });
+    }
+  });
+  app2.post("/api/admin/whatsapp/send", requireAdminAuth, async (req, res) => {
+    try {
+      const { conversationId, phoneNumber, message, mediaUrl, mediaType } = req.body;
+      console.log("[WhatsApp Send] Received request:", { conversationId, phoneNumber, hasMedia: !!mediaUrl, mediaType });
+      if (!conversationId || !phoneNumber || !message) {
+        console.error("[WhatsApp Send] Missing fields");
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      const [accessTokenSetting, phoneIdSetting] = await Promise.all([
+        storage.getSystemSetting("messaging", "whatsapp_access_token"),
+        storage.getSystemSetting("messaging", "whatsapp_phone_number_id")
+      ]);
+      const accessToken = accessTokenSetting?.value;
+      const phoneNumberId = String(phoneIdSetting?.value || "").trim();
+      console.log("[WhatsApp Send] Credentials retrieved:", { hasToken: !!accessToken, hasPhoneId: !!phoneNumberId });
+      if (!accessToken?.trim() || !phoneNumberId) {
+        console.error("[WhatsApp Send] Credentials incomplete");
+        return res.status(400).json({ message: "WhatsApp not configured in Messaging Settings. Please configure credentials first." });
+      }
+      const cleanPhone = phoneNumber.replace(/\D/g, "");
+      const finalPhone = cleanPhone.startsWith("254") ? cleanPhone : "254" + cleanPhone.slice(-9);
+      const apiUrl = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
+      let payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: finalPhone
+      };
+      if (mediaUrl && mediaType) {
+        const typeMap = { "image": "image", "video": "video", "file": "document", "audio": "audio" };
+        const waType = typeMap[mediaType] || "document";
+        payload.type = waType;
+        payload[waType] = { link: mediaUrl };
+        if (message) {
+          payload[waType].caption = message;
+        }
+        console.log("[WhatsApp Send] Sending media:", { type: waType, phone: finalPhone });
+      } else {
+        payload.type = "text";
+        payload.text = { body: message };
+        console.log("[WhatsApp Send] Sending text:", { phone: finalPhone });
+      }
+      const apiResponse = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      const apiData = await apiResponse.json();
+      console.log("[WhatsApp Send] Meta API response:", { status: apiResponse.status, msgId: apiData.messages?.[0]?.id, error: apiData.error });
+      if (apiResponse.ok && apiData.messages?.[0]?.id) {
+        let fileName = "media";
+        if (mediaUrl) {
+          const urlParts = new URL(mediaUrl).pathname.split("/");
+          fileName = urlParts[urlParts.length - 1] || "media";
+        }
+        const msgRecord = await storage.createWhatsappMessage({
+          conversationId,
+          phoneNumber,
+          content: message || `[${mediaType?.toUpperCase() || "FILE"}]`,
+          isFromAdmin: true,
+          status: "sent",
+          messageId: apiData.messages[0].id,
+          messageType: mediaUrl ? mediaType || "file" : "text",
+          fileUrl: mediaUrl,
+          fileName: mediaUrl ? fileName : null,
+          fileSize: null
+          // We don't have file size on send, but DB can store it
+        });
+        await storage.updateWhatsappConversation(conversationId, { lastMessageAt: /* @__PURE__ */ new Date() });
+        console.log("[WhatsApp Send] Message saved successfully:", { msgId: msgRecord.id, hasMedia: !!mediaUrl });
+        res.json({ success: true, message: msgRecord });
+      } else {
+        const errorMsg = apiData.error?.message || "Unknown error from Meta API";
+        console.error("[WhatsApp Send] API error:", { status: apiResponse.status, error: errorMsg, data: apiData });
+        res.status(500).json({ message: `Failed to send message: ${errorMsg}` });
+      }
+    } catch (error) {
+      console.error("[WhatsApp Send] Error:", error);
+      res.status(500).json({ message: "Failed to send message", error: String(error) });
+    }
+  });
+  app2.get("/api/admin/whatsapp/config", requireAdminAuth, async (req, res) => {
+    try {
+      let config = await storage.getWhatsappConfig();
+      console.log("[WhatsApp Config] Get request - config exists:", !!config, "has token:", !!config?.accessToken);
+      if (!config) {
+        config = await storage.initWhatsappConfig();
+        console.log("[WhatsApp Config] Initialized new config");
+      }
+      res.json({
+        phoneNumberId: config.phoneNumberId || "",
+        businessAccountId: config.businessAccountId || "",
+        verifyToken: config.verifyToken,
+        webhookUrl: process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS}/api/whatsapp/webhook` : config.webhookUrl,
+        isActive: config.isActive
+      });
+    } catch (error) {
+      console.error("[Admin] Get WhatsApp config error:", error);
+      res.status(500).json({ message: "Failed to fetch config" });
+    }
+  });
+  app2.post("/api/admin/whatsapp/config", requireAdminAuth, async (req, res) => {
+    try {
+      const { phoneNumberId, businessAccountId, accessToken, isActive } = req.body;
+      console.log("[WhatsApp Config] Saving config:", { phoneNumberId: !!phoneNumberId, businessAccountId: !!businessAccountId, accessToken: !!accessToken, isActive });
+      const updated = await storage.updateWhatsappConfig({
+        phoneNumberId,
+        businessAccountId,
+        accessToken,
+        isActive
+      });
+      console.log("[WhatsApp Config] Saved successfully:", { hasToken: !!updated?.accessToken, hasPhoneId: !!updated?.phoneNumberId });
+      if (updated) {
+        res.json({ success: true, config: updated });
+      } else {
+        res.status(500).json({ message: "Failed to update config" });
+      }
+    } catch (error) {
+      console.error("[Admin] Update WhatsApp config error:", error);
+      res.status(500).json({ message: "Failed to update config" });
+    }
+  });
+  app2.post("/api/admin/api-keys/generate", requireAuth, async (req, res) => {
+    try {
+      const { name, scope, rateLimit } = req.body;
+      if (!name || !scope || !Array.isArray(scope)) {
+        return res.status(400).json({ error: "Missing required fields: name, scope" });
+      }
+      const { apiKeyService: apiKeyService2 } = await Promise.resolve().then(() => (init_api_key(), api_key_exports));
+      const key = await apiKeyService2.generateApiKey(name, scope, rateLimit || 1e3);
+      res.json({
+        success: true,
+        key,
+        name,
+        scope,
+        rateLimit: rateLimit || 1e3,
+        message: "API key generated successfully. Copy it now - you won't see it again!"
+      });
+    } catch (error) {
+      console.error("[API Keys] Generate error:", error);
+      res.status(500).json({ error: "Failed to generate API key" });
+    }
+  });
+  app2.get("/api/admin/api-keys", requireAuth, async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettingsByCategory("api_keys");
+      const apiKeys = settings.map((s) => {
+        const keyData = JSON.parse(typeof s.value === "string" ? s.value : JSON.stringify(s.value));
+        return {
+          id: s.key,
+          name: keyData.name,
+          isActive: keyData.isActive,
+          scope: keyData.scope,
+          rateLimit: keyData.rateLimit,
+          createdAt: keyData.createdAt,
+          lastUsedAt: keyData.lastUsedAt
+        };
+      });
+      res.json({ keys: apiKeys });
+    } catch (error) {
+      console.error("[API Keys] List error:", error);
+      res.status(500).json({ error: "Failed to fetch API keys" });
+    }
+  });
+  app2.post("/api/admin/api-keys/:keyId/revoke", requireAuth, async (req, res) => {
+    try {
+      const { keyId } = req.params;
+      const { apiKeyService: apiKeyService2 } = await Promise.resolve().then(() => (init_api_key(), api_key_exports));
+      const success = await apiKeyService2.revokeApiKey(keyId);
+      if (success) {
+        res.json({ success: true, message: "API key revoked successfully" });
+      } else {
+        res.status(404).json({ error: "API key not found" });
+      }
+    } catch (error) {
+      console.error("[API Keys] Revoke error:", error);
+      res.status(500).json({ error: "Failed to revoke API key" });
     }
   });
   setTimeout(() => {
@@ -9848,6 +12303,10 @@ if (process.env.NODE_ENV === "development") {
     next();
   });
 }
+app.use((req, res, next) => {
+  res.setHeader("Permissions-Policy", "publickey-credentials-get=*, publickey-credentials-create=*");
+  next();
+});
 app.use((req, res, next) => {
   const start = Date.now();
   const path3 = req.path;

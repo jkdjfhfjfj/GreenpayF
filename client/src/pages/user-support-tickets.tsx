@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Send, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Send, CheckCircle, Clock, AlertCircle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -42,7 +42,7 @@ export default function UserSupportTickets() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery<TicketsResponse>({
+  const { data, isLoading, refetch, isFetching } = useQuery<TicketsResponse>({
     queryKey: ['user-support-tickets'],
     queryFn: async () => {
       const response = await fetch('/api/user/support-tickets', { credentials: "include" });
@@ -84,20 +84,20 @@ export default function UserSupportTickets() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'open': return <AlertCircle className="w-5 h-5 text-red-500" />;
-      case 'in_progress': return <Clock className="w-5 h-5 text-yellow-500" />;
+      case 'open': return <AlertCircle className="w-5 h-5 text-emerald-600" />;
+      case 'in_progress': return <Clock className="w-5 h-5 text-emerald-500" />;
       case 'resolved':
-      case 'closed': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'closed': return <CheckCircle className="w-5 h-5 text-emerald-700" />;
       default: return <AlertCircle className="w-5 h-5" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-red-100 text-red-800 border-red-300';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'resolved': return 'bg-green-100 text-green-800 border-green-300';
-      case 'closed': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'open': return 'bg-emerald-50 text-emerald-800 border-emerald-300';
+      case 'in_progress': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      case 'resolved': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      case 'closed': return 'bg-emerald-50 text-emerald-800 border-emerald-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
@@ -126,7 +126,7 @@ export default function UserSupportTickets() {
             <Badge className={`${getStatusColor(selectedTicket.status)} border text-xs`}>
               {selectedTicket.status}
             </Badge>
-            <Badge variant="outline" className="text-xs">{selectedTicket.priority}</Badge>
+            <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300">{selectedTicket.priority}</Badge>
           </div>
         </motion.div>
 
@@ -136,9 +136,9 @@ export default function UserSupportTickets() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-card p-4 rounded-xl border border-border elevation-1"
+            className="bg-card p-4 rounded-xl border border-emerald-200 elevation-1 bg-gradient-to-br from-emerald-50 to-transparent"
           >
-            <p className="text-sm font-semibold text-muted-foreground mb-2">ISSUE DESCRIPTION</p>
+            <p className="text-sm font-semibold text-emerald-800 mb-2">ISSUE DESCRIPTION</p>
             <p className="text-sm text-foreground">{selectedTicket.description}</p>
           </motion.div>
 
@@ -147,10 +147,10 @@ export default function UserSupportTickets() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-card rounded-xl border border-border elevation-1"
+            className="bg-card rounded-xl border border-emerald-200 elevation-1"
           >
-            <div className="p-4 border-b border-border">
-              <p className="text-sm font-semibold text-muted-foreground">CONVERSATION ({selectedTicket.replies?.length || 0})</p>
+            <div className="p-4 border-b border-emerald-200 bg-gradient-to-r from-emerald-50 to-transparent">
+              <p className="text-sm font-semibold text-emerald-800">CONVERSATION ({selectedTicket.replies?.length || 0})</p>
             </div>
             <div className="p-4 max-h-80 overflow-y-auto space-y-3">
               {!selectedTicket.replies || selectedTicket.replies.length === 0 ? (
@@ -163,17 +163,17 @@ export default function UserSupportTickets() {
                     animate={{ opacity: 1, x: 0 }}
                     className={`p-3 rounded-lg text-sm ${
                       reply.senderType === 'admin'
-                        ? 'bg-primary/10 border-l-4 border-primary'
+                        ? 'bg-emerald-50 border-l-4 border-emerald-500'
                         : 'bg-muted border-l-4 border-muted-foreground'
                     }`}
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-xs">{reply.senderType === 'admin' ? '👨‍💼 Support' : '👤 You'}</span>
+                      <span className="font-semibold text-xs text-emerald-800">{reply.senderType === 'admin' ? '👨‍💼 Support' : '👤 You'}</span>
                       <span className="text-xs text-muted-foreground">{format(new Date(reply.createdAt), 'MMM d HH:mm')}</span>
                     </div>
                     <p className="text-foreground">{reply.content}</p>
                     {reply.fileUrl && (
-                      <a href={reply.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary mt-2 inline-block hover:underline">
+                      <a href={reply.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 mt-2 inline-block hover:underline font-semibold">
                         📎 {reply.fileName || 'Download'}
                       </a>
                     )}
@@ -188,9 +188,9 @@ export default function UserSupportTickets() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-card p-4 rounded-xl border border-border elevation-1"
+            className="bg-card p-4 rounded-xl border border-emerald-200 elevation-1 bg-gradient-to-br from-emerald-50 to-transparent"
           >
-            <p className="text-sm font-semibold text-muted-foreground mb-3">SEND REPLY</p>
+            <p className="text-sm font-semibold text-emerald-800 mb-3">SEND REPLY</p>
             <div className="space-y-3">
               <Textarea
                 placeholder="Type your response..."
@@ -207,13 +207,13 @@ export default function UserSupportTickets() {
                   accept="image/*,video/*,.pdf,.doc,.docx"
                 />
                 {replyFile && (
-                  <span className="text-xs text-primary self-center px-2">✓ {replyFile.name}</span>
+                  <span className="text-xs text-emerald-600 self-center px-2 font-semibold">✓ {replyFile.name}</span>
                 )}
               </div>
               <Button
                 onClick={() => replyMutation.mutate()}
                 disabled={!replyText.trim() || replyMutation.isPending}
-                className="w-full ripple"
+                className="w-full ripple bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 <span className="material-icons text-sm mr-2">send</span>
                 {replyMutation.isPending ? "Sending..." : "Send Reply"}
@@ -237,13 +237,23 @@ export default function UserSupportTickets() {
           <h1 className="text-lg font-semibold">Support Tickets</h1>
           <p className="text-xs text-muted-foreground">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</p>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setLocation('/support')}
-          className="material-icons text-muted-foreground p-2 rounded-full hover:bg-muted transition-colors"
-        >
-          close
-        </motion.button>
+        <div className="flex gap-2">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="material-icons text-emerald-600 p-2 rounded-full hover:bg-emerald-50 transition-colors"
+          >
+            {isFetching ? "schedule" : "refresh"}
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setLocation('/support')}
+            className="material-icons text-muted-foreground p-2 rounded-full hover:bg-muted transition-colors"
+          >
+            close
+          </motion.button>
+        </div>
       </motion.div>
 
       <div className="p-4 space-y-3">
@@ -251,11 +261,11 @@ export default function UserSupportTickets() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-card p-6 rounded-xl text-center border border-border elevation-1"
+            className="bg-card p-6 rounded-xl text-center border border-emerald-200 elevation-1 bg-gradient-to-br from-emerald-50 to-transparent"
           >
-            <span className="material-icons text-4xl text-muted-foreground mb-2 inline-block">inbox</span>
-            <p className="text-muted-foreground font-semibold text-sm">No support tickets yet</p>
-            <p className="text-xs text-muted-foreground mt-1">Visit the support page to report an issue</p>
+            <span className="material-icons text-4xl text-emerald-600 mb-2 inline-block">inbox</span>
+            <p className="text-emerald-800 font-semibold text-sm">No support tickets yet</p>
+            <p className="text-xs text-emerald-700 mt-1">Visit the support page to report an issue</p>
           </motion.div>
         ) : (
           tickets.map((ticket, index) => (
@@ -268,7 +278,7 @@ export default function UserSupportTickets() {
               whileTap={{ scale: 0.99 }}
             >
               <Card
-                className="cursor-pointer hover:shadow-md transition-all border border-border bg-card elevation-1"
+                className="cursor-pointer hover:shadow-md transition-all border-emerald-200 bg-card elevation-1 hover:border-emerald-300"
                 onClick={() => setSelectedId(ticket.id)}
               >
                 <CardContent className="p-4">
@@ -281,7 +291,7 @@ export default function UserSupportTickets() {
                       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{ticket.description}</p>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">{format(new Date(ticket.createdAt), 'MMM d')}</span>
-                        <span className="text-primary font-semibold">{ticket.replies?.length || 0} replies</span>
+                        <span className="text-emerald-700 font-semibold">{ticket.replies?.length || 0} replies</span>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 items-end flex-shrink-0">
