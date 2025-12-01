@@ -71,13 +71,6 @@ export default function VirtualCardPurchasePage() {
         onBack={() => setLocation("/dashboard")}
         size="sm"
       />
-          className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
-          data-testid="button-back"
-        >
-          arrow_back
-        </motion.button>
-        <h1 className="text-lg font-semibold">Get Your Virtual Card</h1>
-      </motion.div>
 
       <div className="flex-1 p-6 flex items-center justify-center">
         <motion.div
