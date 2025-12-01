@@ -752,7 +752,8 @@ export class WhatsAppService {
       }
 
       // Extract required parameter count from template components
-      const requiredCount = this.extractParametersFromComponents(template.components || []);
+      const paramNumbers = this.extractParametersFromComponents(template.components || []);
+      const requiredCount = paramNumbers.size;
       const providedCount = Object.values(parameters).filter(p => p && p.trim() !== '').length;
 
       if (requiredCount > 0 && providedCount < requiredCount) {
@@ -996,25 +997,57 @@ export class WhatsAppService {
   }
 
   /**
-   * Extract parameters from template components (finds {{1}}, {{2}}, etc)
+   * Extract parameters from template components - scans ALL fields for {{1}}, {{2}}, etc
+   * Returns SET of unique parameter numbers found
    */
-  private extractParametersFromComponents(components: any[]): number {
-    if (!components || !Array.isArray(components)) return 0;
+  private extractParametersFromComponents(components: any[]): Set<number> {
+    if (!components || !Array.isArray(components)) return new Set();
     
-    let maxParamNum = 0;
+    const paramNumbers = new Set<number>();
     const regex = /\{\{(\d+)\}\}/g;
     
     components.forEach((comp: any) => {
-      if (comp.text) {
+      // Check text field
+      if (comp.text && typeof comp.text === 'string') {
         const matches = [...comp.text.matchAll(regex)];
         matches.forEach(m => {
-          const paramNum = parseInt(m[1]);
-          maxParamNum = Math.max(maxParamNum, paramNum);
+          paramNumbers.add(parseInt(m[1]));
+        });
+      }
+      
+      // Check buttons for URL parameters
+      if (comp.buttons && Array.isArray(comp.buttons)) {
+        comp.buttons.forEach((btn: any) => {
+          if (btn.url && typeof btn.url === 'string') {
+            const matches = [...btn.url.matchAll(regex)];
+            matches.forEach(m => {
+              paramNumbers.add(parseInt(m[1]));
+            });
+          }
+        });
+      }
+      
+      // Check header for parameters
+      if (comp.format === 'TEXT' && comp.text) {
+        const matches = [...comp.text.matchAll(regex)];
+        matches.forEach(m => {
+          paramNumbers.add(parseInt(m[1]));
         });
       }
     });
     
-    return maxParamNum;
+    return paramNumbers;
+  }
+
+  /**
+   * Extract parameters from template components - returns param names like param1, param2
+   */
+  private getComponentParameters(components: any[]): string[] {
+    const paramNumbers = this.extractParametersFromComponents(components);
+    // Sort by number and create param names
+    return Array.from(paramNumbers)
+      .sort((a, b) => a - b)
+      .map(n => `param${n}`);
   }
 
   /**
@@ -1023,7 +1056,10 @@ export class WhatsAppService {
   private extractTemplateParameters(templateText: string): string[] {
     const regex = /\{\{(\d+)\}\}/g;
     const matches = [...templateText.matchAll(regex)];
-    return matches.map(m => `param${m[1]}`);
+    const paramNumbers = new Set(matches.map(m => parseInt(m[1])));
+    return Array.from(paramNumbers)
+      .sort((a, b) => a - b)
+      .map(n => `param${n}`);
   }
 
   /**
@@ -1041,7 +1077,7 @@ export class WhatsAppService {
   }
 
   /**
-   * Get template parameters from Meta
+   * Get template parameters from Meta - scans full component structure
    */
   async getTemplateParameters(templateName: string): Promise<{ required: string[]; paramCount: number; language: string; components: any[] }> {
     try {
@@ -1051,15 +1087,15 @@ export class WhatsAppService {
         return { required: [], paramCount: 0, language: 'en_US', components: [] };
       }
 
-      // Extract parameters from all body/header/footer text in components
-      let allText = '';
-      if (template.components) {
-        template.components.forEach((comp: any) => {
-          if (comp.text) allText += ' ' + comp.text;
-        });
-      }
+      // Extract parameters from all component types including buttons
+      const params = this.getComponentParameters(template.components || []);
+      
+      console.log(`[WhatsApp] Template "${templateName}" parameters extracted:`, {
+        params,
+        paramCount: params.length,
+        componentCount: template.components?.length || 0
+      });
 
-      const params = this.extractTemplateParameters(allText);
       return { required: params, paramCount: params.length, language: template.language || 'en_US', components: template.components || [] };
     } catch (error) {
       console.error('[WhatsApp] Error getting template parameters:', error);
