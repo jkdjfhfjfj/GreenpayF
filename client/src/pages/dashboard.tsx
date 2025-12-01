@@ -171,40 +171,38 @@ export default function DashboardPage() {
           {/* Background Dark */}
           <rect width="1440" height="600" fill="#0f1a14" />
           
-          {/* Bottom Dark Wave - stays dark */}
+          {/* Top Green Fill - bright green at top */}
           <path
-            d="M 0,400 Q 360,480 720,400 T 1440,400 L 1440,600 L 0,600 Z"
-            fill="#081a0f"
-            opacity="0.9"
+            d="M 0,0 L 1440,0 L 1440,180 Q 1080,140 720,180 Q 360,140 0,180 Z"
+            fill="#4CAF50"
           />
           
-          {/* Middle Dark Wave */}
+          {/* Upper Green Wave - smooth transition */}
           <path
-            d="M 0,320 Q 360,400 720,320 T 1440,320 L 1440,450 Q 360,530 720,450 T 1440,450 Z"
-            fill="#0f2818"
+            d="M 0,180 Q 360,220 720,180 Q 1080,140 1440,180 L 1440,280 Q 1080,240 720,280 Q 360,240 0,280 Z"
+            fill="#3a9940"
+            opacity="0.8"
+          />
+          
+          {/* Middle transition wave */}
+          <path
+            d="M 0,280 Q 360,320 720,280 Q 1080,240 1440,280 L 1440,380 Q 1080,340 720,380 Q 360,340 0,380 Z"
+            fill="#2a7f30"
             opacity="0.7"
           />
           
-          {/* Top Green Wave - transitions to green */}
+          {/* Lower dark wave */}
           <path
-            d="M 0,200 Q 360,280 720,200 T 1440,200 L 1440,350 Q 360,430 720,350 T 1440,350 Z"
-            fill="#4CAF50"
-            opacity="0.85"
+            d="M 0,380 Q 360,420 720,380 Q 1080,340 1440,380 L 1440,480 Q 1080,440 720,480 Q 360,440 0,480 Z"
+            fill="#1a5a20"
+            opacity="0.8"
           />
           
-          {/* Top Green Fill - bright green at top */}
+          {/* Bottom dark wave */}
           <path
-            d="M 0,0 Q 360,80 720,0 T 1440,0 L 1440,220 Q 360,300 720,220 T 1440,220 Z"
-            fill="#4CAF50"
-          />
-          
-          {/* Light accent wave */}
-          <path
-            d="M 0,150 Q 360,230 720,150 T 1440,150"
-            stroke="#5ec060"
-            strokeWidth="2"
-            fill="none"
-            opacity="0.4"
+            d="M 0,480 Q 360,520 720,480 Q 1080,440 1440,480 L 1440,600 L 0,600 Z"
+            fill="#0f3a14"
+            opacity="0.9"
           />
         </svg>
         
