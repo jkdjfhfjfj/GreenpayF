@@ -159,12 +159,55 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Top Navigation */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-primary via-primary to-secondary p-6 text-white"
-      >
+      {/* Top Navigation with Wavy Background */}
+      <div className="relative overflow-hidden">
+        {/* Layered Wavy Background SVG */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox="0 0 1440 600"
+          preserveAspectRatio="none"
+          style={{ height: '100%' }}
+        >
+          {/* Background Green */}
+          <rect width="1440" height="600" fill="#4CAF50" />
+          
+          {/* Top Dark Wave */}
+          <path
+            d="M 0,200 Q 360,80 720,200 T 1440,200 L 1440,0 L 0,0 Z"
+            fill="#1a3a2a"
+            opacity="0.8"
+          />
+          
+          {/* Middle Dark Wave */}
+          <path
+            d="M 0,280 Q 360,160 720,280 T 1440,280 L 1440,150 Q 360,250 720,150 T 1440,150 Z"
+            fill="#0f2818"
+            opacity="0.6"
+          />
+          
+          {/* Bottom Dark Wave */}
+          <path
+            d="M 0,350 Q 360,280 720,350 T 1440,350 L 1440,250 Q 360,320 720,250 T 1440,250 Z"
+            fill="#081a0f"
+            opacity="0.4"
+          />
+          
+          {/* Light accent wave */}
+          <path
+            d="M 0,320 Q 360,240 720,320 T 1440,320"
+            stroke="#4CAF50"
+            strokeWidth="2"
+            fill="none"
+            opacity="0.3"
+          />
+        </svg>
+        
+        {/* Content */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 bg-gradient-to-br from-primary/30 via-primary/20 to-secondary/30 backdrop-blur-sm p-6 text-white"
+        >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center flex-1">
             {user?.profilePhotoUrl ? (
@@ -304,6 +347,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </motion.div>
+      </div>
 
       <div className="px-4 py-6 space-y-6">
         {/* KYC Status Alert - Different messages based on status */}
