@@ -14,11 +14,12 @@ import { mockFAQs } from "@/lib/mock-data";
 import LiveChat from "@/components/live-chat";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { X } from "lucide-react";
+import { X, Upload } from "lucide-react";
 
 const issueReportSchema = z.object({
   issueType: z.string().min(1, "Please select an issue type"),
   description: z.string().min(10, "Please provide a detailed description"),
+  file: z.any().optional(),
 });
 
 type IssueReportForm = z.infer<typeof issueReportSchema>;
@@ -34,12 +35,26 @@ export default function SupportPage() {
     defaultValues: {
       issueType: "",
       description: "",
+      file: undefined,
     },
   });
 
   const submitTicketMutation = useMutation({
     mutationFn: async (data: IssueReportForm) => {
-      return apiRequest('POST', '/api/support/tickets', data);
+      const formData = new FormData();
+      formData.append('issueType', data.issueType);
+      formData.append('description', data.description);
+      if (data.file) {
+        formData.append('file', data.file);
+      }
+      
+      const response = await fetch('/api/support/tickets', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!response.ok) throw new Error('Failed to submit');
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -326,6 +341,29 @@ export default function SupportPage() {
                         data-testid="textarea-issue-description"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="file"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      Attach Media (Optional)
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="file"
+                        accept="image/*,video/*,.pdf,.doc,.docx"
+                        onChange={(e) => field.onChange(e.target.files?.[0])}
+                        data-testid="input-file-upload"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">Images, videos, PDFs, or documents</p>
                     <FormMessage />
                   </FormItem>
                 )}

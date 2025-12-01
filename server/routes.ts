@@ -198,7 +198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error("Failed to create default admin:", error);
   }
   // Authentication routes with real WhatsApp integration
-  app.post("/api/auth/signup", async (req, res) => {
+  app.post("/api/auth/signup", optionalApiKey, async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
       
@@ -257,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", optionalApiKey, async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
       
@@ -413,7 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/verify-otp", async (req, res) => {
+  app.post("/api/auth/verify-otp", optionalApiKey, async (req, res) => {
     try {
       const { code } = otpSchema.parse(req.body);
       const { userId } = req.body;
@@ -498,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resend OTP
-  app.post("/api/auth/resend-otp", async (req, res) => {
+  app.post("/api/auth/resend-otp", optionalApiKey, async (req, res) => {
     try {
       const { userId } = req.body;
       const user = await storage.getUser(userId);
@@ -1683,7 +1683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Airtime purchase endpoint - uses KES balance and Statum API
-  app.post("/api/airtime/purchase", async (req, res) => {
+  app.post("/api/airtime/purchase", optionalApiKey, async (req, res) => {
     try {
       const { userId, phoneNumber, amount, currency, provider } = req.body;
 
@@ -1762,7 +1762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Claim airtime bonus endpoint
-  app.post("/api/airtime/claim-bonus", async (req, res) => {
+  app.post("/api/airtime/claim-bonus", optionalApiKey, async (req, res) => {
     try {
       const { userId } = req.body;
 
@@ -1827,7 +1827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bill payment endpoint - KPLC, Zuku, StartimesTV, Nairobi Water, etc
-  app.post("/api/bills/pay", async (req, res) => {
+  app.post("/api/bills/pay", optionalApiKey, async (req, res) => {
     try {
       const { userId, provider, meterNumber, accountNumber, amount } = req.body;
 
@@ -1930,7 +1930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create exchange rate service with storage for database-backed configuration
   const exchangeRateService = createExchangeRateService(storage);
   
-  app.get("/api/exchange-rates/:from/:to", async (req, res) => {
+  app.get("/api/exchange-rates/:from/:to", optionalApiKey, async (req, res) => {
     try {
       const { from, to } = req.params;
       const rate = await exchangeRateService.getExchangeRate(from.toUpperCase(), to.toUpperCase());
@@ -1947,7 +1947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/exchange-rates/:base", async (req, res) => {
+  app.get("/api/exchange-rates/:base", optionalApiKey, async (req, res) => {
     try {
       const { base } = req.params;
       // Support bidirectional USD ↔ KES conversions
@@ -1967,7 +1967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Real-time Transaction routes
-  app.post("/api/transactions/send", async (req, res) => {
+  app.post("/api/transactions/send", optionalApiKey, async (req, res) => {
     try {
       const { userId, amount, currency, recipientDetails, targetCurrency } = req.body;
       
@@ -2035,7 +2035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/transactions/receive", async (req, res) => {
+  app.post("/api/transactions/receive", optionalApiKey, async (req, res) => {
     try {
       const { userId, amount, currency, senderDetails } = req.body;
       
@@ -2086,7 +2086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/transactions/status/:transactionId", async (req, res) => {
+  app.get("/api/transactions/status/:transactionId", optionalApiKey, async (req, res) => {
     try {
       const transaction = await storage.getTransaction(req.params.transactionId);
       if (!transaction) {
@@ -2437,7 +2437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recipient management routes
-  app.post("/api/recipients", async (req, res) => {
+  app.post("/api/recipients", optionalApiKey, async (req, res) => {
     try {
       const recipientData = insertRecipientSchema.parse(req.body);
       const recipient = await storage.createRecipient(recipientData);
@@ -2448,7 +2448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/recipients/:userId", async (req, res) => {
+  app.get("/api/recipients/:userId", optionalApiKey, async (req, res) => {
     try {
       const recipients = await storage.getRecipientsByUserId(req.params.userId);
       res.json({ recipients });
@@ -2510,7 +2510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Real-time exchange and currency conversion - supports dual wallet (USD/KES)
-  app.post("/api/exchange/convert", async (req, res) => {
+  app.post("/api/exchange/convert", optionalApiKey, async (req, res) => {
     try {
       const { amount, fromCurrency, toCurrency, userId } = req.body;
       
