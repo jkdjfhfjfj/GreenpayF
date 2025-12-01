@@ -99,6 +99,9 @@ export default function SplashPage() {
         />
       </div>
 
+      {/* Green Status Bar - Matches Browser Theme */}
+      <div className="h-7 bg-emerald-500 w-full relative z-10"></div>
+
       {/* Top Navigation Bar */}
       <motion.div
         initial={{ y: -50, opacity: 0 }}
