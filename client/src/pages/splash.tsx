@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Send, CreditCard, TrendingUp, Shield, ChevronRight, X } from "lucide-react";
+import { Send, CreditCard, TrendingUp, Shield, ChevronRight } from "lucide-react";
 
 interface OnboardingSlide {
   id: number;
@@ -84,148 +84,150 @@ export default function SplashPage() {
   const slide = slides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center p-4">
-      {/* Status Bar */}
-      <div className="fixed top-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 px-6 py-3 z-20">
-        <div className="flex items-center justify-between max-w-md mx-auto">
-          <span className="text-white text-sm font-semibold">9:41</span>
-          <div className="flex gap-1 text-white text-xs">
-            <span>📶</span>
-            <span>📡</span>
-            <span>🔋</span>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Animated background gradient orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          className="absolute top-20 right-10 w-96 h-96 bg-emerald-500 rounded-full opacity-10 blur-3xl"
+          animate={{ x: [0, 100, 0], y: [0, 50, 0] }}
+          transition={{ duration: 15, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute -bottom-10 -left-20 w-96 h-96 bg-green-500 rounded-full opacity-10 blur-3xl"
+          animate={{ x: [0, -100, 0], y: [0, -50, 0] }}
+          transition={{ duration: 18, repeat: Infinity }}
+        />
       </div>
 
-      {/* Main Container - Fixed Phone-like view */}
-      <div className="w-full max-w-sm h-screen max-h-screen flex flex-col bg-black overflow-hidden rounded-3xl shadow-2xl border border-gray-800 relative">
-        
-        {/* Top Navigation Bar */}
-        <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 pt-8 pb-4 flex items-center justify-between">
-          <div className="w-6" />
-          <div className="text-center">
-            <h1 className="text-white font-bold text-lg">GreenPay</h1>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleSkip}
-            className="text-gray-400 hover:text-white transition-colors"
+      {/* Top Navigation Bar */}
+      <motion.div
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="w-full flex items-center justify-between mb-12 relative z-10"
+      >
+        <div className="text-center flex-1">
+          <h1 className="text-white font-bold text-2xl">GreenPay</h1>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleSkip}
+          className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+        >
+          Skip
+        </motion.button>
+      </motion.div>
+
+      {/* Slide Container */}
+      <div className="w-full max-w-2xl flex-1 flex flex-col items-center justify-center relative z-10">
+        <AnimatePresence mode="wait" custom={1}>
+          <motion.div
+            key={currentSlide}
+            custom={1}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.4 },
+            }}
+            className="w-full flex flex-col items-center justify-center py-12"
           >
-            <X className="w-5 h-5" />
-          </motion.button>
-        </div>
-
-        {/* Slide Container */}
-        <div className="flex-1 overflow-hidden flex flex-col items-center justify-center px-6 relative">
-          <AnimatePresence mode="wait" custom={1}>
+            {/* Icon */}
             <motion.div
-              key={currentSlide}
-              custom={1}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: "spring", stiffness: 300, damping: 30 },
-                opacity: { duration: 0.4 },
-              }}
-              className="w-full flex flex-col items-center justify-center py-12"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className={`bg-gradient-to-br ${slide.gradient} p-8 rounded-3xl mb-8 text-white shadow-2xl`}
             >
-              {/* Icon */}
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
-                className={`bg-gradient-to-br ${slide.gradient} p-8 rounded-3xl mb-8 text-white shadow-2xl`}
-              >
-                {slide.icon}
-              </motion.div>
-
-              {/* Title */}
-              <motion.h2
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="text-3xl font-bold text-white text-center mb-4"
-              >
-                {slide.title}
-              </motion.h2>
-
-              {/* Description */}
-              <motion.p
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
-                className="text-gray-300 text-center text-base leading-relaxed"
-              >
-                {slide.description}
-              </motion.p>
+              {slide.icon}
             </motion.div>
-          </AnimatePresence>
-        </div>
 
-        {/* Pagination Dots */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="flex gap-2 justify-center py-6"
-        >
-          {slides.map((_, idx) => (
-            <motion.button
-              key={idx}
-              onClick={() => setCurrentSlide(idx)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                idx === currentSlide ? "bg-emerald-500 w-8" : "bg-gray-700 w-2"
-              }`}
-              whileHover={{ scale: 1.2 }}
-            />
-          ))}
-        </motion.div>
+            {/* Title */}
+            <motion.h2
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-5xl font-bold text-white text-center mb-6"
+            >
+              {slide.title}
+            </motion.h2>
 
-        {/* Bottom Navigation */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-gradient-to-t from-gray-900 to-gray-800/50 px-6 pb-6 pt-4 space-y-3"
-        >
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            {currentSlide > 0 && (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handlePrev}
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
-              >
-                Back
-              </motion.button>
-            )}
+            {/* Description */}
+            <motion.p
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="text-gray-300 text-center text-lg leading-relaxed max-w-xl"
+            >
+              {slide.description}
+            </motion.p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
+      {/* Pagination Dots */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="flex gap-2 justify-center mb-12 relative z-10"
+      >
+        {slides.map((_, idx) => (
+          <motion.button
+            key={idx}
+            onClick={() => setCurrentSlide(idx)}
+            className={`h-3 rounded-full transition-all duration-300 ${
+              idx === currentSlide ? "bg-emerald-500 w-8" : "bg-gray-700 w-3"
+            }`}
+            whileHover={{ scale: 1.2 }}
+          />
+        ))}
+      </motion.div>
+
+      {/* Bottom Navigation */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="w-full max-w-2xl space-y-3 relative z-10"
+      >
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          {currentSlide > 0 && (
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={handleNext}
-              className="flex-1 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg"
+              onClick={handlePrev}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
             >
-              <span>{currentSlide === slides.length - 1 ? "Get Started" : "Next"}</span>
-              <ChevronRight className="w-5 h-5" />
+              Back
             </motion.button>
-          </div>
+          )}
 
-          {/* Skip Button */}
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={handleSkip}
-            className="w-full text-gray-400 hover:text-white font-semibold py-3 px-4 transition-colors"
+            onClick={handleNext}
+            className="flex-1 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg"
           >
-            {currentSlide === slides.length - 1 ? "Already have account? Sign In" : "Skip"}
+            <span>{currentSlide === slides.length - 1 ? "Get Started" : "Next"}</span>
+            <ChevronRight className="w-5 h-5" />
           </motion.button>
-        </motion.div>
-      </div>
+        </div>
+
+        {/* Skip Button */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleSkip}
+          className="w-full text-gray-400 hover:text-white font-semibold py-3 px-4 transition-colors"
+        >
+          {currentSlide === slides.length - 1 ? "Already have account? Sign In" : "Skip"}
+        </motion.button>
+      </motion.div>
     </div>
   );
 }
