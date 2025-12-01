@@ -3317,8 +3317,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let fileUrl = undefined;
       let fileName = undefined;
       if (req.file) {
-        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
-        fileName = req.file.originalname;
+        try {
+          fileUrl = await cloudinaryStorage.uploadFile(
+            `support-tickets/${userId}/${Date.now()}-${req.file.originalname}`,
+            req.file.buffer,
+            req.file.mimetype
+          );
+          fileName = req.file.originalname;
+        } catch (error) {
+          console.error('Error uploading support ticket file:', error);
+          return res.status(400).json({ message: "File upload failed" });
+        }
       }
 
       const ticket = await storage.createSupportTicket({
@@ -3405,8 +3414,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let fileUrl = undefined;
       let fileName = undefined;
       if (req.file) {
-        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
-        fileName = req.file.originalname;
+        try {
+          fileUrl = await cloudinaryStorage.uploadFile(
+            `support-tickets/${req.params.id}/${Date.now()}-${req.file.originalname}`,
+            req.file.buffer,
+            req.file.mimetype
+          );
+          fileName = req.file.originalname;
+        } catch (error) {
+          console.error('Error uploading reply file:', error);
+          return res.status(400).json({ message: "File upload failed" });
+        }
       }
 
       const reply = await storage.createTicketReply({
@@ -3639,8 +3657,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let fileUrl = undefined;
       let fileName = undefined;
       if (req.file) {
-        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
-        fileName = req.file.originalname;
+        try {
+          fileUrl = await cloudinaryStorage.uploadFile(
+            `support-tickets/${req.params.id}/${Date.now()}-${req.file.originalname}`,
+            req.file.buffer,
+            req.file.mimetype
+          );
+          fileName = req.file.originalname;
+        } catch (error) {
+          console.error('Error uploading reply file:', error);
+          return res.status(400).json({ message: "File upload failed" });
+        }
       }
 
       const reply = await storage.createTicketReply({
