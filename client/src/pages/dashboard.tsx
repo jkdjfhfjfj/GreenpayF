@@ -198,9 +198,9 @@ export default function DashboardPage() {
             opacity="0.8"
           />
           
-          {/* Bottom dark wave */}
+          {/* Bottom dark wave with rounded corners */}
           <path
-            d="M 0,480 Q 360,520 720,480 Q 1080,440 1440,480 L 1440,600 L 0,600 Z"
+            d="M 20,480 Q 360,520 720,480 Q 1080,440 1420,480 Q 1430,480 1440,490 L 1440,600 L 0,600 L 0,490 Q 10,480 20,480 Z"
             fill="#0f3a14"
             opacity="0.9"
           />
