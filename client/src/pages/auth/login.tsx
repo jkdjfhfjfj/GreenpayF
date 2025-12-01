@@ -166,19 +166,20 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email or Phone</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <span className="material-icons absolute left-3 top-3 text-muted-foreground">person</span>
                         <Input
                           {...field}
                           type="email"
-                          placeholder="Enter your email or phone"
+                          placeholder="Enter your email"
                           className="pl-12"
                           data-testid="input-email"
                         />
                       </div>
                     </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">If correct, a 6-digit verification code will be sent to your registered phone via SMS and WhatsApp</p>
                     <FormMessage />
                   </FormItem>
                 )}
