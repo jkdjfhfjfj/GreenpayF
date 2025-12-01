@@ -120,6 +120,7 @@ export default function SignupPage() {
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold mb-2">Join GreenPay</h2>
             <p className="text-muted-foreground">Create your account to start sending money</p>
+            <p className="text-xs text-muted-foreground mt-3 px-2">We'll verify your phone number and email. Make sure your phone is on WhatsApp and your name matches your ID.</p>
           </div>
 
           <Form {...form}>
@@ -137,6 +138,7 @@ export default function SignupPage() {
                         data-testid="input-fullname"
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">Must match the name on your ID</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -156,6 +158,7 @@ export default function SignupPage() {
                         data-testid="input-email"
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">We'll send a verification code to this email</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -200,6 +203,7 @@ export default function SignupPage() {
                           data-testid="input-phone"
                         />
                       </FormControl>
+                      <p className="text-xs text-muted-foreground mt-1">Must be on WhatsApp and receive SMS. We'll send a verification code.</p>
                       <FormMessage />
                     </FormItem>
                   )}
