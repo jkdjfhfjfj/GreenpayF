@@ -11,7 +11,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-interface SupportTicketWithUser {
+interface SupportTicket {
   id: string;
   userId: string;
   issueType: string;
@@ -20,15 +20,10 @@ interface SupportTicketWithUser {
   priority: string;
   adminNotes: string | null;
   createdAt: string;
-  user: {
-    fullName: string;
-    email: string;
-    phone: string;
-  };
 }
 
 interface TicketsResponse {
-  tickets: SupportTicketWithUser[];
+  tickets: SupportTicket[];
   total: number;
   page: number;
   totalPages: number;
@@ -93,7 +88,7 @@ export default function SupportTicketManagement() {
   const tickets = data?.tickets || [];
   const ticket = selectedId ? tickets.find(t => t.id === selectedId) : null;
 
-  const handleSelectTicket = (t: SupportTicketWithUser) => {
+  const handleSelectTicket = (t: SupportTicket) => {
     setSelectedId(t.id);
     setFormStatus(t.status);
     setFormPriority(t.priority);
@@ -122,136 +117,99 @@ export default function SupportTicketManagement() {
       <div className="space-y-4">
         <Button variant="outline" onClick={handleBack}>← Back</Button>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Main Ticket Details */}
-          <div className="lg:col-span-2 space-y-4">
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
-              <CardHeader>
-                <CardTitle className="text-2xl">{ticket.issueType}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600">Description</p>
-                  <p className="text-sm mt-2 bg-white p-3 rounded border">{ticket.description}</p>
-                </div>
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
+          <CardHeader>
+            <CardTitle className="text-2xl">{ticket.issueType}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600">Description</p>
+              <p className="text-sm mt-2 bg-white p-3 rounded border">{ticket.description}</p>
+            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm">Status</Label>
-                    <Select value={formStatus} onValueChange={setFormStatus}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm">Status</Label>
+                <Select value={formStatus} onValueChange={setFormStatus}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div>
-                    <Label className="text-sm">Priority</Label>
-                    <Select value={formPriority} onValueChange={setFormPriority}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              <div>
+                <Label className="text-sm">Priority</Label>
+                <Select value={formPriority} onValueChange={setFormPriority}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-                <div>
-                  <Label htmlFor="notes" className="text-sm">Admin Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formNotes}
-                    onChange={(e) => setFormNotes(e.target.value)}
-                    className="mt-1"
-                    rows={4}
-                  />
-                </div>
+            <div>
+              <Label htmlFor="notes" className="text-sm">Admin Notes</Label>
+              <Textarea
+                id="notes"
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
+                className="mt-1"
+                rows={4}
+              />
+            </div>
 
-                <div className="flex gap-2 pt-4">
-                  <Button variant="outline" onClick={handleBack}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      if (confirm("Delete ticket?")) {
-                        deleteMutation.mutate(ticket.id);
-                      }
-                    }}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" /> Delete
-                  </Button>
-                  <Button
-                    onClick={handleSave}
-                    disabled={updateMutation.isPending}
-                  >
-                    {updateMutation.isPending ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={handleBack}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (confirm("Delete ticket?")) {
+                    deleteMutation.mutate(ticket.id);
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* User Info Sidebar */}
-          <div className="space-y-4">
-            <Card className="bg-gradient-to-br from-purple-50 to-pink-50">
-              <CardHeader>
-                <CardTitle className="text-lg">User Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
-                  <User className="w-5 h-5 text-purple-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Name</p>
-                    <p className="font-medium text-sm">{ticket.user.fullName}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
-                  <Mail className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Email</p>
-                    <p className="font-medium text-sm truncate">{ticket.user.email}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
-                  <Phone className="w-5 h-5 text-green-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Phone</p>
-                    <p className="font-medium text-sm">{ticket.user.phone}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
-                  <Calendar className="w-5 h-5 text-orange-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Created</p>
-                    <p className="font-medium text-sm">{format(new Date(ticket.createdAt), 'MMM d, yyyy')}</p>
-                  </div>
-                </div>
-
-                <div className="pt-3 space-y-2">
-                  <Badge variant="outline" className="w-full justify-center py-2">
-                    ID: {ticket.id.substring(0, 8)}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card className="bg-gradient-to-br from-purple-50 to-pink-50">
+          <CardHeader>
+            <CardTitle className="text-lg">Ticket Info</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">User ID:</span>
+              <span className="font-mono">{ticket.userId.substring(0, 8)}...</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Created:</span>
+              <span>{format(new Date(ticket.createdAt), 'MMM d, yyyy HH:mm')}</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -293,9 +251,8 @@ export default function SupportTicketManagement() {
                       <div className="text-sm space-y-1">
                         <p className="text-gray-700">{t.description.substring(0, 100)}...</p>
                         <div className="flex items-center gap-4 text-xs text-gray-600 mt-2">
-                          <span>👤 {t.user.fullName}</span>
-                          <span>📧 {t.user.email}</span>
-                          <span>📞 {t.user.phone}</span>
+                          <span>ID: {t.userId.substring(0, 8)}</span>
+                          <span>{format(new Date(t.createdAt), 'MMM d')}</span>
                         </div>
                       </div>
                     </div>
