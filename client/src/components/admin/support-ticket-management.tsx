@@ -262,10 +262,10 @@ export default function SupportTicketManagement() {
           </div>
           <div className="flex items-center gap-4">
             <Badge variant="outline" className="text-sm">
-              {tickets?.filter((t: any) => t?.status === 'open')?.length || 0} open tickets
+              {Array.isArray(tickets) ? tickets.filter((t: any) => t?.status === 'open')?.length || 0 : 0} open tickets
             </Badge>
             <Badge variant="outline" className="text-sm">
-              {tickets?.filter((t: any) => t?.status === 'in_progress')?.length || 0} in progress
+              {Array.isArray(tickets) ? tickets.filter((t: any) => t?.status === 'in_progress')?.length || 0 : 0} in progress
             </Badge>
           <Button
             variant="outline"
@@ -545,7 +545,8 @@ export default function SupportTicketManagement() {
                       </Dialog>
                     </TableCell>
                   </TableRow>
-                ))}
+                    );
+                  }) : null}
               </TableBody>
             </Table>
           )}
@@ -553,7 +554,7 @@ export default function SupportTicketManagement() {
       </Card>
 
       {/* Pagination */}
-      {ticketsData && ticketsData.totalPages > 1 && (
+      {ticketsData?.totalPages && ticketsData.totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600">
             Page {page} of {ticketsData.totalPages}
@@ -578,6 +579,15 @@ export default function SupportTicketManagement() {
           </div>
         </div>
       )}
-    </div>
-  );
+      </div>
+    );
+  } catch (err) {
+    console.error('Support Tickets component error:', err);
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-800 font-medium">Error rendering support tickets</p>
+        <p className="text-red-600 text-sm mt-1">{String(err)}</p>
+      </div>
+    );
+  }
 }
