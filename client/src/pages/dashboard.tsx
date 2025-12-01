@@ -161,44 +161,50 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Top Navigation with Wavy Background */}
       <div className="relative overflow-hidden">
-        {/* Layered Wavy Background SVG */}
+        {/* Layered Wavy Background SVG - Green top, Dark bottom */}
         <svg
           className="absolute inset-0 w-full h-full"
           viewBox="0 0 1440 600"
           preserveAspectRatio="none"
           style={{ height: '100%' }}
         >
-          {/* Background Green */}
-          <rect width="1440" height="600" fill="#4CAF50" />
+          {/* Background Dark */}
+          <rect width="1440" height="600" fill="#0f1a14" />
           
-          {/* Top Dark Wave */}
+          {/* Bottom Dark Wave - stays dark */}
           <path
-            d="M 0,200 Q 360,80 720,200 T 1440,200 L 1440,0 L 0,0 Z"
-            fill="#1a3a2a"
-            opacity="0.8"
+            d="M 0,400 Q 360,480 720,400 T 1440,400 L 1440,600 L 0,600 Z"
+            fill="#081a0f"
+            opacity="0.9"
           />
           
           {/* Middle Dark Wave */}
           <path
-            d="M 0,280 Q 360,160 720,280 T 1440,280 L 1440,150 Q 360,250 720,150 T 1440,150 Z"
+            d="M 0,320 Q 360,400 720,320 T 1440,320 L 1440,450 Q 360,530 720,450 T 1440,450 Z"
             fill="#0f2818"
-            opacity="0.6"
+            opacity="0.7"
           />
           
-          {/* Bottom Dark Wave */}
+          {/* Top Green Wave - transitions to green */}
           <path
-            d="M 0,350 Q 360,280 720,350 T 1440,350 L 1440,250 Q 360,320 720,250 T 1440,250 Z"
-            fill="#081a0f"
-            opacity="0.4"
+            d="M 0,200 Q 360,280 720,200 T 1440,200 L 1440,350 Q 360,430 720,350 T 1440,350 Z"
+            fill="#4CAF50"
+            opacity="0.85"
+          />
+          
+          {/* Top Green Fill - bright green at top */}
+          <path
+            d="M 0,0 Q 360,80 720,0 T 1440,0 L 1440,220 Q 360,300 720,220 T 1440,220 Z"
+            fill="#4CAF50"
           />
           
           {/* Light accent wave */}
           <path
-            d="M 0,320 Q 360,240 720,320 T 1440,320"
-            stroke="#4CAF50"
+            d="M 0,150 Q 360,230 720,150 T 1440,150"
+            stroke="#5ec060"
             strokeWidth="2"
             fill="none"
-            opacity="0.3"
+            opacity="0.4"
           />
         </svg>
         
