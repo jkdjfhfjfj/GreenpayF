@@ -185,7 +185,7 @@ export function AIChatWidget() {
                   Send
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 text-center">Powered by ChatGPT</p>
+              <p className="text-xs text-gray-500 text-center">Powered by DeepSeek</p>
             </div>
           </motion.div>
         )}

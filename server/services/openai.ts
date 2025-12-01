@@ -4,17 +4,20 @@ export class OpenAIService {
   private openai: OpenAI;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
-      console.warn('⚠️ OpenAI API key not configured');
+      console.warn('⚠️ DeepSeek API key not configured');
     }
-    this.openai = new OpenAI({ apiKey });
+    this.openai = new OpenAI({ 
+      apiKey,
+      baseURL: 'https://api.deepseek.com'
+    });
   }
 
   async generateResponse(messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>): Promise<string> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'deepseek-chat',
         messages,
         max_tokens: 500,
         temperature: 0.7,
@@ -22,7 +25,7 @@ export class OpenAIService {
 
       return response.choices[0]?.message?.content || 'Unable to generate response';
     } catch (error) {
-      console.error('OpenAI API error:', error);
+      console.error('DeepSeek API error:', error);
       throw error;
     }
   }
