@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
-import { Send, X } from "lucide-react";
+import { Send, X, AlertCircle } from "lucide-react";
 
 interface User {
   id: string;
@@ -34,25 +34,19 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
     select: (data: any) => data.users || []
   });
 
-  const getParameterFields = (templateName: string) => {
-    const fields: Record<string, { label: string; placeholder: string }> = {
-      'otp': { code: { label: 'OTP Code', placeholder: '000000' } },
-      'password_reset': { code: { label: 'Reset Code', placeholder: '000000' } },
-      'card_activation': { lastFour: { label: 'Card Last 4 Digits', placeholder: '4242' } },
-      'fund_receipt': {
-        amount: { label: 'Amount', placeholder: '100.00' },
-        currency: { label: 'Currency', placeholder: 'USD' },
-        sender: { label: 'Sender Name', placeholder: 'John Doe' }
-      },
-      'login_alert': {
-        location: { label: 'Location', placeholder: 'New York, USA' },
-        ip: { label: 'IP Address', placeholder: '192.168.1.1' }
-      }
-    };
-    return fields[templateName] || {};
-  };
+  // Fetch template parameters dynamically from backend
+  const { data: templateParamData, isLoading: paramsLoading } = useQuery({
+    queryKey: ["/api/admin/whatsapp/template-parameters", selectedTemplate],
+    enabled: !!selectedTemplate,
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/whatsapp/template-parameters/${selectedTemplate}`);
+      if (!response.ok) throw new Error("Failed to fetch template parameters");
+      return response.json();
+    }
+  });
 
   const handleSend = async () => {
+    // Validation checks
     if (!selectedUser || !selectedTemplate) {
       toast({
         title: "Validation Error",
@@ -62,26 +56,54 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
       return;
     }
 
+    // Validate required parameters are provided
+    if (templateParamData?.parameterCount > 0) {
+      const requiredParams = templateParamData?.requiredParameters || [];
+      const missingParams = requiredParams.filter((param: string) => !parameters[param] || !parameters[param].trim());
+      
+      if (missingParams.length > 0) {
+        toast({
+          title: "Missing Parameters",
+          description: `Please provide values for: ${missingParams.join(", ")}`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setSending(true);
     try {
-      const response = await apiRequest('POST', '/api/admin/whatsapp/send-template', {
-        userId: selectedUser,
-        templateName: selectedTemplate,
-        parameters
+      const response = await fetch('/api/admin/whatsapp/send-template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: selectedUser,
+          templateName: selectedTemplate,
+          parameters
+        })
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+
+      if (data.success) {
         toast({
-          title: "Template Sent",
-          description: `Template "${selectedTemplate}" sent successfully to user`
+          title: "Template Delivered",
+          description: `Template "${selectedTemplate}" delivered to WhatsApp`
         });
         setSelectedUser("");
         setSelectedTemplate("");
         setParameters({});
         onClose();
       } else {
-        throw new Error('Failed to send template');
+        // Show actual error from backend
+        const errorMsg = data.message || data.error || 'Template delivery failed';
+        toast({
+          title: "Delivery Failed",
+          description: errorMsg,
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
       toast({
@@ -96,11 +118,13 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
 
   if (!isOpen) return null;
 
-  const paramFields = getParameterFields(selectedTemplate);
+  // Dynamic parameter fields based on backend response
+  const requiredParams = templateParamData?.requiredParameters || [];
+  const paramCount = templateParamData?.parameterCount || 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md max-h-96 overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle>Send Template to User</CardTitle>
@@ -134,31 +158,71 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
 
           <div className="space-y-2">
             <Label htmlFor="template">Select Template</Label>
-            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+            <Select value={selectedTemplate} onValueChange={(value) => {
+              setSelectedTemplate(value);
+              setParameters({});  // Reset parameters when template changes
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Choose a template" />
               </SelectTrigger>
               <SelectContent>
                 {templates.map((template, idx) => (
                   <SelectItem key={idx} value={template.name}>
-                    {template.name}
+                    {template.name} {template.status && `(${template.status})`}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {Object.entries(paramFields).map(([key, field]) => (
-            <div key={key} className="space-y-2">
-              <Label htmlFor={key}>{field.label}</Label>
-              <Input
-                id={key}
-                placeholder={field.placeholder}
-                value={parameters[key] || ''}
-                onChange={(e) => setParameters({ ...parameters, [key]: e.target.value })}
-              />
+          {/* Template Info and Requirements */}
+          {selectedTemplate && templateParamData && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+              <div className="text-sm font-medium text-blue-900">Template Information</div>
+              <div className="text-xs space-y-1 text-blue-800">
+                <p><strong>Language:</strong> {templateParamData.language}</p>
+                <p><strong>Status:</strong> {templateParamData.status}</p>
+                {paramCount > 0 && (
+                  <p><strong>Required Parameters:</strong> {paramCount}</p>
+                )}
+              </div>
             </div>
-          ))}
+          )}
+
+          {/* Dynamic Parameter Input Fields */}
+          {selectedTemplate && paramsLoading && (
+            <div className="text-sm text-gray-500">Loading template requirements...</div>
+          )}
+
+          {selectedTemplate && templateParamData && paramCount > 0 && (
+            <div className="space-y-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="text-sm font-medium text-amber-900 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                This template requires {paramCount} parameter(s)
+              </div>
+              {requiredParams.map((param: string, idx: number) => (
+                <div key={param} className="space-y-1">
+                  <Label htmlFor={param} className="text-xs font-medium">
+                    Parameter {idx + 1}: {param} *
+                  </Label>
+                  <Input
+                    id={param}
+                    placeholder={`Enter ${param}`}
+                    value={parameters[param] || ''}
+                    onChange={(e) => setParameters({ ...parameters, [param]: e.target.value })}
+                    required
+                    className="text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {selectedTemplate && templateParamData && paramCount === 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-sm text-green-800">✓ No parameters required for this template</p>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-4">
             <Button
@@ -170,7 +234,7 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
             </Button>
             <Button
               onClick={handleSend}
-              disabled={sending}
+              disabled={sending || !selectedUser || !selectedTemplate || paramsLoading}
               className="flex-1"
             >
               <Send className="w-4 h-4 mr-2" />
