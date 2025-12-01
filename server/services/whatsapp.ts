@@ -864,6 +864,43 @@ export class WhatsAppService {
   }
 
   /**
+   * Extract parameters from template text (finds {{1}}, {{2}}, etc)
+   */
+  private extractTemplateParameters(templateText: string): string[] {
+    const regex = /\{\{(\d+)\}\}/g;
+    const matches = [...templateText.matchAll(regex)];
+    return matches.map(m => `param${m[1]}`);
+  }
+
+  /**
+   * Get template parameters from Meta
+   */
+  async getTemplateParameters(templateName: string): Promise<{ required: string[]; paramCount: number }> {
+    try {
+      const templates = await this.fetchTemplatesFromMeta();
+      const template = templates.find((t: any) => t.name === templateName);
+      
+      if (!template) {
+        return { required: [], paramCount: 0 };
+      }
+
+      // Extract parameters from all body/header/footer text in components
+      let allText = '';
+      if (template.components) {
+        template.components.forEach((comp: any) => {
+          if (comp.text) allText += ' ' + comp.text;
+        });
+      }
+
+      const params = this.extractTemplateParameters(allText);
+      return { required: params, paramCount: params.length };
+    } catch (error) {
+      console.error('[WhatsApp] Error getting template parameters:', error);
+      return { required: [], paramCount: 0 };
+    }
+  }
+
+  /**
    * Fetch all templates from Meta Business Account
    */
   async fetchTemplatesFromMeta(): Promise<any[]> {

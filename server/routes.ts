@@ -6862,73 +6862,24 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     });
   });
 
-  // Get template parameter requirements
+  // Get template parameter requirements from Meta
   app.get("/api/admin/whatsapp/template-parameters/:templateName", requireAdminAuth, async (req, res) => {
     try {
       const { templateName } = req.params;
+      const { whatsappService } = await import('./services/whatsapp');
       
-      const templateParams: Record<string, {
-        required: string[];
-        optional: string[];
-        defaults: Record<string, string>;
-        description: string;
-      }> = {
-        create_acc: {
-          required: [],
-          optional: [],
-          defaults: {},
-          description: "Welcome message - Auto-filled from user data"
-        },
-        kyc_verified: {
-          required: [],
-          optional: [],
-          defaults: {},
-          description: "KYC approval - Auto-filled from user data"
-        },
-        card_activation: {
-          required: ['lastFour'],
-          optional: [],
-          defaults: { lastFour: '0000' },
-          description: "Card activation notification with last 4 digits"
-        },
-        otp: {
-          required: [],
-          optional: ['code'],
-          defaults: { code: 'auto-generated' },
-          description: "OTP verification code - Auto-generates if not provided"
-        },
-        password_reset: {
-          required: [],
-          optional: ['code'],
-          defaults: { code: 'auto-generated' },
-          description: "Password reset code - Auto-generates if not provided"
-        },
-        fund_receipt: {
-          required: ['currency', 'amount', 'sender'],
-          optional: [],
-          defaults: { currency: 'KES', amount: '0', sender: 'Unknown' },
-          description: "Payment receipt with transaction details"
-        },
-        login_alert: {
-          required: ['location', 'ip'],
-          optional: [],
-          defaults: { location: 'Unknown', ip: 'Unknown IP' },
-          description: "Security alert for new login"
-        }
-      };
-
-      const params = templateParams[templateName];
-      if (!params) {
-        return res.status(404).json({ message: `Unknown template: ${templateName}` });
-      }
-
+      const paramInfo = await whatsappService.getTemplateParameters(templateName);
+      
       res.json({
         templateName,
-        ...params
+        requiredParameters: paramInfo.required,
+        parameterCount: paramInfo.paramCount,
+        description: `Template requires ${paramInfo.paramCount} parameters: ${paramInfo.required.join(', ') || 'none'}`,
+        source: 'meta'
       });
     } catch (error) {
       console.error('[Admin] Get template parameters error:', error);
-      res.status(500).json({ message: "Failed to get template parameters" });
+      res.status(500).json({ message: "Failed to get template parameters from Meta" });
     }
   });
 
