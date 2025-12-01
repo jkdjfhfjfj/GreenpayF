@@ -480,7 +480,7 @@ export class WhatsAppService {
   }
 
   /**
-   * Send password reset code via template
+   * Send password reset code via OTP template (same as login OTP)
    */
   async sendPasswordReset(phoneNumber: string, resetCode: string): Promise<boolean> {
     await this.refreshCredentials();
@@ -492,27 +492,80 @@ export class WhatsAppService {
 
       const payload = {
         messaging_product: 'whatsapp',
+        recipient_type: 'individual',
         to: formattedPhone,
         type: 'template',
         template: {
-          name: 'password_reset',
-          language: { code: 'en_US' },
-          components: [{ type: 'body', parameters: [{ type: 'text', text: resetCode }] }]
-        }
+          name: 'otp',
+          language: {
+            code: 'en_US',
+          },
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                {
+                  type: 'text',
+                  text: resetCode,
+                },
+              ],
+            },
+            {
+              type: 'button',
+              sub_type: 'url',
+              index: '0',
+              parameters: [
+                {
+                  type: 'text',
+                  text: resetCode,
+                },
+              ],
+            },
+          ],
+        },
       };
 
-      const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`[WhatsApp] ✓ Password reset sent to ${phoneNumber}`);
+        const messageId = responseData.messages?.[0]?.id || 'unknown';
+        console.log('[WhatsApp] ✓ Password reset sent successfully', {
+          to: phoneNumber,
+          messageId,
+          templateName: 'otp',
+          timestamp: new Date().toISOString(),
+        });
         return true;
       } else {
-        console.error(`[WhatsApp] ✗ Password reset failed: ${responseData.error?.message || 'Unknown error'}`);
+        const errorMsg = responseData.error?.message || 'Unknown error';
+        const errorCode = responseData.error?.code || 'UNKNOWN_ERROR';
+        console.error('[WhatsApp] ✗ Password reset send failed', {
+          to: phoneNumber,
+          templateName: 'otp',
+          error: errorMsg,
+          errorCode,
+          status: response.status,
+          fullError: responseData.error,
+          timestamp: new Date().toISOString()
+        });
         return false;
       }
-    } catch (error) {
-      console.error('[WhatsApp] Error sending password reset:', error);
+    } catch (error: any) {
+      console.error('[WhatsApp] ✗ Error sending password reset', {
+        to: phoneNumber,
+        error: error?.message || 'Unknown error',
+        errorType: error?.constructor?.name,
+        timestamp: new Date().toISOString()
+      });
       return false;
     }
   }
