@@ -853,10 +853,27 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.data) {
-        console.log(`[WhatsApp] ✓ Found ${responseData.data.length} templates`);
+        const templateList = responseData.data.map((t: any) => ({
+          name: t.name,
+          status: t.status,
+          language: t.language,
+          category: t.category
+        }));
+        console.log('[WhatsApp] ✓ Successfully fetched approved templates from Meta', {
+          count: responseData.data.length,
+          templates: templateList,
+          timestamp: new Date().toISOString()
+        });
         return responseData.data;
       } else {
-        console.error(`[WhatsApp] ✗ Failed to fetch templates: ${responseData.error?.message || 'Unknown error'}`);
+        const errorMsg = responseData.error?.message || 'Unknown error';
+        console.error('[WhatsApp] ✗ Failed to fetch templates from Meta', {
+          error: errorMsg,
+          code: responseData.error?.code,
+          status: response.status,
+          timestamp: new Date().toISOString(),
+          suggestion: 'Ensure your WhatsApp Business Account ID (WABA ID) and access token are correctly configured'
+        });
         return [];
       }
     } catch (error) {
