@@ -59,9 +59,24 @@ export function AIChatWidget() {
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.error || 'Unable to process your request. Please try again later.',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
       console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Connection error. Please check your internet and try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -97,14 +112,14 @@ export function AIChatWidget() {
             className="fixed bottom-20 right-4 w-80 h-80 sm:w-96 sm:h-96 max-h-[calc(100vh-120px)] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 sm:p-4 rounded-t-2xl flex items-center justify-between">
+            <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white p-3 sm:p-4 rounded-t-2xl flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Ask AI</h3>
-                <p className="text-xs sm:text-sm text-blue-100">Get help with GreenPay</p>
+                <p className="text-xs sm:text-sm text-emerald-100">Get help with GreenPay</p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="flex-shrink-0 ml-2 p-1 hover:bg-blue-400 rounded-full transition-colors"
+                className="flex-shrink-0 ml-2 p-1 hover:bg-green-500 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-white" />
               </button>
@@ -128,7 +143,7 @@ export function AIChatWidget() {
                   <div
                     className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
                       msg.role === 'user'
-                        ? 'bg-blue-500 text-white rounded-br-none'
+                        ? 'bg-green-500 text-white rounded-br-none'
                         : 'bg-gray-100 text-gray-800 rounded-bl-none'
                     }`}
                   >
@@ -151,23 +166,26 @@ export function AIChatWidget() {
             </div>
 
             {/* Input */}
-            <div className="border-t p-2 sm:p-3 flex gap-2 rounded-b-2xl bg-gray-50">
-              <Input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Type your question..."
-                className="text-xs sm:text-sm"
-                disabled={isLoading}
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={isLoading || !input.trim()}
-                size="sm"
-                className="bg-blue-500 hover:bg-blue-600 text-xs sm:text-sm flex-shrink-0"
-              >
-                Send
-              </Button>
+            <div className="border-t p-2 sm:p-3 flex flex-col gap-2 rounded-b-2xl bg-gray-50">
+              <div className="flex gap-2">
+                <Input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Type your question..."
+                  className="text-xs sm:text-sm"
+                  disabled={isLoading}
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={isLoading || !input.trim()}
+                  size="sm"
+                  className="bg-green-500 hover:bg-green-600 text-xs sm:text-sm flex-shrink-0"
+                >
+                  Send
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 text-center">Powered by ChatGPT</p>
             </div>
           </motion.div>
         )}
