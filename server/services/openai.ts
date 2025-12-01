@@ -1,31 +1,32 @@
-import { OpenAI } from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export class OpenAIService {
-  private openai: OpenAI;
+  private genAI: GoogleGenerativeAI;
+  private model: any;
 
   constructor() {
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) {
-      console.warn('⚠️ DeepSeek API key not configured');
+      console.warn('⚠️ Google AI API key not configured');
     }
-    this.openai = new OpenAI({ 
-      apiKey,
-      baseURL: 'https://api.deepseek.com'
-    });
+    this.genAI = new GoogleGenerativeAI(apiKey || '');
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
   }
 
   async generateResponse(messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>): Promise<string> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'deepseek-chat',
-        messages,
-        max_tokens: 500,
-        temperature: 0.7,
+      const conversationHistory = messages.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+
+      const result = await this.model.generateContent({
+        contents: conversationHistory
       });
 
-      return response.choices[0]?.message?.content || 'Unable to generate response';
+      return result.response.text() || 'Unable to generate response';
     } catch (error) {
-      console.error('DeepSeek API error:', error);
+      console.error('Google AI API error:', error);
       throw error;
     }
   }
