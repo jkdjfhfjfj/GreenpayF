@@ -6880,32 +6880,45 @@ Sitemap: https://greenpay.world/sitemap.xml`;
           const otpCode = parameters?.code || messagingService.generateOTP();
           const otpResult = await whatsappService.sendOTP(user.phone, otpCode);
           success = otpResult;
+          console.log('[Admin] OTP template sent', { userId, success });
           break;
         case 'password_reset':
           const pwdCode = parameters?.code || messagingService.generateOTP();
           success = await whatsappService.sendPasswordReset(user.phone, pwdCode);
+          console.log('[Admin] Password reset template sent', { userId, success });
+          break;
+        case 'create_acc':
+          success = await whatsappService.sendAccountCreation(user.phone, user.fullName || 'User');
+          console.log('[Admin] Create account template sent', { userId, success });
           break;
         case 'kyc_verified':
           success = await whatsappService.sendKYCVerified(user.phone);
+          console.log('[Admin] KYC verified template sent', { userId, success });
           break;
         case 'card_activation':
           success = await whatsappService.sendCardActivation(user.phone, parameters?.lastFour || '0000');
+          console.log('[Admin] Card activation template sent', { userId, success });
           break;
         case 'fund_receipt':
+          // Parameters: currency, amount, sender, reference
           success = await whatsappService.sendFundReceipt(
             user.phone,
+            parameters?.currency || 'KES',
             parameters?.amount || '0',
-            parameters?.currency || 'USD',
-            parameters?.sender || 'Unknown'
+            parameters?.sender || 'Unknown Sender'
           );
+          console.log('[Admin] Fund receipt template sent', { userId, success });
           break;
         case 'login_alert':
           success = await whatsappService.sendLoginAlert(
             user.phone,
-            parameters?.location || 'Unknown',
+            parameters?.location || 'Unknown Location',
             parameters?.ip || 'Unknown IP'
           );
+          console.log('[Admin] Login alert template sent', { userId, success });
           break;
+        default:
+          return res.status(400).json({ message: `Unknown template: ${templateName}` });
       }
 
       res.json({ success, templateName, userId, message: success ? 'Template sent successfully' : 'Template send failed' });
