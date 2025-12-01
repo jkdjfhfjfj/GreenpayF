@@ -23,6 +23,7 @@ export function AIChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [remainingRequests, setRemainingRequests] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -32,6 +33,25 @@ export function AIChatWidget() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Load remaining requests when chat opens or component mounts
+  useEffect(() => {
+    const loadRemainingRequests = async () => {
+      try {
+        const response = await fetch('/api/ai/remaining-requests');
+        if (response.ok) {
+          const data = await response.json();
+          setRemainingRequests(data.remainingRequests);
+        }
+      } catch (error) {
+        console.log('Could not load remaining requests');
+      }
+    };
+
+    if (isOpen) {
+      loadRemainingRequests();
+    }
+  }, [isOpen]);
 
 
   const handleSendMessage = async () => {
@@ -57,6 +77,11 @@ export function AIChatWidget() {
       });
 
       const data: ChatResponse = await response.json();
+
+      // Update remaining requests if provided
+      if (data.remainingRequests !== undefined) {
+        setRemainingRequests(data.remainingRequests);
+      }
 
       if (response.ok) {
         const assistantMessage: Message = {
@@ -130,6 +155,11 @@ export function AIChatWidget() {
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">Ask AI</h3>
                 <p className="text-xs sm:text-sm text-emerald-100">Get help with GreenPay</p>
+                {remainingRequests !== null && (
+                  <p className="text-xs text-emerald-50 mt-1">
+                    {remainingRequests} request{remainingRequests !== 1 ? 's' : ''} remaining today
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => setIsOpen(false)}
