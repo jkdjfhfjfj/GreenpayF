@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Send, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 
 interface TicketReply {
   id: string;
@@ -104,168 +104,197 @@ export default function UserSupportTickets() {
 
   if (selectedTicket) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pb-20">
+      <div className="min-h-screen bg-background pb-20">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 shadow-lg">
-          <button onClick={() => setSelectedId(null)} className="flex items-center gap-2 hover:opacity-80">
-            <span>←</span>
-            <span>Back to Tickets</span>
-          </button>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card shadow-sm p-4 flex items-center elevation-1 border-b border-border"
+        >
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setSelectedId(null)}
+            className="material-icons text-muted-foreground mr-3 p-2 rounded-full hover:bg-muted transition-colors"
+          >
+            arrow_back
+          </motion.button>
+          <div>
+            <h1 className="text-lg font-semibold">{selectedTicket.issueType}</h1>
+            <p className="text-xs text-muted-foreground">{format(new Date(selectedTicket.createdAt), 'MMM d, yyyy HH:mm')}</p>
+          </div>
+          <div className="ml-auto flex gap-2">
+            <Badge className={`${getStatusColor(selectedTicket.status)} border text-xs`}>
+              {selectedTicket.status}
+            </Badge>
+            <Badge variant="outline" className="text-xs">{selectedTicket.priority}</Badge>
+          </div>
+        </motion.div>
 
-        <div className="max-w-2xl mx-auto p-4 space-y-4">
-          {/* Ticket Card */}
-          <Card className="border-2 border-indigo-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b-2 border-indigo-200">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    {getStatusIcon(selectedTicket.status)}
-                    {selectedTicket.issueType}
-                  </CardTitle>
-                  <p className="text-xs text-gray-500 mt-1">{format(new Date(selectedTicket.createdAt), 'MMM d, yyyy HH:mm')}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Badge className={`${getStatusColor(selectedTicket.status)} border`}>
-                    {selectedTicket.status}
-                  </Badge>
-                  <Badge variant={selectedTicket.priority === 'urgent' ? 'destructive' : 'outline'}>
-                    {selectedTicket.priority}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Description</p>
-                  <p className="text-sm bg-white p-4 rounded-lg border-l-4 border-indigo-500">{selectedTicket.description}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="p-4 space-y-4 max-w-full">
+          {/* Ticket Description */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-card p-4 rounded-xl border border-border elevation-1"
+          >
+            <p className="text-sm font-semibold text-muted-foreground mb-2">ISSUE DESCRIPTION</p>
+            <p className="text-sm text-foreground">{selectedTicket.description}</p>
+          </motion.div>
 
           {/* Conversation */}
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
-              <CardTitle className="text-lg">Conversation ({selectedTicket.replies?.length || 0})</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 max-h-80 overflow-y-auto space-y-3">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-card rounded-xl border border-border elevation-1"
+          >
+            <div className="p-4 border-b border-border">
+              <p className="text-sm font-semibold text-muted-foreground">CONVERSATION ({selectedTicket.replies?.length || 0})</p>
+            </div>
+            <div className="p-4 max-h-80 overflow-y-auto space-y-3">
               {!selectedTicket.replies || selectedTicket.replies.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No replies yet</p>
+                <p className="text-muted-foreground text-center py-6 text-sm">No replies yet</p>
               ) : (
                 selectedTicket.replies.map((reply) => (
-                  <div
+                  <motion.div
                     key={reply.id}
-                    className={`p-4 rounded-lg ${
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`p-3 rounded-lg text-sm ${
                       reply.senderType === 'admin'
-                        ? 'bg-blue-50 border-l-4 border-blue-500'
-                        : 'bg-gray-50 border-l-4 border-gray-300'
+                        ? 'bg-primary/10 border-l-4 border-primary'
+                        : 'bg-muted border-l-4 border-muted-foreground'
                     }`}
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-sm">{reply.senderType === 'admin' ? '👨‍💼 Support Team' : '👤 You'}</span>
-                      <span className="text-xs text-gray-500">{format(new Date(reply.createdAt), 'MMM d HH:mm')}</span>
+                      <span className="font-semibold text-xs">{reply.senderType === 'admin' ? '👨‍💼 Support' : '👤 You'}</span>
+                      <span className="text-xs text-muted-foreground">{format(new Date(reply.createdAt), 'MMM d HH:mm')}</span>
                     </div>
-                    <p className="text-sm text-gray-800">{reply.content}</p>
+                    <p className="text-foreground">{reply.content}</p>
                     {reply.fileUrl && (
-                      <a href={reply.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 inline-block hover:underline">
+                      <a href={reply.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary mt-2 inline-block hover:underline">
                         📎 {reply.fileName || 'Download'}
                       </a>
                     )}
-                  </div>
+                  </motion.div>
                 ))
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </motion.div>
 
           {/* Reply Form */}
-          <Card className="shadow-lg border-2 border-green-200">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
-              <CardTitle className="text-lg">Send Reply</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-card p-4 rounded-xl border border-border elevation-1"
+          >
+            <p className="text-sm font-semibold text-muted-foreground mb-3">SEND REPLY</p>
+            <div className="space-y-3">
               <Textarea
-                placeholder="Type your reply..."
+                placeholder="Type your response..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 rows={2}
-                className="text-sm"
+                className="text-sm rounded-lg"
               />
-              <Input type="file" onChange={(e) => setReplyFile(e.target.files?.[0] || null)} className="text-sm" />
+              <div className="flex gap-2">
+                <Input 
+                  type="file" 
+                  onChange={(e) => setReplyFile(e.target.files?.[0] || null)} 
+                  className="text-sm flex-1"
+                  accept="image/*,video/*,.pdf,.doc,.docx"
+                />
+                {replyFile && (
+                  <span className="text-xs text-primary self-center px-2">✓ {replyFile.name}</span>
+                )}
+              </div>
               <Button
                 onClick={() => replyMutation.mutate()}
                 disabled={!replyText.trim() || replyMutation.isPending}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full ripple"
               >
-                <Send className="w-4 h-4 mr-2" />
+                <span className="material-icons text-sm mr-2">send</span>
                 {replyMutation.isPending ? "Sending..." : "Send Reply"}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </motion.div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pb-20">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 shadow-lg flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card shadow-sm p-4 flex items-center justify-between elevation-1 border-b border-border"
+      >
         <div>
-          <h1 className="text-2xl font-bold">Your Support Tickets</h1>
-          <p className="text-blue-100 text-sm">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-lg font-semibold">Support Tickets</h1>
+          <p className="text-xs text-muted-foreground">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={() => setLocation('/support')} className="opacity-80 hover:opacity-100">←</button>
-      </div>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setLocation('/support')}
+          className="material-icons text-muted-foreground p-2 rounded-full hover:bg-muted transition-colors"
+        >
+          close
+        </motion.button>
+      </motion.div>
 
-      <div className="max-w-2xl mx-auto p-4 space-y-4">
-        {/* Tickets List */}
-        <div className="space-y-3">
-          {tickets.length === 0 ? (
-            <Card className="shadow-lg">
-              <CardContent className="text-center py-12">
-                <AlertCircle className="w-16 h-16 mx-auto mb-3 text-gray-300" />
-                <p className="text-gray-600 font-semibold">No issues reported yet</p>
-                <p className="text-sm text-gray-400 mt-1">Click on the Support page to report an issue</p>
-              </CardContent>
-            </Card>
-          ) : (
-            tickets.map((ticket) => (
+      <div className="p-4 space-y-3">
+        {tickets.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-card p-6 rounded-xl text-center border border-border elevation-1"
+          >
+            <span className="material-icons text-4xl text-muted-foreground mb-2 inline-block">inbox</span>
+            <p className="text-muted-foreground font-semibold text-sm">No support tickets yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Visit the support page to report an issue</p>
+          </motion.div>
+        ) : (
+          tickets.map((ticket, index) => (
+            <motion.div
+              key={ticket.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+            >
               <Card
-                key={ticket.id}
-                className="hover:shadow-xl transition-all cursor-pointer border-2 border-gray-200 hover:border-indigo-300 shadow-md"
+                className="cursor-pointer hover:shadow-md transition-all border border-border bg-card elevation-1"
                 onClick={() => setSelectedId(ticket.id)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
                         {getStatusIcon(ticket.status)}
-                        <h3 className="font-bold text-lg">{ticket.issueType}</h3>
+                        <h3 className="font-semibold text-sm truncate">{ticket.issueType}</h3>
                       </div>
-                      <p className="text-sm text-gray-700 mb-3">{ticket.description.substring(0, 100)}...</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
-                          {format(new Date(ticket.createdAt), 'MMM d, yyyy')}
-                        </span>
-                        <span className="text-xs font-semibold text-indigo-600">
-                          {ticket.replies?.length || 0} replies
-                        </span>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{ticket.description}</p>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">{format(new Date(ticket.createdAt), 'MMM d')}</span>
+                        <span className="text-primary font-semibold">{ticket.replies?.length || 0} replies</span>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2 items-end">
-                      <Badge className={`${getStatusColor(ticket.status)} border`}>
+                    <div className="flex flex-col gap-2 items-end flex-shrink-0">
+                      <Badge className={`${getStatusColor(ticket.status)} border text-xs`}>
                         {ticket.status}
                       </Badge>
-                      <Badge variant="outline">{ticket.priority}</Badge>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );

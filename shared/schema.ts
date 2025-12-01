@@ -157,7 +157,7 @@ export const supportTickets = pgTable("support_tickets", {
 export const ticketReplies = pgTable("ticket_replies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   ticketId: varchar("ticket_id").references(() => supportTickets.id, { onDelete: "cascade" }).notNull(),
-  senderId: varchar("sender_id").notNull(), // Can be user ID or admin ID
+  userId: varchar("user_id").notNull(), // Can be user ID or admin ID
   senderType: text("sender_type").notNull(), // user, admin
   content: text("content").notNull(),
   fileUrl: text("file_url"),

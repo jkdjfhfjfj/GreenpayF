@@ -22,7 +22,7 @@ import { notificationService } from "./services/notifications";
 import { CloudinaryStorageService, ObjectNotFoundError } from "./cloudinaryStorage";
 import { statumService } from "./statumService";
 import { ActivityLogger } from "./services/activity-logger";
-import { validateApiKey } from "./middleware/api-key";
+import { validateApiKey, optionalApiKey } from "./middleware/api-key";
 
 const cloudinaryStorage = new CloudinaryStorageService();
 
@@ -3302,20 +3302,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Support Ticket API endpoints
   
   // Submit support ticket (user facing)
-  app.post("/api/support/tickets", async (req, res) => {
+  app.post("/api/support/tickets", upload.single('file'), async (req, res) => {
     try {
-      const ticketData = insertSupportTicketSchema.parse(req.body);
       const userId = (req.session as any)?.user?.id;
-      
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const ticket = await storage.createSupportTicket({
-        ...ticketData,
-        userId,
-      });
+      const { issueType, description } = req.body;
+      if (!issueType || !description) {
+        return res.status(400).json({ message: "Issue type and description required" });
+      }
 
+      let fileUrl = undefined;
+      let fileName = undefined;
+      if (req.file) {
+        fileUrl = `https://res.cloudinary.com/example/${req.file.filename}`;
+        fileName = req.file.originalname;
+      }
+
+      const ticket = await storage.createSupportTicket({
+        issueType,
+        description,
+        userId,
+        status: 'open',
+        priority: 'normal',
+        fileUrl,
+        fileName,
+      });
 
       res.json({ 
         message: "Support ticket submitted successfully",
@@ -3397,7 +3411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reply = await storage.createTicketReply({
         ticketId: req.params.id,
-        senderId: userId,
+        userId,
         senderType: 'user',
         content,
         fileUrl,
@@ -3631,7 +3645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reply = await storage.createTicketReply({
         ticketId: req.params.id,
-        senderId: (req.session as any)?.admin?.id || '',
+        userId: (req.session as any)?.admin?.id || '',
         senderType: 'admin',
         content,
         fileUrl,
