@@ -58,9 +58,17 @@ export default function SendTemplateModal({ isOpen, onClose, templates }: SendTe
     }
 
     // Validate required parameters are provided
-    if (templateParamData?.parameterCount > 0) {
-      const requiredParams = templateParamData?.requiredParameters || [];
-      const missingParams = requiredParams.filter((param: string) => !parameters[param] || !parameters[param].trim());
+    const requiredParams = templateParamData?.required || [];
+    if (requiredParams.length > 0) {
+      const missingParams = requiredParams.filter((param: string) => {
+        const paramMeta = templateParamData?.parameterMetadata?.[param];
+        // For media params, check if file is uploaded
+        if (paramMeta?.type === 'media') {
+          return !mediaFiles[param];
+        }
+        // For text params, check if value is provided
+        return !parameters[param] || !parameters[param].trim();
+      });
       
       if (missingParams.length > 0) {
         toast({
