@@ -742,23 +742,67 @@ export class WhatsAppService {
   }
 
   /**
-   * Send generic template with dynamic parameters
+   * Validate parameters against template requirements
    */
-  async sendTemplateGeneric(phoneNumber: string, templateName: string, parameters: Record<string, string>): Promise<boolean> {
+  async validateTemplateParameters(templateName: string, parameters: Record<string, string>): Promise<{ valid: boolean; error?: string; required: number; provided: number }> {
+    try {
+      const template = await this.getTemplateDetails(templateName);
+      if (!template) {
+        return { valid: false, error: `Template "${templateName}" not found in Meta`, required: 0, provided: 0 };
+      }
+
+      // Extract required parameter count from template
+      let allText = '';
+      if (template.components) {
+        template.components.forEach((comp: any) => {
+          if (comp.text) allText += ' ' + comp.text;
+        });
+      }
+
+      const params = this.extractTemplateParameters(allText);
+      const requiredCount = params.length;
+      const providedCount = Object.values(parameters).filter(p => p && p.trim() !== '').length;
+
+      if (requiredCount > 0 && providedCount < requiredCount) {
+        return { 
+          valid: false, 
+          error: `Template requires ${requiredCount} parameters but only ${providedCount} provided`,
+          required: requiredCount,
+          provided: providedCount
+        };
+      }
+
+      return { valid: true, required: requiredCount, provided: providedCount };
+    } catch (error) {
+      console.error('[WhatsApp] Error validating template parameters:', error);
+      return { valid: false, error: 'Failed to validate template', required: 0, provided: 0 };
+    }
+  }
+
+  /**
+   * Send generic template with dynamic parameters and validation
+   */
+  async sendTemplateGeneric(phoneNumber: string, templateName: string, parameters: Record<string, string>): Promise<{ success: boolean; error?: string }> {
     await this.refreshCredentials();
-    if (!this.checkCredentials()) return false;
+    if (!this.checkCredentials()) return { success: false, error: 'WhatsApp credentials not configured' };
 
     try {
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
 
-      // Get template from Meta to get the correct language code
-      const templates = await this.fetchTemplatesFromMeta();
-      const template = templates.find((t: any) => t.name === templateName);
+      // Validate parameters first
+      const validation = await this.validateTemplateParameters(templateName, parameters);
+      if (!validation.valid) {
+        console.warn(`[WhatsApp] Parameter validation failed for "${templateName}":`, validation.error);
+        return { success: false, error: validation.error };
+      }
+
+      // Get template to get the correct language code
+      const template = await this.getTemplateDetails(templateName);
       const languageCode = template?.language || 'en_US';
 
       // Build parameters array from the provided object
-      const paramArray = Object.values(parameters);
+      const paramArray = Object.values(parameters).filter(p => p && p.trim() !== '');
 
       const payload = {
         messaging_product: 'whatsapp',
@@ -783,7 +827,7 @@ export class WhatsAppService {
 
       console.log(`[WhatsApp] Sending generic template "${templateName}" with language: ${languageCode}`, {
         paramCount: paramArray.length,
-        parameters: paramArray
+        validated: true
       });
 
       const response = await fetch(url, {
@@ -802,20 +846,21 @@ export class WhatsAppService {
           messageId: responseData.messages[0]?.id,
           language: languageCode
         });
-        return true;
+        return { success: true };
       } else {
+        const errorMsg = responseData.error?.message || 'Unknown error';
         console.error(`[WhatsApp] ✗ Generic template send failed:`, {
           templateName,
-          error: responseData.error?.message,
+          error: errorMsg,
           errorCode: responseData.error?.code,
-          language: languageCode,
-          paramCount: paramArray.length
+          language: languageCode
         });
-        return false;
+        return { success: false, error: errorMsg };
       }
     } catch (error) {
+      const errorMsg = String(error);
       console.error(`[WhatsApp] Error sending generic template "${templateName}":`, error);
-      return false;
+      return { success: false, error: errorMsg };
     }
   }
 
@@ -951,15 +996,28 @@ export class WhatsAppService {
   }
 
   /**
-   * Get template parameters from Meta
+   * Get full template details from Meta with components
    */
-  async getTemplateParameters(templateName: string): Promise<{ required: string[]; paramCount: number }> {
+  async getTemplateDetails(templateName: string): Promise<any> {
     try {
       const templates = await this.fetchTemplatesFromMeta();
       const template = templates.find((t: any) => t.name === templateName);
+      return template || null;
+    } catch (error) {
+      console.error('[WhatsApp] Error getting template details:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get template parameters from Meta
+   */
+  async getTemplateParameters(templateName: string): Promise<{ required: string[]; paramCount: number; language: string; components: any[] }> {
+    try {
+      const template = await this.getTemplateDetails(templateName);
       
       if (!template) {
-        return { required: [], paramCount: 0 };
+        return { required: [], paramCount: 0, language: 'en_US', components: [] };
       }
 
       // Extract parameters from all body/header/footer text in components
@@ -971,10 +1029,10 @@ export class WhatsAppService {
       }
 
       const params = this.extractTemplateParameters(allText);
-      return { required: params, paramCount: params.length };
+      return { required: params, paramCount: params.length, language: template.language || 'en_US', components: template.components || [] };
     } catch (error) {
       console.error('[WhatsApp] Error getting template parameters:', error);
-      return { required: [], paramCount: 0 };
+      return { required: [], paramCount: 0, language: 'en_US', components: [] };
     }
   }
 

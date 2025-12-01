@@ -6869,12 +6869,17 @@ Sitemap: https://greenpay.world/sitemap.xml`;
       const { whatsappService } = await import('./services/whatsapp');
       
       const paramInfo = await whatsappService.getTemplateParameters(templateName);
+      const template = await whatsappService.getTemplateDetails(templateName);
       
       res.json({
         templateName,
+        status: template?.status || 'UNKNOWN',
+        language: paramInfo.language,
         requiredParameters: paramInfo.required,
         parameterCount: paramInfo.paramCount,
+        parameterLabels: paramInfo.required.map((p, i) => `${p} (position ${i + 1})`),
         description: `Template requires ${paramInfo.paramCount} parameters: ${paramInfo.required.join(', ') || 'none'}`,
+        components: paramInfo.components,
         source: 'meta'
       });
     } catch (error) {
@@ -6962,9 +6967,26 @@ Sitemap: https://greenpay.world/sitemap.xml`;
 
         // Generic handler for any other approved template
         default:
-          // For unknown templates, try to send them dynamically
-          success = await whatsappService.sendTemplateGeneric(user.phone, templateName, parameters || {});
-          console.log('[Admin] Generic template sent', { userId, templateName, success });
+          // Validate parameters before sending
+          const validation = await whatsappService.validateTemplateParameters(templateName, parameters || {});
+          if (!validation.valid) {
+            return res.status(400).json({ 
+              message: validation.error || 'Parameter validation failed',
+              templateName,
+              required: validation.required,
+              provided: validation.provided,
+              hint: `Provide ${validation.required} parameters for this template`
+            });
+          }
+          
+          // Send the template
+          const result = await whatsappService.sendTemplateGeneric(user.phone, templateName, parameters || {});
+          success = result.success;
+          if (!success && result.error) {
+            console.error('[Admin] Generic template send error:', { userId, templateName, error: result.error });
+          } else {
+            console.log('[Admin] Generic template sent', { userId, templateName, success });
+          }
           break;
       }
 
