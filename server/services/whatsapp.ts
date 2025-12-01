@@ -742,7 +742,7 @@ export class WhatsAppService {
   }
 
   /**
-   * Create all required WhatsApp templates via Meta API
+   * Create all required WhatsApp templates via Meta API with interactive buttons
    */
   async createAllTemplates(): Promise<{ success: string[]; failed: string[] }> {
     // Refresh credentials first to ensure we have latest token
@@ -750,75 +750,171 @@ export class WhatsAppService {
     
     const results = { success: [], failed: [] };
 
-    // OTP template (AUTHENTICATION category for verification codes)
-    const otpSuccess = await this.createTemplate('otp', 'AUTHENTICATION', [
+    // 1. Account Creation template - MARKETING with CTA button to activate messaging
+    const createAccSuccess = await this.createTemplate('create_acc', 'MARKETING', [
+      {
+        type: 'HEADER',
+        format: 'TEXT',
+        text: '🎉 Welcome to GreenPay!'
+      },
       {
         type: 'BODY',
-        text: 'Your verification code is {{1}}. Valid for 10 minutes.'
-      }
-    ]);
-    if (otpSuccess) results.success.push('otp');
-    else results.failed.push('otp');
-
-    // Password Reset template (AUTHENTICATION category for verification codes)
-    const pwdSuccess = await this.createTemplate('password_reset', 'AUTHENTICATION', [
+        text: 'Hi {{1}},\n\nYour GreenPay account is ready! Enjoy seamless payments, virtual cards, money transfers, and more.\n\nClick the button below to activate messaging and get started.'
+      },
       {
-        type: 'BODY',
-        text: 'Your password reset code is {{1}}. Valid for 10 minutes.'
-      }
-    ]);
-    if (pwdSuccess) results.success.push('password_reset');
-    else results.failed.push('password_reset');
-
-    // KYC Verified template (UTILITY category for notifications)
-    const kycSuccess = await this.createTemplate('kyc_verified', 'UTILITY', [
+        type: 'FOOTER',
+        text: 'Secure payments powered by GreenPay'
+      },
       {
-        type: 'BODY',
-        text: 'Congratulations! Your account has been verified. You can now enjoy all GreenPay features.'
+        type: 'BUTTONS',
+        buttons: [
+          {
+            type: 'URL',
+            text: 'Start Using GreenPay',
+            url: 'https://app.greenpay.world/dashboard'
+          },
+          {
+            type: 'QUICK_REPLY',
+            text: 'Help & Support'
+          }
+        ]
       }
     ]);
-    if (kycSuccess) results.success.push('kyc_verified');
-    else results.failed.push('kyc_verified');
+    if (createAccSuccess) results.success.push('create_acc');
+    else results.failed.push('create_acc');
 
-    // Card Activation template (UTILITY category for notifications)
-    const cardSuccess = await this.createTemplate('card_activation', 'UTILITY', [
-      {
-        type: 'BODY',
-        text: 'Your virtual card ending in {{1}} has been activated and is ready to use.'
-      }
-    ]);
-    if (cardSuccess) results.success.push('card_activation');
-    else results.failed.push('card_activation');
-
-    // Fund Receipt template (UTILITY category for notifications)
-    const fundSuccess = await this.createTemplate('fund_receipt', 'UTILITY', [
-      {
-        type: 'BODY',
-        text: 'You have received {{1}} {{2}} from {{3}}. Your new balance is available in your wallet.'
-      }
-    ]);
-    if (fundSuccess) results.success.push('fund_receipt');
-    else results.failed.push('fund_receipt');
-
-    // Login Alert template (UTILITY category for notifications)
+    // 2. Login Alert template - UTILITY with security action button
     const loginSuccess = await this.createTemplate('login_alert', 'UTILITY', [
       {
         type: 'BODY',
-        text: 'New login detected on your account from {{1}} ({{2}}). If this wasn\'t you, please secure your account immediately.'
+        text: 'New login detected on your GreenPay account:\n\nLocation: {{1}}\nIP Address: {{2}}\nTime: {{3}}\n\nIf this wasn\'t you, click the button below to secure your account immediately.'
+      },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          {
+            type: 'URL',
+            text: 'Secure Account',
+            url: 'https://app.greenpay.world/security'
+          },
+          {
+            type: 'QUICK_REPLY',
+            text: 'This is Me'
+          }
+        ]
       }
     ]);
     if (loginSuccess) results.success.push('login_alert');
     else results.failed.push('login_alert');
 
-    // Account Creation template (MARKETING category for new users)
-    const createAccSuccess = await this.createTemplate('create_acc', 'MARKETING', [
+    // 3. Fund Receipt template - UTILITY with transaction details and action
+    const fundSuccess = await this.createTemplate('fund_receipt', 'UTILITY', [
+      {
+        type: 'HEADER',
+        format: 'TEXT',
+        text: '✅ Funds Received'
+      },
       {
         type: 'BODY',
-        text: 'Welcome {{1}} to GreenPay! Your account has been successfully created. Start sending money, get virtual cards, and enjoy seamless payments today.'
+        text: 'You have received {{1}} {{2}} from {{3}}.\n\nTransaction reference: {{4}}\nYour new balance is available in your wallet.'
+      },
+      {
+        type: 'FOOTER',
+        text: 'Transaction Date: {{5}}'
+      },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          {
+            type: 'URL',
+            text: 'View Wallet',
+            url: 'https://app.greenpay.world/wallet'
+          },
+          {
+            type: 'QUICK_REPLY',
+            text: 'Transaction History'
+          }
+        ]
       }
     ]);
-    if (createAccSuccess) results.success.push('create_acc');
-    else results.failed.push('create_acc');
+    if (fundSuccess) results.success.push('fund_receipt');
+    else results.failed.push('fund_receipt');
+
+    // 4. Card Activation template - UTILITY with card details and action
+    const cardSuccess = await this.createTemplate('card_activation', 'UTILITY', [
+      {
+        type: 'HEADER',
+        format: 'TEXT',
+        text: '💳 Card Activated'
+      },
+      {
+        type: 'BODY',
+        text: 'Your GreenPay virtual card {{1}} has been activated!\n\nYou can now:\n• Make online purchases\n• Pay bills\n• Transfer money\n• Manage your spending\n\nCard is ready to use immediately.'
+      },
+      {
+        type: 'FOOTER',
+        text: 'Card valid until {{2}}'
+      },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          {
+            type: 'URL',
+            text: 'View Card Details',
+            url: 'https://app.greenpay.world/cards'
+          },
+          {
+            type: 'QUICK_REPLY',
+            text: 'Card Settings'
+          }
+        ]
+      }
+    ]);
+    if (cardSuccess) results.success.push('card_activation');
+    else results.failed.push('card_activation');
+
+    // 5. KYC Verified template - MARKETING with congratulations and next steps
+    const kycSuccess = await this.createTemplate('kyc_verified', 'MARKETING', [
+      {
+        type: 'HEADER',
+        format: 'TEXT',
+        text: '✅ Identity Verified'
+      },
+      {
+        type: 'BODY',
+        text: 'Congratulations {{1}}! Your identity has been verified.\n\nYou now have full access to:\n• Higher transaction limits\n• Virtual card creation\n• Enhanced features\n• Priority support\n\nStart enjoying GreenPay benefits today!'
+      },
+      {
+        type: 'FOOTER',
+        text: 'All your data is secure and encrypted'
+      },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          {
+            type: 'URL',
+            text: 'Go to Dashboard',
+            url: 'https://app.greenpay.world/dashboard'
+          },
+          {
+            type: 'QUICK_REPLY',
+            text: 'View Limits'
+          }
+        ]
+      }
+    ]);
+    if (kycSuccess) results.success.push('kyc_verified');
+    else results.failed.push('kyc_verified');
+
+    // 6. Password Reset template - AUTHENTICATION with code
+    const pwdSuccess = await this.createTemplate('password_reset', 'AUTHENTICATION', [
+      {
+        type: 'BODY',
+        text: 'Your GreenPay password reset code is: {{1}}\n\nValid for 10 minutes. Do not share this code with anyone.'
+      }
+    ]);
+    if (pwdSuccess) results.success.push('password_reset');
+    else results.failed.push('password_reset');
 
     return results;
   }
