@@ -23,7 +23,7 @@ import { CloudinaryStorageService, ObjectNotFoundError } from "./cloudinaryStora
 import { statumService } from "./statumService";
 import { ActivityLogger } from "./services/activity-logger";
 import { validateApiKey, optionalApiKey } from "./middleware/api-key";
-import { openaiService } from "./services/openai";
+import { openaiService } from "./services/ai";
 
 const cloudinaryStorage = new CloudinaryStorageService();
 
