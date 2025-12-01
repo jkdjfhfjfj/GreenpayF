@@ -179,7 +179,7 @@ export default function LoginPage() {
                         />
                       </div>
                     </FormControl>
-                    <p className="text-xs text-muted-foreground mt-1">If correct, a 6-digit verification code will be sent to your registered phone via SMS and WhatsApp</p>
+                    <p className="text-xs text-muted-foreground mt-1">If correct, a 6-digit verification code will be sent to your registered phone via SMS and WhatsApp and Email</p>
                     <FormMessage />
                   </FormItem>
                 )}
