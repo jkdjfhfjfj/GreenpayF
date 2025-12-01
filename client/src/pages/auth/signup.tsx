@@ -120,7 +120,7 @@ export default function SignupPage() {
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold mb-2">Join GreenPay</h2>
             <p className="text-muted-foreground">Create your account to start sending money</p>
-            <p className="text-xs text-muted-foreground mt-3 px-2">We'll verify your phone number and email. Make sure your phone is on WhatsApp and your name matches your ID.</p>
+            <p className="text-xs text-muted-foreground mt-3 px-2">Account verification requires a valid phone number on WhatsApp with SMS capability, a verified email address, and identification that matches your registered name.</p>
           </div>
 
           <Form {...form}>
@@ -138,7 +138,7 @@ export default function SignupPage() {
                         data-testid="input-fullname"
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground mt-1">Must match the name on your ID</p>
+                    <p className="text-xs text-muted-foreground mt-1">This must match the name on your official identification</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -158,7 +158,7 @@ export default function SignupPage() {
                         data-testid="input-email"
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground mt-1">We'll send a verification code to this email</p>
+                    <p className="text-xs text-muted-foreground mt-1">A verification code will be sent to this address</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -203,7 +203,7 @@ export default function SignupPage() {
                           data-testid="input-phone"
                         />
                       </FormControl>
-                      <p className="text-xs text-muted-foreground mt-1">Must be on WhatsApp and receive SMS. We'll send a verification code.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Must be a WhatsApp-enabled number with SMS capability. A verification code will be sent via SMS.</p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -330,14 +330,26 @@ export default function SignupPage() {
           </Form>
 
           <div className="mt-6 text-center">
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
               <button
                 onClick={() => setLocation("/login")}
-                className="text-primary hover:underline font-medium"
+                className="text-primary hover:underline font-semibold"
                 data-testid="link-signin"
               >
                 Sign in
+              </button>
+            </p>
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-xs text-muted-foreground">
+              By creating an account, you agree to our{" "}
+              <button
+                onClick={() => setLocation("/terms")}
+                className="text-primary hover:underline font-medium"
+              >
+                Terms and Conditions
               </button>
             </p>
           </div>
