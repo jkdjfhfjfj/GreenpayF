@@ -752,6 +752,11 @@ export class WhatsAppService {
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       const url = `${this.graphApiUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
 
+      // Get template from Meta to get the correct language code
+      const templates = await this.fetchTemplatesFromMeta();
+      const template = templates.find((t: any) => t.name === templateName);
+      const languageCode = template?.language || 'en_US';
+
       // Build parameters array from the provided object
       const paramArray = Object.values(parameters);
 
@@ -761,7 +766,7 @@ export class WhatsAppService {
         type: 'template',
         template: {
           name: templateName,
-          language: { code: 'en_US' },
+          language: { code: languageCode },
           components: paramArray.length > 0 ? [
             {
               type: 'body',
@@ -776,6 +781,11 @@ export class WhatsAppService {
         delete payload.template.components;
       }
 
+      console.log(`[WhatsApp] Sending generic template "${templateName}" with language: ${languageCode}`, {
+        paramCount: paramArray.length,
+        parameters: paramArray
+      });
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -788,10 +798,19 @@ export class WhatsAppService {
       const responseData = await response.json() as any;
 
       if (response.ok && responseData.messages) {
-        console.log(`[WhatsApp] ✓ Generic template "${templateName}" sent successfully`);
+        console.log(`[WhatsApp] ✓ Generic template "${templateName}" sent successfully`, {
+          messageId: responseData.messages[0]?.id,
+          language: languageCode
+        });
         return true;
       } else {
-        console.error(`[WhatsApp] ✗ Generic template send failed:`, responseData.error?.message);
+        console.error(`[WhatsApp] ✗ Generic template send failed:`, {
+          templateName,
+          error: responseData.error?.message,
+          errorCode: responseData.error?.code,
+          language: languageCode,
+          paramCount: paramArray.length
+        });
         return false;
       }
     } catch (error) {
