@@ -1,181 +1,229 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
-import { Send, CreditCard, TrendingUp, Shield, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { Send, CreditCard, TrendingUp, Shield, ChevronRight, X } from "lucide-react";
+
+interface OnboardingSlide {
+  id: number;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  gradient: string;
+}
+
+const slides: OnboardingSlide[] = [
+  {
+    id: 1,
+    title: "Send Money Instantly",
+    description: "Send money to Kenya and Africa with just a few taps. Fast, secure, and affordable.",
+    icon: <Send className="w-24 h-24" />,
+    gradient: "from-emerald-500 to-green-600",
+  },
+  {
+    id: 2,
+    title: "Virtual Cards",
+    description: "Get instant virtual Mastercard for online shopping worldwide. No waiting.",
+    icon: <CreditCard className="w-24 h-24" />,
+    gradient: "from-blue-500 to-cyan-600",
+  },
+  {
+    id: 3,
+    title: "Best Exchange Rates",
+    description: "Real-time rates with no hidden fees. Get more value for your money.",
+    icon: <TrendingUp className="w-24 h-24" />,
+    gradient: "from-purple-500 to-pink-600",
+  },
+  {
+    id: 4,
+    title: "Bank-Level Security",
+    description: "Your money is protected with military-grade encryption and biometric login.",
+    icon: <Shield className="w-24 h-24" />,
+    gradient: "from-orange-500 to-red-600",
+  },
+];
 
 export default function SplashPage() {
   const [, setLocation] = useLocation();
-  const [progress, setProgress] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  useEffect(() => {
-    // Simulate loading progress
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + Math.random() * 30;
-      });
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const features = [
-    { icon: Send, title: "Fast Transfers", desc: "Send money instantly to Kenya" },
-    { icon: CreditCard, title: "Virtual Cards", desc: "Shop online worldwide" },
-    { icon: TrendingUp, title: "Best Rates", desc: "Real-time exchange rates" },
-    { icon: Shield, title: "Secure", desc: "Bank-level security" }
-  ];
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.2,
-      },
-    },
+  const handleNext = () => {
+    if (currentSlide < slides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
+    } else {
+      setLocation("/signup");
+    }
   };
 
-  const itemVariants = {
-    hidden: { y: 30, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.6, ease: "easeOut" },
-    },
+  const handleSkip = () => {
+    setLocation("/login");
   };
+
+  const handlePrev = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
+    }
+  };
+
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 1000 : -1000,
+      opacity: 0,
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1,
+    },
+    exit: (direction: number) => ({
+      zIndex: 0,
+      x: direction < 0 ? 1000 : -1000,
+      opacity: 0,
+    }),
+  };
+
+  const slide = slides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-900 overflow-hidden flex items-center justify-center p-4">
-      {/* Animated background gradient orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute top-20 right-10 w-72 h-72 bg-emerald-500 rounded-full opacity-10 blur-3xl"
-          animate={{ x: [0, 100, 0], y: [0, 50, 0] }}
-          transition={{ duration: 15, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute -bottom-10 -left-20 w-80 h-80 bg-green-500 rounded-full opacity-10 blur-3xl"
-          animate={{ x: [0, -100, 0], y: [0, -50, 0] }}
-          transition={{ duration: 18, repeat: Infinity }}
-        />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center p-4">
+      {/* Status Bar */}
+      <div className="fixed top-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 px-6 py-3 z-20">
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <span className="text-white text-sm font-semibold">9:41</span>
+          <div className="flex gap-1 text-white text-xs">
+            <span>📶</span>
+            <span>📡</span>
+            <span>🔋</span>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content Container */}
-      <div className="w-full max-w-md relative z-10">
-        {/* Header Logo */}
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center mb-10"
-        >
-          <div className="inline-block mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-500 rounded-3xl flex items-center justify-center shadow-2xl">
-              <span className="text-white text-3xl font-bold">$</span>
-            </div>
+      {/* Main Container - Fixed Phone-like view */}
+      <div className="w-full max-w-sm h-screen max-h-screen flex flex-col bg-black overflow-hidden rounded-3xl shadow-2xl border border-gray-800 relative">
+        
+        {/* Top Navigation Bar */}
+        <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 pt-8 pb-4 flex items-center justify-between">
+          <div className="w-6" />
+          <div className="text-center">
+            <h1 className="text-white font-bold text-lg">GreenPay</h1>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">GreenPay</h1>
-          <p className="text-emerald-200 text-sm">Send Money. Go Global.</p>
-        </motion.div>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleSkip}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </motion.button>
+        </div>
 
-        {/* Features Grid */}
-        <motion.div
-          className="grid grid-cols-2 gap-3 mb-10"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {features.map((feature, idx) => (
+        {/* Slide Container */}
+        <div className="flex-1 overflow-hidden flex flex-col items-center justify-center px-6 relative">
+          <AnimatePresence mode="wait" custom={1}>
             <motion.div
-              key={idx}
-              variants={itemVariants}
-              whileHover={{ scale: 1.05, y: -5 }}
-              className="bg-gradient-to-br from-emerald-900/50 to-green-900/50 backdrop-blur-md border border-emerald-700/50 rounded-2xl p-4 hover:border-emerald-500/50 transition-all duration-300"
+              key={currentSlide}
+              custom={1}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                x: { type: "spring", stiffness: 300, damping: 30 },
+                opacity: { duration: 0.4 },
+              }}
+              className="w-full flex flex-col items-center justify-center py-12"
             >
-              <feature.icon className="w-6 h-6 text-emerald-400 mb-3" />
-              <h3 className="font-semibold text-white text-sm mb-1">{feature.title}</h3>
-              <p className="text-xs text-emerald-200">{feature.desc}</p>
+              {/* Icon */}
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
+                className={`bg-gradient-to-br ${slide.gradient} p-8 rounded-3xl mb-8 text-white shadow-2xl`}
+              >
+                {slide.icon}
+              </motion.div>
+
+              {/* Title */}
+              <motion.h2
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="text-3xl font-bold text-white text-center mb-4"
+              >
+                {slide.title}
+              </motion.h2>
+
+              {/* Description */}
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-gray-300 text-center text-base leading-relaxed"
+              >
+                {slide.description}
+              </motion.p>
             </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Pagination Dots */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="flex gap-2 justify-center py-6"
+        >
+          {slides.map((_, idx) => (
+            <motion.button
+              key={idx}
+              onClick={() => setCurrentSlide(idx)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                idx === currentSlide ? "bg-emerald-500 w-8" : "bg-gray-700 w-2"
+              }`}
+              whileHover={{ scale: 1.2 }}
+            />
           ))}
         </motion.div>
 
-        {/* Tagline */}
-        <motion.p
+        {/* Bottom Navigation */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="text-center text-emerald-100 text-sm mb-10 leading-relaxed"
+          transition={{ delay: 0.5 }}
+          className="bg-gradient-to-t from-gray-900 to-gray-800/50 px-6 pb-6 pt-4 space-y-3"
         >
-          The easiest way to send money to Africa. Fast, secure, and affordable.
-        </motion.p>
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            {currentSlide > 0 && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handlePrev}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
+              >
+                Back
+              </motion.button>
+            )}
 
-        {/* CTA Buttons */}
-        <motion.div
-          className="space-y-3 mb-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-        >
-          <motion.button
-            whileHover={{ scale: 1.02, x: 5 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setLocation("/signup")}
-            className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-between group"
-          >
-            <span>Create Account</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleNext}
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg"
+            >
+              <span>{currentSlide === slides.length - 1 ? "Get Started" : "Next"}</span>
+              <ChevronRight className="w-5 h-5" />
+            </motion.button>
+          </div>
 
+          {/* Skip Button */}
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setLocation("/login")}
-            className="w-full border-2 border-emerald-500 text-emerald-300 font-semibold py-4 px-6 rounded-xl hover:bg-emerald-950/50 transition-all duration-200"
+            onClick={handleSkip}
+            className="w-full text-gray-400 hover:text-white font-semibold py-3 px-4 transition-colors"
           >
-            Sign In
+            {currentSlide === slides.length - 1 ? "Already have account? Sign In" : "Skip"}
           </motion.button>
-        </motion.div>
-
-        {/* Footer Links */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="text-center space-y-2"
-        >
-          <p className="text-emerald-300 text-xs">
-            By continuing, you agree to our{" "}
-            <button onClick={() => setLocation("/terms")} className="text-emerald-400 hover:text-emerald-300 font-semibold underline">
-              Terms
-            </button>
-            {" "}and{" "}
-            <button onClick={() => setLocation("/privacy")} className="text-emerald-400 hover:text-emerald-300 font-semibold underline">
-              Privacy
-            </button>
-          </p>
-        </motion.div>
-
-        {/* Loading Progress Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.4 }}
-          className="mt-8 pt-6 border-t border-emerald-700/50"
-        >
-          <div className="bg-emerald-950/50 rounded-full h-1 overflow-hidden backdrop-blur-sm">
-            <motion.div
-              className="h-full bg-gradient-to-r from-emerald-400 to-green-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-          <p className="text-center text-emerald-400 text-xs mt-2 font-medium">{Math.round(progress)}%</p>
         </motion.div>
       </div>
     </div>
