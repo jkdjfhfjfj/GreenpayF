@@ -10,7 +10,7 @@ export class OpenAIService {
       console.warn('⚠️ Google AI API key not configured');
     }
     this.genAI = new GoogleGenerativeAI(apiKey || '');
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
   }
 
   async generateResponse(messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>): Promise<string> {
