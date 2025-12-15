@@ -14,7 +14,7 @@ export class OpenAIService {
 
     // ✅ gemini-1.5-flash works ONLY on v1
     this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-pro',
+      model: 'gemini-2.5-flash',
     });
   }
 
