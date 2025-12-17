@@ -20,12 +20,11 @@ export default function OtpVerificationPage() {
   const [sentVia, setSentVia] = useState<string>("");
 
   useEffect(() => {
-    // Get user ID and phone from localStorage
     const storedUserId = localStorage.getItem("otpUserId");
     const storedPhone = localStorage.getItem("otpPhone");
     const storedEmail = localStorage.getItem("otpEmail");
     const storedSentVia = localStorage.getItem("otpSentVia");
-    
+
     if (!storedUserId) {
       toast({
         title: "Session expired",
@@ -35,13 +34,12 @@ export default function OtpVerificationPage() {
       setLocation("/login");
       return;
     }
-    
+
     setUserId(storedUserId);
     setPhone(storedPhone || "");
     setEmail(storedEmail || "");
     setSentVia(storedSentVia || "");
-    
-    // Focus first input on mount
+
     if (inputRefs.current[0]) {
       inputRefs.current[0].focus();
     }
@@ -56,19 +54,16 @@ export default function OtpVerificationPage() {
       return response.json();
     },
     onSuccess: (data) => {
-      // Clear localStorage
       localStorage.removeItem("otpUserId");
       localStorage.removeItem("otpPhone");
-      
-      // Login the user - this updates state and localStorage
+
       login(data.user);
-      
+
       toast({
         title: "Login successful!",
         description: "You have been successfully verified and logged in.",
       });
-      
-      // Use setTimeout to ensure state has updated before navigation
+
       setTimeout(() => {
         setLocation("/dashboard");
       }, 100);
@@ -79,7 +74,7 @@ export default function OtpVerificationPage() {
         description: "Invalid or expired OTP code. Please try again.",
         variant: "destructive",
       });
-      // Clear OTP inputs
+
       setOtp(new Array(6).fill(""));
       if (inputRefs.current[0]) {
         inputRefs.current[0].focus();
@@ -88,17 +83,19 @@ export default function OtpVerificationPage() {
   });
 
   const handleChange = (element: HTMLInputElement, index: number) => {
-    if (isNaN(Number(element.value))) return false;
+    if (isNaN(Number(element.value))) return;
 
     setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
 
-    // Focus next element
     if (element.nextSibling && element.value !== "") {
       (element.nextSibling as HTMLInputElement).focus();
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number
+  ) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -140,11 +137,7 @@ export default function OtpVerificationPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <WavyHeader
-        
-        
-        size="sm"
-      />
+      <WavyHeader size="sm" />
 
       <div className="flex-1 p-6 flex items-center justify-center">
         <motion.div
@@ -161,12 +154,13 @@ export default function OtpVerificationPage() {
           >
             <span className="material-icons text-white text-2xl">sms</span>
           </motion.div>
-          
+
           <h2 className="text-2xl font-bold mb-2">Verify Login</h2>
           <p className="text-muted-foreground mb-8">
-            We've sent a 6-digit verification code to (Check both on either Email,sms, or Whatsapp):
+            We've sent a 6-digit verification code to (Check Email, SMS or
+            WhatsApp):
             <br />
-            <strong>📱 Email, SMS & WhatsApp:</strong> {phone || "your phone"}
+            <strong>📱 Phone:</strong> {phone || "your phone"}
             {email && (
               <>
                 <br />
@@ -188,7 +182,6 @@ export default function OtpVerificationPage() {
                   onFocus={(e) => e.target.select()}
                   ref={(ref) => (inputRefs.current[index] = ref)}
                   className="w-12 h-12 text-center text-xl font-bold border border-border rounded-xl bg-input focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                  data-testid={`input-otp-${index}`}
                 />
               ))}
             </div>
@@ -197,7 +190,6 @@ export default function OtpVerificationPage() {
               type="submit"
               className="w-full ripple mb-4"
               disabled={verifyOtpMutation.isPending || otp.join("").length !== 6}
-              data-testid="button-verify"
             >
               {verifyOtpMutation.isPending ? "Verifying..." : "Verify Code"}
             </Button>
@@ -209,13 +201,26 @@ export default function OtpVerificationPage() {
               onClick={handleResend}
               disabled={resendOtpMutation.isPending}
               className="text-primary hover:underline font-medium disabled:opacity-50"
-              data-testid="button-resend"
             >
               {resendOtpMutation.isPending ? "Sending..." : "Resend Code"}
             </button>
+          </p>
+
+          {/* ✅ WhatsApp Support Link */}
+          <p className="text-muted-foreground text-sm mt-4">
+            Having OTP issues?{" "}
+            <a
+              href="https://wa.me/14704657028"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-green-600 hover:underline font-medium"
+            >
+              <span className="material-icons text-base">chat</span>
+              Contact Support on WhatsApp (+1 470 465 7028)
+            </a>
           </p>
         </motion.div>
       </div>
     </div>
   );
-}
+    }
