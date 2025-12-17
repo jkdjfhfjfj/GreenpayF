@@ -164,7 +164,14 @@ export default function OtpVerificationPage() {
             {email && (
               <>
                 <br />
-                <strong>📧 Email:</strong> {email}
+                <strong>📧 Email:</strong>{" "}
+{email && email.trim().length > 0 ? (
+  email
+) : (
+  <span className="text-muted-foreground">
+    Check your mailbox. Ensure you entered a correct email or contact us.
+  </span>
+)}
               </>
             )}
           </p>
