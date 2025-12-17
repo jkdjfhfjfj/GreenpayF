@@ -164,9 +164,9 @@ export default function OtpVerificationPage() {
           
           <h2 className="text-2xl font-bold mb-2">Verify Login</h2>
           <p className="text-muted-foreground mb-8">
-            We've sent a 6-digit verification code to:
+            We've sent a 6-digit verification code to (Check both on either Email,sms, or Whatsapp):
             <br />
-            <strong>📱 SMS & WhatsApp:</strong> {phone || "your phone"}
+            <strong>📱 Email, SMS & WhatsApp:</strong> {phone || "your phone"}
             {email && (
               <>
                 <br />
