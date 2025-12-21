@@ -4256,15 +4256,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/settings/:key", async (req, res) => {
+  app.put("/api/admin/settings/:key", requireAdminAuth, async (req, res) => {
     try {
       const { key } = req.params;
       const { value } = req.body;
       
-      const updatedSetting = await storage.updateSystemSetting(key, value);
+      // Try to update existing setting
+      let updatedSetting = await storage.updateSystemSetting(key, value);
       
+      // If setting doesn't exist, create it with messaging category
       if (!updatedSetting) {
-        return res.status(404).json({ message: "Setting not found" });
+        updatedSetting = await storage.createSystemSetting({
+          category: "messaging",
+          key: key,
+          value: JSON.parse(typeof value === 'string' ? value : JSON.stringify(value))
+        });
       }
 
       res.json({ setting: updatedSetting });

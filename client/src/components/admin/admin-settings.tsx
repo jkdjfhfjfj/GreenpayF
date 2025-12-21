@@ -116,7 +116,9 @@ export default function AdminSettings() {
     Object.entries(security).forEach(([key, value]) => {
       // Special mapping for OTP feature setting
       if (key === 'enable_otp_feature') {
-        updateSettingMutation.mutate({ key: 'enable_otp_messages', value: value.toString() });
+        // Convert boolean to string for storage ('true' or 'false')
+        const stringValue = value ? 'true' : 'false';
+        updateSettingMutation.mutate({ key: 'enable_otp_messages', value: stringValue });
       } else {
         updateSettingMutation.mutate({ key, value: value.toString() });
       }
