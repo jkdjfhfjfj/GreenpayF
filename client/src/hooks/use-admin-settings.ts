@@ -11,6 +11,9 @@ interface AdminSettings {
     two_factor_required: boolean;
     kyc_auto_approval: boolean;
     enable_otp_feature: boolean;
+    otp_email_enabled: boolean;
+    otp_sms_enabled: boolean;
+    otp_whatsapp_enabled: boolean;
     max_daily_limit: string;
     min_transaction_amount: string;
   };
@@ -50,6 +53,9 @@ const DEFAULT_SETTINGS: AdminSettings = {
     two_factor_required: true,
     kyc_auto_approval: false,
     enable_otp_feature: true,
+    otp_email_enabled: true,
+    otp_sms_enabled: true,
+    otp_whatsapp_enabled: true,
     max_daily_limit: '10000',
     min_transaction_amount: '1.00'
   },

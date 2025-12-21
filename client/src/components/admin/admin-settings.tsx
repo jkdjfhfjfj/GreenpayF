@@ -114,14 +114,25 @@ export default function AdminSettings() {
     updateSecurity(security);
     saveSettings({ ...settings, security });
     Object.entries(security).forEach(([key, value]) => {
-      // Special mapping for OTP feature setting
+      let backendKey = key;
+      let finalValue = value.toString();
+      
+      // Special mapping for OTP feature settings
       if (key === 'enable_otp_feature') {
-        // Convert boolean to string for storage ('true' or 'false')
-        const stringValue = value ? 'true' : 'false';
-        updateSettingMutation.mutate({ key: 'enable_otp_messages', value: stringValue });
-      } else {
-        updateSettingMutation.mutate({ key, value: value.toString() });
+        backendKey = 'enable_otp_messages';
+        finalValue = value ? 'true' : 'false';
+      } else if (key === 'otp_email_enabled') {
+        backendKey = 'otp_email_enabled';
+        finalValue = value ? 'true' : 'false';
+      } else if (key === 'otp_sms_enabled') {
+        backendKey = 'otp_sms_enabled';
+        finalValue = value ? 'true' : 'false';
+      } else if (key === 'otp_whatsapp_enabled') {
+        backendKey = 'otp_whatsapp_enabled';
+        finalValue = value ? 'true' : 'false';
       }
+      
+      updateSettingMutation.mutate({ key: backendKey, value: finalValue });
     });
   };
 
@@ -401,13 +412,40 @@ export default function AdminSettings() {
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>OTP Feature</Label>
-                      <p className="text-sm text-gray-500">Enable SMS/WhatsApp OTP verification during login</p>
+                      <p className="text-sm text-gray-500">Enable OTP verification during login</p>
                     </div>
                     <Switch
                       checked={security.enable_otp_feature !== false}
                       onCheckedChange={(checked) => setSecurity({ ...security, enable_otp_feature: checked })}
                       data-testid="switch-otp-feature"
                     />
+                  </div>
+                  <div className="space-y-2 border-t pt-3">
+                    <p className="text-sm font-medium text-gray-700">OTP Methods (if OTP enabled):</p>
+                    <div className="flex items-center justify-between pl-4">
+                      <Label className="font-normal">Email OTP</Label>
+                      <Switch
+                        checked={security.otp_email_enabled !== false}
+                        onCheckedChange={(checked) => setSecurity({ ...security, otp_email_enabled: checked })}
+                        data-testid="switch-otp-email"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between pl-4">
+                      <Label className="font-normal">SMS OTP</Label>
+                      <Switch
+                        checked={security.otp_sms_enabled !== false}
+                        onCheckedChange={(checked) => setSecurity({ ...security, otp_sms_enabled: checked })}
+                        data-testid="switch-otp-sms"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between pl-4">
+                      <Label className="font-normal">WhatsApp OTP</Label>
+                      <Switch
+                        checked={security.otp_whatsapp_enabled !== false}
+                        onCheckedChange={(checked) => setSecurity({ ...security, otp_whatsapp_enabled: checked })}
+                        data-testid="switch-otp-whatsapp"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-4">

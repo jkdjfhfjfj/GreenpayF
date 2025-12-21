@@ -6115,6 +6115,23 @@ var transferSchema = z.object({
   description: z.string().optional()
 });
 async function registerRoutes(app2) {
+  const checkMaintenanceMode = async (req, res, next) => {
+    try {
+      const maintenanceSetting = await storage.getSystemSetting("general", "maintenance_mode");
+      const maintenanceEnabled = maintenanceSetting?.value === true || maintenanceSetting?.value === "true";
+      const allowedPaths = ["/api/auth/login", "/api/auth/logout", "/"];
+      const isAllowedPath = allowedPaths.some((path3) => req.path.startsWith(path3));
+      if (maintenanceEnabled && !isAllowedPath && !req.session?.admin) {
+        const messageSetting = await storage.getSystemSetting("general", "maintenance_message");
+        return res.status(503).json({
+          message: messageSetting?.value || "System is under maintenance. Please try again later."
+        });
+      }
+    } catch (error) {
+      console.error("Maintenance check error:", error);
+    }
+    next();
+  };
   const requireAuth = (req, res, next) => {
     const userId = req.session?.userId;
     if (!userId) {
@@ -6242,6 +6259,12 @@ async function registerRoutes(app2) {
       }
       const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
       const otpRequired = enableOtpSetting?.value !== "false";
+      const otpEmailSetting = await storage.getSystemSetting("messaging", "otp_email_enabled");
+      const otpSmsSetting = await storage.getSystemSetting("messaging", "otp_sms_enabled");
+      const otpWhatsappSetting = await storage.getSystemSetting("messaging", "otp_whatsapp_enabled");
+      const emailEnabled = otpEmailSetting?.value !== "false";
+      const smsEnabled = otpSmsSetting?.value !== "false";
+      const whatsappEnabled = otpWhatsappSetting?.value !== "false";
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");

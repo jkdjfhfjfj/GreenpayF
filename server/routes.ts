@@ -95,6 +95,28 @@ const transferSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Maintenance mode middleware
+  const checkMaintenanceMode = async (req: any, res: any, next: any) => {
+    try {
+      const maintenanceSetting = await storage.getSystemSetting("general", "maintenance_mode");
+      const maintenanceEnabled = maintenanceSetting?.value === true || maintenanceSetting?.value === 'true';
+      
+      // Allow certain paths during maintenance
+      const allowedPaths = ['/api/auth/login', '/api/auth/logout', '/'];
+      const isAllowedPath = allowedPaths.some(path => req.path.startsWith(path));
+      
+      if (maintenanceEnabled && !isAllowedPath && !req.session?.admin) {
+        const messageSetting = await storage.getSystemSetting("general", "maintenance_message");
+        return res.status(503).json({ 
+          message: messageSetting?.value || "System is under maintenance. Please try again later."
+        });
+      }
+    } catch (error) {
+      console.error('Maintenance check error:', error);
+    }
+    next();
+  };
+
   // Authentication and authorization middleware
   const requireAuth = (req: any, res: any, next: any) => {
     const userId = req.session?.userId;
@@ -277,6 +299,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if OTP is required (based on admin toggle)
       const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
       const otpRequired = enableOtpSetting?.value !== 'false'; // Default to true if not set
+      
+      // Check which OTP methods are enabled
+      const otpEmailSetting = await storage.getSystemSetting("messaging", "otp_email_enabled");
+      const otpSmsSetting = await storage.getSystemSetting("messaging", "otp_sms_enabled");
+      const otpWhatsappSetting = await storage.getSystemSetting("messaging", "otp_whatsapp_enabled");
+      
+      const emailEnabled = otpEmailSetting?.value !== 'false'; // Default to true
+      const smsEnabled = otpSmsSetting?.value !== 'false'; // Default to true
+      const whatsappEnabled = otpWhatsappSetting?.value !== 'false'; // Default to true
       
       // Check if messaging credentials are configured (SMS or WhatsApp)
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
