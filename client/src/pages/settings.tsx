@@ -44,8 +44,15 @@ export default function SettingsPage() {
     pushNotificationsEnabled: user?.pushNotificationsEnabled !== false,
     twoFactorEnabled: user?.twoFactorEnabled || false,
     biometricEnabled: user?.biometricEnabled || false,
+    pinEnabled: user?.pinEnabled || false,
     darkMode: user?.darkMode || false,
   });
+
+  // PIN setup states
+  const [isPinSetup, setIsPinSetup] = useState(false);
+  const [pinSetupStep, setPinSetupStep] = useState<'create' | 'confirm'>('create');
+  const [pinValue, setPinValue] = useState('');
+  const [pinConfirm, setPinConfirm] = useState('');
 
   // Profile editing states
   const [profileImage, setProfileImage] = useState<string | null>(null);

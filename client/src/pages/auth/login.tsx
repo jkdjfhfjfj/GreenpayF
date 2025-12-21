@@ -24,6 +24,9 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [biometricSupported, setBiometricSupported] = useState(false);
+  const [requiresPin, setRequiresPin] = useState(false);
+  const [pinCode, setPinCode] = useState("");
+  const [tempLoginData, setTempLoginData] = useState<any>(null);
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -47,7 +50,12 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data) => {
-      if (data.requiresOtp) {
+      if (data.requiresPin) {
+        // PIN verification required
+        setTempLoginData(data);
+        setRequiresPin(true);
+        setPinCode("");
+      } else if (data.requiresOtp) {
         // OTP verification required
         toast({
           title: "Verification code sent",
@@ -78,6 +86,37 @@ export default function LoginPage() {
         description: error.message || "Invalid email or password. Please try again.",
         variant: "destructive",
       });
+    },
+  });
+
+  const verifyPinMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/verify-pin", {
+        userId: tempLoginData.userId,
+        pin: pinCode,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      login(data.user);
+      setRequiresPin(false);
+      setPinCode("");
+      setTempLoginData(null);
+      toast({
+        title: "Welcome back!",
+        description: "You have been successfully logged in.",
+      });
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 100);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "PIN verification failed",
+        description: error.message || "Invalid PIN. Please try again.",
+        variant: "destructive",
+      });
+      setPinCode("");
     },
   });
 
@@ -276,6 +315,62 @@ export default function LoginPage() {
               </button>
             </p>
           </div>
+
+          {/* PIN Verification Dialog */}
+          {requiresPin && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => {
+                setRequiresPin(false);
+                setPinCode("");
+                setTempLoginData(null);
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-background p-6 rounded-lg border border-border max-w-sm w-full shadow-lg"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-semibold mb-2">Enter PIN</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Your account has PIN protection enabled. Please enter your 4-6 digit PIN to continue.
+                </p>
+                <div className="space-y-4">
+                  <Input
+                    type="password"
+                    placeholder="Enter PIN"
+                    value={pinCode}
+                    onChange={(e) => setPinCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    maxLength={6}
+                    className="text-center text-2xl tracking-widest font-bold"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setRequiresPin(false);
+                        setPinCode("");
+                        setTempLoginData(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      disabled={pinCode.length < 4 || verifyPinMutation.isPending}
+                      onClick={() => verifyPinMutation.mutate()}
+                    >
+                      {verifyPinMutation.isPending ? "Verifying..." : "Verify"}
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
 
           <div className="mt-8">
             <div className="relative">
