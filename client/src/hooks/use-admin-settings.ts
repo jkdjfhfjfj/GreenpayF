@@ -10,6 +10,7 @@ interface AdminSettings {
   security: {
     two_factor_required: boolean;
     kyc_auto_approval: boolean;
+    enable_otp_feature: boolean;
     max_daily_limit: string;
     min_transaction_amount: string;
   };
@@ -48,6 +49,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
   security: {
     two_factor_required: true,
     kyc_auto_approval: false,
+    enable_otp_feature: true,
     max_daily_limit: '10000',
     min_transaction_amount: '1.00'
   },

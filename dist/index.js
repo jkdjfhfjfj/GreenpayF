@@ -111,6 +111,9 @@ var init_schema = __esm({
       otpExpiry: timestamp("otp_expiry"),
       paystackCustomerId: text("paystack_customer_id"),
       defaultCurrency: text("default_currency").default("KES"),
+      pinEnabled: boolean("pin_enabled").default(false),
+      pinCode: text("pin_code"),
+      // Hashed PIN for login protection
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
@@ -683,7 +686,10 @@ var init_schema = __esm({
     insertTicketReplySchema = createInsertSchema(ticketReplies).omit({ id: true, createdAt: true });
     aiUsage = pgTable("ai_usage", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+      userId: varchar("user_id"),
+      // Can be null for guest users tracked by IP
+      trackingId: varchar("tracking_id").notNull(),
+      // user_id or guest-{ip}
       dailyCount: integer("daily_count").default(0),
       lastResetDate: timestamp("last_reset_date").defaultNow(),
       createdAt: timestamp("created_at").defaultNow(),
@@ -5912,11 +5918,14 @@ var OpenAIService = class {
       console.warn("\u26A0\uFE0F Google AI API key not configured");
     }
     this.genAI = new GoogleGenerativeAI(apiKey || "");
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    this.model = this.genAI.getGenerativeModel({
+      model: "gemini-2.5-flash"
+    });
   }
   async generateResponse(messages2) {
     try {
-      const systemPrompt = `You are a helpful AI assistant for GreenPay, a comprehensive fintech payment application for KES users.
+      const systemPrompt = `
+You are a helpful AI assistant for GreenPay, a comprehensive fintech payment application for KES users.
 
 You MUST only answer questions related to GreenPay's features and services:
 - Bill payments and money transfers
@@ -5930,15 +5939,8 @@ You MUST only answer questions related to GreenPay's features and services:
 - Admin panel and support ticket system
 - Public API services
 
-IMPORTANT RULES:
-1. Only respond to questions about GreenPay features and services
-2. If asked about unrelated topics, politely redirect the user by saying: "I'm here to help with GreenPay features. Could you ask me something about bill payments, transfers, virtual cards, airtime, currency exchange, loans, or your account?"
-3. Provide helpful, concise, and professional responses
-4. Be friendly and supportive in your tone`;
-      const conversationHistory = messages2.map((msg) => ({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text: msg.content }]
-      }));
+If asked about unrelated topics, politely redirect the user.
+`;
       const contents = [
         {
           role: "user",
@@ -5946,13 +5948,14 @@ IMPORTANT RULES:
         },
         {
           role: "model",
-          parts: [{ text: "Understood. I will only provide assistance related to GreenPay features and services." }]
+          parts: [{ text: "Understood." }]
         },
-        ...conversationHistory
+        ...messages2.map((msg) => ({
+          role: msg.role === "assistant" ? "model" : "user",
+          parts: [{ text: msg.content }]
+        }))
       ];
-      const result = await this.model.generateContent({
-        contents
-      });
+      const result = await this.model.generateContent({ contents });
       return result.response.text() || "Unable to generate response";
     } catch (error) {
       console.error("Google AI API error:", error);
@@ -5960,18 +5963,7 @@ IMPORTANT RULES:
     }
   }
   async getAIFeatureSuggestions(context) {
-    const systemPrompt = `You are a helpful AI assistant for GreenPay, a fintech payment application. 
-Provide helpful, concise suggestions and answers about:
-- Bill payments and money transfers
-- Virtual cards and airtime purchases
-- Currency exchange services
-- Document uploads and KYC verification
-- Support and account management
-- Performance-based loans
-
-Keep responses brief and professional.`;
     return this.generateResponse([
-      { role: "system", content: systemPrompt },
       { role: "user", content: context }
     ]);
   }
@@ -5995,18 +5987,19 @@ var AIRateLimiter = class {
       const oneDayAgo = new Date(Date.now() - ONE_DAY_MS);
       const finalUserId = userId || `guest-${ipAddress}`;
       let usage = await db.query.aiUsage.findFirst({
-        where: eq2(aiUsage.userId, finalUserId)
+        where: eq2(aiUsage.trackingId, finalUserId)
       });
       if (!usage) {
         const newUsage = await db.insert(aiUsage).values({
-          userId: finalUserId,
+          userId: userId || null,
+          trackingId: finalUserId,
           dailyCount: 0,
           lastResetDate: now
         }).returning();
         usage = newUsage[0];
       }
       if (usage.lastResetDate && new Date(usage.lastResetDate) < oneDayAgo) {
-        await db.update(aiUsage).set({ dailyCount: 0, lastResetDate: now }).where(eq2(aiUsage.userId, finalUserId));
+        await db.update(aiUsage).set({ dailyCount: 0, lastResetDate: now }).where(eq2(aiUsage.trackingId, finalUserId));
         usage.dailyCount = 0;
       }
       if (usage.dailyCount >= DAILY_LIMIT) {
@@ -6017,7 +6010,7 @@ var AIRateLimiter = class {
         };
       }
       const newCount = (usage.dailyCount || 0) + 1;
-      await db.update(aiUsage).set({ dailyCount: newCount, updatedAt: /* @__PURE__ */ new Date() }).where(eq2(aiUsage.userId, finalUserId));
+      await db.update(aiUsage).set({ dailyCount: newCount, updatedAt: /* @__PURE__ */ new Date() }).where(eq2(aiUsage.trackingId, finalUserId));
       const remainingRequests = DAILY_LIMIT - newCount;
       return { allowed: true, remainingRequests };
     } catch (error) {
@@ -6034,13 +6027,13 @@ var AIRateLimiter = class {
       const oneDayAgo = new Date(Date.now() - ONE_DAY_MS);
       const finalUserId = userId || `guest-${ipAddress}`;
       let usage = await db.query.aiUsage.findFirst({
-        where: eq2(aiUsage.userId, finalUserId)
+        where: eq2(aiUsage.trackingId, finalUserId)
       });
       if (!usage) {
         return DAILY_LIMIT;
       }
       if (usage.lastResetDate && new Date(usage.lastResetDate) < oneDayAgo) {
-        await db.update(aiUsage).set({ dailyCount: 0, lastResetDate: /* @__PURE__ */ new Date() }).where(eq2(aiUsage.userId, finalUserId));
+        await db.update(aiUsage).set({ dailyCount: 0, lastResetDate: /* @__PURE__ */ new Date() }).where(eq2(aiUsage.trackingId, finalUserId));
         return DAILY_LIMIT;
       }
       return Math.max(0, DAILY_LIMIT - (usage.dailyCount || 0));

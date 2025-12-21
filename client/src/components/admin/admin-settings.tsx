@@ -63,7 +63,10 @@ export default function AdminSettings() {
   useEffect(() => {
     if (isLoaded) {
       setFees(settings.fees);
-      setSecurity(settings.security);
+      setSecurity({
+        ...settings.security,
+        enable_otp_feature: settings.security.enable_otp_feature !== undefined ? settings.security.enable_otp_feature : true
+      });
       setNotifications(settings.notifications);
       setWhatsapp(settings.whatsapp);
       setGeneral(settings.general);
@@ -107,11 +110,16 @@ export default function AdminSettings() {
     });
   };
 
-  const handleSaveSecurity = () => {
+  const handleSaveSecurity = async () => {
     updateSecurity(security);
     saveSettings({ ...settings, security });
     Object.entries(security).forEach(([key, value]) => {
-      updateSettingMutation.mutate({ key, value: value.toString() });
+      // Special mapping for OTP feature setting
+      if (key === 'enable_otp_feature') {
+        updateSettingMutation.mutate({ key: 'enable_otp_messages', value: value.toString() });
+      } else {
+        updateSettingMutation.mutate({ key, value: value.toString() });
+      }
     });
   };
 
@@ -386,6 +394,17 @@ export default function AdminSettings() {
                       checked={security.kyc_auto_approval}
                       onCheckedChange={(checked) => setSecurity({ ...security, kyc_auto_approval: checked })}
                       data-testid="switch-kyc-auto"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>OTP Feature</Label>
+                      <p className="text-sm text-gray-500">Enable SMS/WhatsApp OTP verification during login</p>
+                    </div>
+                    <Switch
+                      checked={security.enable_otp_feature !== false}
+                      onCheckedChange={(checked) => setSecurity({ ...security, enable_otp_feature: checked })}
+                      data-testid="switch-otp-feature"
                     />
                   </div>
                 </div>
