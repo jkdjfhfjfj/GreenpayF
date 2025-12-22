@@ -10,6 +10,8 @@ interface AdminSettings {
   security: {
     two_factor_required: boolean;
     kyc_auto_approval: boolean;
+    kyc_required?: boolean;
+    pin_required?: boolean;
     enable_otp_feature: boolean;
     otp_email_enabled: boolean;
     otp_sms_enabled: boolean;
@@ -52,6 +54,8 @@ const DEFAULT_SETTINGS: AdminSettings = {
   security: {
     two_factor_required: true,
     kyc_auto_approval: false,
+    kyc_required: false,
+    pin_required: false,
     enable_otp_feature: true,
     otp_email_enabled: true,
     otp_sms_enabled: true,

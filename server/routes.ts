@@ -95,14 +95,14 @@ const transferSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Maintenance mode middleware
+  // Maintenance mode middleware - APPLIED AT END
   const checkMaintenanceMode = async (req: any, res: any, next: any) => {
     try {
       const maintenanceSetting = await storage.getSystemSetting("general", "maintenance_mode");
       const maintenanceEnabled = maintenanceSetting?.value === true || maintenanceSetting?.value === 'true';
       
-      // Allow certain paths during maintenance
-      const allowedPaths = ['/api/auth/login', '/api/auth/logout', '/'];
+      // Allow only login/logout/static during maintenance
+      const allowedPaths = ['/api/auth/login', '/api/auth/logout', '/api/auth/verify-otp', '/'];
       const isAllowedPath = allowedPaths.some(path => req.path.startsWith(path));
       
       if (maintenanceEnabled && !isAllowedPath && !req.session?.admin) {
@@ -154,6 +154,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`[ADMIN AUTH] SUCCESS - Admin ${req.session.admin.email} authenticated`);
     next();
   };
+
+  // Apply maintenance mode middleware globally
+  app.use(checkMaintenanceMode);
 
   // Health check endpoint - must be defined early to avoid catch-all routes
   app.get("/health", (_req, res) => {
@@ -296,6 +299,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      // Check admin-enforced security requirements
+      const twoFactorRequiredSetting = await storage.getSystemSetting("security", "two_factor_required");
+      const twoFactorRequired = twoFactorRequiredSetting?.value === 'true';
+      
+      const kycRequiredSetting = await storage.getSystemSetting("security", "kyc_auto_approval");
+      const kycRequired = kycRequiredSetting?.value === 'false'; // false means KYC is REQUIRED
+      
       // Check if OTP is required (based on admin toggle)
       const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
       const otpRequired = enableOtpSetting?.value !== 'false'; // Default to true if not set
@@ -308,6 +318,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailEnabled = otpEmailSetting?.value !== 'false'; // Default to true
       const smsEnabled = otpSmsSetting?.value !== 'false'; // Default to true
       const whatsappEnabled = otpWhatsappSetting?.value !== 'false'; // Default to true
+      
+      // Check PIN requirement
+      const pinRequiredSetting = await storage.getSystemSetting("security", "pin_required");
+      const pinRequired = pinRequiredSetting?.value === 'true';
       
       // Check if messaging credentials are configured (SMS or WhatsApp)
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
@@ -328,22 +342,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // At least one messaging channel must be configured for OTP
       const messagesConfigured = smsConfigured || whatsappConfigured;
       
-      // If OTP is disabled by admin, allow direct login (regardless of messaging credentials)
+      // Check enforcement requirements
+      if (kycRequired && user.kycStatus !== 'verified') {
+        return res.status(403).json({
+          message: "KYC verification required",
+          requiresKYC: true,
+          userId: user.id
+        });
+      }
+      
+      if (twoFactorRequired && !user.twoFactorEnabled) {
+        return res.status(403).json({
+          message: "2FA must be enabled",
+          requires2FA: true,
+          userId: user.id
+        });
+      }
+      
+      if (pinRequired && !user.pinEnabled) {
+        return res.status(403).json({
+          message: "PIN setup required",
+          requiresPINSetup: true,
+          userId: user.id
+        });
+      }
+      
+      // If OTP is disabled by admin, allow direct login (or check PIN if required)
       if (!otpRequired) {
-        console.log('OTP disabled by admin - allowing direct login');
+        console.log('OTP disabled by admin');
         
-        // Direct login without OTP (admin has disabled OTP)
+        if (pinRequired && user.pinEnabled) {
+          return res.status(200).json({
+            message: "PIN verification required",
+            requiresPin: true,
+            userId: user.id
+          });
+        }
+        
+        // Direct login without OTP
         req.session.regenerate((err) => {
           if (err) {
             console.error('Session regeneration error:', err);
             return res.status(500).json({ message: "Session error" });
           }
 
-          // Set session data for direct login
           (req.session as any).userId = user.id;
           (req.session as any).user = { id: user.id, email: user.email };
 
-          // Save login history
           storage.createLoginHistory({
             userId: user.id,
             ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'Unknown',
@@ -354,16 +399,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'success',
           }).catch(err => console.error('Login history error:', err));
 
-          // Send security notification
           notificationService.sendSecurityNotification(
             user.id,
             "New login detected from your account"
           ).catch(err => console.error('Notification error:', err));
 
-          // Remove password from response
           const { password: _, ...userResponse } = user;
           
-          // Save session before responding
           req.session.save((saveErr) => {
             if (saveErr) {
               console.error('Session save error:', saveErr);

@@ -394,19 +394,39 @@ export default function AdminSettings() {
                     </div>
                     <Switch
                       checked={security.two_factor_required}
-                      onCheckedChange={(checked) => setSecurity({ ...security, two_factor_required: checked })}
+                      onCheckedChange={(checked) => {
+                        setSecurity({ ...security, two_factor_required: checked });
+                        updateSettingMutation.mutate({ key: 'two_factor_required', value: checked ? 'true' : 'false' });
+                      }}
                       data-testid="switch-2fa-required"
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>KYC Auto-Approval</Label>
-                      <p className="text-sm text-gray-500">Automatically approve KYC documents</p>
+                      <Label>KYC Verification Required</Label>
+                      <p className="text-sm text-gray-500">Require KYC before users can transact</p>
                     </div>
                     <Switch
-                      checked={security.kyc_auto_approval}
-                      onCheckedChange={(checked) => setSecurity({ ...security, kyc_auto_approval: checked })}
-                      data-testid="switch-kyc-auto"
+                      checked={security.kyc_auto_approval === false}
+                      onCheckedChange={(checked) => {
+                        setSecurity({ ...security, kyc_auto_approval: !checked });
+                        updateSettingMutation.mutate({ key: 'kyc_required', value: checked ? 'true' : 'false' });
+                      }}
+                      data-testid="switch-kyc-required"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>PIN Code Required</Label>
+                      <p className="text-sm text-gray-500">Require PIN for major transactions</p>
+                    </div>
+                    <Switch
+                      checked={security.pin_required}
+                      onCheckedChange={(checked) => {
+                        setSecurity({ ...security, pin_required: checked });
+                        updateSettingMutation.mutate({ key: 'pin_required', value: checked ? 'true' : 'false' });
+                      }}
+                      data-testid="switch-pin-required"
                     />
                   </div>
                   <div className="flex items-center justify-between">

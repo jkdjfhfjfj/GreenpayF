@@ -111,6 +111,8 @@ var init_schema = __esm({
       otpExpiry: timestamp("otp_expiry"),
       paystackCustomerId: text("paystack_customer_id"),
       defaultCurrency: text("default_currency").default("KES"),
+      pinEnabled: boolean("pin_enabled").default(false),
+      pinCode: text("pin_code"),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
@@ -6116,7 +6118,7 @@ async function registerRoutes(app2) {
     try {
       const maintenanceSetting = await storage.getSystemSetting("general", "maintenance_mode");
       const maintenanceEnabled = maintenanceSetting?.value === true || maintenanceSetting?.value === "true";
-      const allowedPaths = ["/api/auth/login", "/api/auth/logout", "/"];
+      const allowedPaths = ["/api/auth/login", "/api/auth/logout", "/api/auth/verify-otp", "/"];
       const isAllowedPath = allowedPaths.some((path3) => req.path.startsWith(path3));
       if (maintenanceEnabled && !isAllowedPath && !req.session?.admin) {
         const messageSetting = await storage.getSystemSetting("general", "maintenance_message");
@@ -6156,6 +6158,7 @@ async function registerRoutes(app2) {
     console.log(`[ADMIN AUTH] SUCCESS - Admin ${req.session.admin.email} authenticated`);
     next();
   };
+  app2.use(checkMaintenanceMode);
   app2.get("/health", (_req, res) => {
     res.status(200).json({
       status: "healthy",
@@ -6254,6 +6257,10 @@ async function registerRoutes(app2) {
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
+      const twoFactorRequiredSetting = await storage.getSystemSetting("security", "two_factor_required");
+      const twoFactorRequired = twoFactorRequiredSetting?.value === "true";
+      const kycRequiredSetting = await storage.getSystemSetting("security", "kyc_auto_approval");
+      const kycRequired = kycRequiredSetting?.value === "false";
       const enableOtpSetting = await storage.getSystemSetting("messaging", "enable_otp_messages");
       const otpRequired = enableOtpSetting?.value !== "false";
       const otpEmailSetting = await storage.getSystemSetting("messaging", "otp_email_enabled");
@@ -6262,6 +6269,8 @@ async function registerRoutes(app2) {
       const emailEnabled = otpEmailSetting?.value !== "false";
       const smsEnabled = otpSmsSetting?.value !== "false";
       const whatsappEnabled = otpWhatsappSetting?.value !== "false";
+      const pinRequiredSetting = await storage.getSystemSetting("security", "pin_required");
+      const pinRequired = pinRequiredSetting?.value === "true";
       const apiKeySetting = await storage.getSystemSetting("messaging", "api_key");
       const emailSetting = await storage.getSystemSetting("messaging", "account_email");
       const senderIdSetting = await storage.getSystemSetting("messaging", "sender_id");
@@ -6270,8 +6279,36 @@ async function registerRoutes(app2) {
       const smsConfigured = !!(apiKeySetting?.value && emailSetting?.value && senderIdSetting?.value);
       const whatsappConfigured = !!((whatsappTokenSetting?.value || process.env.WHATSAPP_ACCESS_TOKEN) && (whatsappPhoneSetting?.value || process.env.WHATSAPP_PHONE_NUMBER_ID));
       const messagesConfigured = smsConfigured || whatsappConfigured;
+      if (kycRequired && user.kycStatus !== "verified") {
+        return res.status(403).json({
+          message: "KYC verification required",
+          requiresKYC: true,
+          userId: user.id
+        });
+      }
+      if (twoFactorRequired && !user.twoFactorEnabled) {
+        return res.status(403).json({
+          message: "2FA must be enabled",
+          requires2FA: true,
+          userId: user.id
+        });
+      }
+      if (pinRequired && !user.pinEnabled) {
+        return res.status(403).json({
+          message: "PIN setup required",
+          requiresPINSetup: true,
+          userId: user.id
+        });
+      }
       if (!otpRequired) {
-        console.log("OTP disabled by admin - allowing direct login");
+        console.log("OTP disabled by admin");
+        if (pinRequired && user.pinEnabled) {
+          return res.status(200).json({
+            message: "PIN verification required",
+            requiresPin: true,
+            userId: user.id
+          });
+        }
         req.session.regenerate((err) => {
           if (err) {
             console.error("Session regeneration error:", err);
