@@ -9327,12 +9327,19 @@ async function registerRoutes(app2) {
     try {
       const { key } = req.params;
       const { value } = req.body;
-      let updatedSetting = await storage.updateSystemSetting(key, value);
+      const stringValue = typeof value === "string" ? value : String(value);
+      let category = "messaging";
+      if (key.startsWith("maintenance_") || key === "maintenance_mode" || key === "maintenance_message") {
+        category = "general";
+      } else if (key.includes("fee") || key.includes("limit") || key.includes("amount")) {
+        category = "fees";
+      }
+      let updatedSetting = await storage.updateSystemSetting(key, stringValue);
       if (!updatedSetting) {
         updatedSetting = await storage.createSystemSetting({
-          category: "messaging",
+          category,
           key,
-          value: JSON.parse(typeof value === "string" ? value : JSON.stringify(value))
+          value: stringValue
         });
       }
       res.json({ setting: updatedSetting });

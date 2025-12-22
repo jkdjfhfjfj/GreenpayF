@@ -4292,15 +4292,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { key } = req.params;
       const { value } = req.body;
       
-      // Try to update existing setting
-      let updatedSetting = await storage.updateSystemSetting(key, value);
+      // Convert value to string if it's a boolean
+      const stringValue = typeof value === 'string' ? value : String(value);
       
-      // If setting doesn't exist, create it with messaging category
+      // Determine category based on key
+      let category = "messaging";
+      if (key.startsWith("maintenance_") || key === "maintenance_mode" || key === "maintenance_message") {
+        category = "general";
+      } else if (key.includes("fee") || key.includes("limit") || key.includes("amount")) {
+        category = "fees";
+      }
+      
+      // Try to update existing setting
+      let updatedSetting = await storage.updateSystemSetting(key, stringValue);
+      
+      // If setting doesn't exist, create it
       if (!updatedSetting) {
         updatedSetting = await storage.createSystemSetting({
-          category: "messaging",
+          category: category,
           key: key,
-          value: JSON.parse(typeof value === 'string' ? value : JSON.stringify(value))
+          value: stringValue
         });
       }
 
