@@ -30,8 +30,6 @@ export const users = pgTable("users", {
   otpExpiry: timestamp("otp_expiry"),
   paystackCustomerId: text("paystack_customer_id"),
   defaultCurrency: text("default_currency").default("KES"),
-  pinEnabled: boolean("pin_enabled").default(false),
-  pinCode: text("pin_code"), // Hashed PIN for login protection
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
