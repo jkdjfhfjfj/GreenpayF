@@ -5868,6 +5868,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Login PIN verification endpoint
+  app.post("/api/auth/verify-pin", async (req, res) => {
+    try {
+      const { userId, pin } = req.body;
+
+      if (!userId || !pin) {
+        return res.status(400).json({ message: "User ID and PIN are required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify PIN
+      if (!user.pinEnabled || !user.pinCode) {
+        return res.status(400).json({ message: "PIN not set up" });
+      }
+
+      const isPinValid = await bcrypt.compare(pin, user.pinCode);
+      if (!isPinValid) {
+        return res.status(401).json({ message: "Invalid PIN" });
+      }
+
+      // Complete login session
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Session regeneration error:', err);
+          return res.status(500).json({ message: "Session error" });
+        }
+
+        (req.session as any).userId = user.id;
+        (req.session as any).user = { id: user.id, email: user.email };
+
+        storage.createLoginHistory({
+          userId: user.id,
+          ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'Unknown',
+          userAgent: req.headers['user-agent'] || 'Unknown',
+          deviceType: req.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop',
+          browser: req.headers['user-agent']?.split('/')[0] || 'Unknown',
+          location: (req.headers['cf-ipcountry'] as string) || 'Unknown',
+          status: 'success',
+        }).catch(err => console.error('Login history error:', err));
+
+        const { password: _, ...userResponse } = user;
+
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save error:', saveErr);
+            return res.status(500).json({ message: "Session save error" });
+          }
+          res.json({ user: userResponse });
+        });
+      });
+    } catch (error) {
+      console.error('PIN login verification error:', error);
+      res.status(500).json({ message: "PIN verification failed" });
+    }
+  });
+
   // Notification endpoints
   app.get("/api/notifications/:userId", async (req, res) => {
     try {

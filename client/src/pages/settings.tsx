@@ -322,6 +322,30 @@ export default function SettingsPage() {
     },
   });
 
+  const setupPinMutation = useMutation({
+    mutationFn: async (pin: string) => {
+      const response = await apiRequest("POST", `/api/users/${user?.id}/pin/setup`, { pin });
+      return response.json();
+    },
+    onSuccess: () => {
+      setSettings({ ...settings, pinEnabled: true });
+      setIsPinSetup(false);
+      setPinValue('');
+      setPinConfirm('');
+      toast({
+        title: "PIN Set Successfully",
+        description: "Your PIN has been saved. It will be required for future logins and transactions.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "PIN Setup Failed",
+        description: error.message || "Unable to set PIN",
+        variant: "destructive",
+      });
+    },
+  });
+
   const disable2FAMutation = useMutation({
     mutationFn: async (password: string) => {
       const response = await apiRequest("POST", `/api/users/${user?.id}/disable-2fa`, { 
@@ -860,6 +884,100 @@ export default function SettingsPage() {
               />
               {setup2FAMutation.isPending && <span className="text-xs">Setting up...</span>}
             </div>
+          </motion.div>
+
+          {/* PIN Code */}
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            className="bg-card p-4 rounded-xl border border-border flex items-center justify-between elevation-1"
+          >
+            <div className="flex items-center flex-1">
+              <span className="material-icons text-accent mr-3">lock</span>
+              <div className="flex-1">
+                <p className="font-medium">PIN Code</p>
+                <p className="text-sm text-muted-foreground">
+                  {settings.pinEnabled ? 'PIN is set' : 'Set a 4-digit PIN'}
+                </p>
+              </div>
+            </div>
+            {!settings.pinEnabled && (
+              <Dialog open={isPinSetup} onOpenChange={setIsPinSetup}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    Set PIN
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Set Your PIN</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {pinSetupStep === 'create' && (
+                      <>
+                        <div>
+                          <Label>Enter 4-digit PIN</Label>
+                          <Input
+                            type="password"
+                            inputMode="numeric"
+                            placeholder="••••"
+                            maxLength={4}
+                            value={pinValue}
+                            onChange={(e) => setPinValue(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="text-center text-2xl tracking-widest mt-2"
+                          />
+                        </div>
+                        <Button
+                          className="w-full"
+                          disabled={pinValue.length !== 4}
+                          onClick={() => setPinSetupStep('confirm')}
+                        >
+                          Next
+                        </Button>
+                      </>
+                    )}
+                    {pinSetupStep === 'confirm' && (
+                      <>
+                        <div>
+                          <Label>Confirm PIN</Label>
+                          <Input
+                            type="password"
+                            inputMode="numeric"
+                            placeholder="••••"
+                            maxLength={4}
+                            value={pinConfirm}
+                            onChange={(e) => setPinConfirm(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="text-center text-2xl tracking-widest mt-2"
+                          />
+                        </div>
+                        {pinValue !== pinConfirm && pinConfirm && (
+                          <p className="text-sm text-destructive">PINs do not match</p>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => {
+                              setPinSetupStep('create');
+                              setPinValue('');
+                              setPinConfirm('');
+                            }}
+                          >
+                            Back
+                          </Button>
+                          <Button
+                            className="flex-1"
+                            disabled={pinValue !== pinConfirm || pinConfirm.length !== 4 || setupPinMutation.isPending}
+                            onClick={() => setupPinMutation.mutate(pinValue)}
+                          >
+                            {setupPinMutation.isPending ? 'Setting...' : 'Set PIN'}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </motion.div>
 
           {/* Biometric */}
