@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Smartphone, Zap, Wifi, TrendingUp, Clock } from "lucide-react";
 import { WavyHeader } from "@/components/wavy-header";
+import { PINModal } from "@/components/pin-modal";
 
 const airtimeSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits").regex(/^[0-9+]+$/, "Invalid phone number format"),
@@ -33,6 +34,8 @@ export default function AirtimePage() {
   const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] = useState("");
+  const [showPINModal, setShowPINModal] = useState(false);
+  const [pendingAirtimeData, setPendingAirtimeData] = useState<AirtimeForm | null>(null);
 
   const form = useForm<AirtimeForm>({
     resolver: zodResolver(airtimeSchema),
@@ -60,12 +63,23 @@ export default function AirtimePage() {
   ];
 
   const airtimeMutation = useMutation({
-    mutationFn: async (data: AirtimeForm) => {
+    mutationFn: async (data: AirtimeForm & { pin?: string }) => {
       const response = await apiRequest("POST", "/api/airtime/purchase", {
         userId: user?.id,
         ...data,
       });
-      return response.json();
+      const result = await response.json();
+      
+      // If PIN is required, don't treat as error yet
+      if (response.status === 400 && result.requiresPin) {
+        throw { ...result, requiresPin: true };
+      }
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Purchase failed");
+      }
+      
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -73,10 +87,16 @@ export default function AirtimePage() {
         description: "Your airtime has been sent successfully.",
       });
       form.reset();
+      setPendingAirtimeData(null);
       refreshUser();
       queryClient.invalidateQueries({ queryKey: ["/api/transactions", user?.id] });
     },
     onError: (error: any) => {
+      if (error.requiresPin) {
+        setShowPINModal(true);
+        return;
+      }
+      
       toast({
         title: "Purchase Failed",
         description: error.message || "Unable to purchase airtime. Please try again.",
@@ -98,7 +118,15 @@ export default function AirtimePage() {
       return;
     }
 
+    setPendingAirtimeData(data);
     airtimeMutation.mutate(data);
+  };
+
+  const handlePINVerified = (pin: string) => {
+    if (pendingAirtimeData) {
+      setShowPINModal(false);
+      airtimeMutation.mutate({ ...pendingAirtimeData, pin });
+    }
   };
 
   return (
@@ -272,6 +300,15 @@ export default function AirtimePage() {
           </div>
         </motion.div>
       </div>
+
+      {/* PIN Modal */}
+      <PINModal
+        isOpen={showPINModal}
+        onClose={() => setShowPINModal(false)}
+        onSuccess={handlePINVerified}
+        title="Verify Purchase"
+        description="Enter your 4-digit PIN to complete this airtime purchase"
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Send, DollarSign, Users, CheckCircle } from "lucide-react";
 import { WavyHeader } from "@/components/wavy-header";
+import { PINModal } from "@/components/pin-modal";
 
 interface UserSearchResult {
   id: string;
@@ -31,6 +32,8 @@ export default function SendMoneyPage() {
   const [transferDescription, setTransferDescription] = useState("");
   const [greenPaySearchResults, setGreenPaySearchResults] = useState<UserSearchResult[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [showPINModal, setShowPINModal] = useState(false);
+  const [pendingTransferData, setPendingTransferData] = useState<any>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -80,9 +83,21 @@ export default function SendMoneyPage() {
       amount: string;
       currency: string;
       description?: string;
+      pin?: string;
     }) => {
       const response = await apiRequest("POST", "/api/transfer", transferData);
-      return response.json();
+      const data = await response.json();
+      
+      // If PIN is required, don't treat as error yet
+      if (response.status === 400 && data.requiresPin) {
+        throw { ...data, requiresPin: true };
+      }
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Transfer failed");
+      }
+      
+      return data;
     },
     onSuccess: () => {
       toast({
@@ -102,6 +117,11 @@ export default function SendMoneyPage() {
       }, 2000);
     },
     onError: (error: any) => {
+      if (error.requiresPin) {
+        setShowPINModal(true);
+        return;
+      }
+      
       toast({
         title: "Transfer Failed",
         description: error.message || "Unable to complete transfer. Please try again.",
@@ -135,6 +155,14 @@ export default function SendMoneyPage() {
     setTransferDescription("");
     setGreenPaySearchTerm("");
     setGreenPaySearchResults([]);
+    setPendingTransferData(null);
+  };
+
+  const handlePINVerified = (pin: string) => {
+    if (pendingTransferData) {
+      setShowPINModal(false);
+      greenPayTransferMutation.mutate({ ...pendingTransferData, pin });
+    }
   };
 
   const handleGreenPayTransfer = () => {
@@ -440,6 +468,15 @@ export default function SendMoneyPage() {
           {renderGreenPayTransferContent()}
         </motion.div>
       </div>
+
+      {/* PIN Modal */}
+      <PINModal
+        isOpen={showPINModal}
+        onClose={() => setShowPINModal(false)}
+        onSuccess={handlePINVerified}
+        title="Verify Transfer"
+        description="Enter your 4-digit PIN to complete this transfer"
+      />
     </div>
   );
 }
