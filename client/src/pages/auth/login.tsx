@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 import { apiRequest } from "@/lib/queryClient";
 import { WavyHeader } from "@/components/wavy-header";
 
@@ -27,10 +28,10 @@ export default function LoginPage() {
   const [requiresPin, setRequiresPin] = useState(false);
   const [pinCode, setPinCode] = useState("");
   const [tempLoginData, setTempLoginData] = useState<any>(null);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [authMethod, setAuthMethod] = useState<'pin' | 'otp' | null>(null);
   const { toast } = useToast();
   const { login } = useAuth();
+  const { getMaintenanceMode, getMaintenanceMessage } = useSystemSettings();
 
   useEffect(() => {
     if (window.PublicKeyCredential) {
@@ -52,44 +53,42 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data) => {
-      if (data.requiresPin) {
-        // PIN verification required
-        setTempLoginData(data);
-        setRequiresPin(true);
-        setPinCode("");
-      } else if (data.requiresOtp) {
-        // OTP verification required
-        toast({
-          title: "Verification code sent",
-          description: `A 6-digit code was sent via ${data.sentVia}`,
-        });
-        // Store user ID in localStorage for OTP verification page
-        localStorage.setItem("otpUserId", data.userId);
-        localStorage.setItem("otpPhone", data.phone);
-        localStorage.setItem("otpSentVia", data.sentVia || "");
-        localStorage.setItem("otpEmail", data.email || "");
-        setLocation("/auth/otp-verification");
+      if (data.requiresPin || data.requiresOtp) {
+        // Show authentication method selection if both are available
+        if (data.requiresPin && data.requiresOtp) {
+          setTempLoginData(data);
+          setAuthMethod(null); // Show selection screen
+        } else if (data.requiresPin) {
+          // Only PIN available
+          setTempLoginData(data);
+          setAuthMethod('pin');
+          setRequiresPin(true);
+          setPinCode("");
+        } else {
+          // Only OTP available
+          toast({
+            title: "Verification code sent",
+            description: `A 6-digit code was sent via ${data.sentVia}`,
+          });
+          localStorage.setItem("otpUserId", data.userId);
+          localStorage.setItem("otpPhone", data.phone);
+          localStorage.setItem("otpSentVia", data.sentVia || "");
+          localStorage.setItem("otpEmail", data.email || "");
+          setLocation("/auth/otp-verification");
+        }
       } else {
-        // Direct login (when messaging not configured)
+        // Direct login
         login(data.user);
         toast({
           title: "Welcome back!",
           description: "You have been successfully logged in.",
         });
-        // Use setTimeout to ensure state has updated before navigation
         setTimeout(() => {
           setLocation("/dashboard");
         }, 100);
       }
     },
     onError: (error: any) => {
-      // Check for maintenance mode response
-      if (error.message?.includes("maintenance")) {
-        setMaintenanceMode(true);
-        setMaintenanceMessage(error.message || "System is under maintenance. Please try again later.");
-        return;
-      }
-      
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password. Please try again.",
@@ -185,6 +184,102 @@ export default function LoginPage() {
   const onSubmit = (data: LoginForm) => {
     loginMutation.mutate(data);
   };
+
+  // Check maintenance mode
+  if (getMaintenanceMode()) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-secondary/20 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card p-8 rounded-2xl border border-border shadow-lg max-w-md w-full text-center"
+        >
+          <div className="mb-4 text-6xl">🔧</div>
+          <h1 className="text-3xl font-bold mb-3">System Maintenance</h1>
+          <p className="text-muted-foreground mb-6 text-lg">{getMaintenanceMessage()}</p>
+          <p className="text-xs text-muted-foreground">We'll be back soon. Please check back later.</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Show auth method selection if both PIN and OTP are available
+  if (tempLoginData && authMethod === null && tempLoginData.requiresPin && tempLoginData.requiresOtp) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <WavyHeader size="sm" />
+        <div className="flex-1 p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-sm mx-auto"
+          >
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold mb-2">Choose Verification Method</h2>
+              <p className="text-muted-foreground">Select how you'd like to verify your identity</p>
+            </div>
+
+            <div className="space-y-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                onClick={() => {
+                  setAuthMethod('pin');
+                  setRequiresPin(true);
+                }}
+                className="w-full p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors text-left"
+              >
+                <div className="flex items-center">
+                  <span className="material-icons text-primary mr-3">lock</span>
+                  <div>
+                    <p className="font-semibold">Use PIN Code</p>
+                    <p className="text-sm text-muted-foreground">4-6 digit PIN</p>
+                  </div>
+                </div>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                onClick={() => {
+                  // Trigger OTP
+                  const response = apiRequest("POST", "/api/auth/send-otp", { userId: tempLoginData.userId });
+                  response.then(async (res) => {
+                    const data = await res.json();
+                    localStorage.setItem("otpUserId", tempLoginData.userId);
+                    localStorage.setItem("otpPhone", tempLoginData.phone);
+                    localStorage.setItem("otpSentVia", data.sentVia || "");
+                    localStorage.setItem("otpEmail", tempLoginData.email || "");
+                    setLocation("/auth/otp-verification");
+                  }).catch(() => {
+                    toast({ title: "Error", description: "Failed to send OTP", variant: "destructive" });
+                  });
+                }}
+                className="w-full p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors text-left"
+              >
+                <div className="flex items-center">
+                  <span className="material-icons text-secondary mr-3">mail</span>
+                  <div>
+                    <p className="font-semibold">Use OTP Code</p>
+                    <p className="text-sm text-muted-foreground">6-digit code via SMS/Email</p>
+                  </div>
+                </div>
+              </motion.button>
+
+              <Button
+                variant="outline"
+                className="w-full mt-4"
+                onClick={() => {
+                  setAuthMethod(null);
+                  setTempLoginData(null);
+                }}
+              >
+                Back
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">

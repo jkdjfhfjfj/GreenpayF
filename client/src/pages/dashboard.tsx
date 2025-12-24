@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 import Notifications from "@/components/notifications";
 import { Sparkles, TrendingUp, Smartphone, Send, Download, CreditCard, Zap, DollarSign, MapPin, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -16,13 +17,27 @@ export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
   const [showDiscountModal] = useState(false); // Modal disabled - kept for future use
   const [activeWallet, setActiveWallet] = useState<'USD' | 'KES'>('USD');
+  const [maintenanceAlertShown, setMaintenanceAlertShown] = useState(false);
   const { user, logout, refreshUser } = useAuth();
   const { toast } = useToast();
+  const { getMaintenanceMode, getMaintenanceMessage } = useSystemSettings();
 
   // Refresh user data when dashboard loads to get latest balance
   useEffect(() => {
     refreshUser();
   }, []);
+
+  // Check for maintenance mode changes and alert user
+  useEffect(() => {
+    if (getMaintenanceMode() && !maintenanceAlertShown) {
+      setMaintenanceAlertShown(true);
+      toast({
+        title: "System Maintenance",
+        description: getMaintenanceMessage(),
+        variant: "destructive",
+      });
+    }
+  }, [getMaintenanceMode(), maintenanceAlertShown, toast, getMaintenanceMessage]);
 
   // Get real user data
   const { data: transactionData } = useQuery({
