@@ -371,7 +371,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!otpRequired) {
         console.log('OTP disabled by admin');
         
-        if (pinRequired && user.pinEnabled) {
+        // Check both admin PIN requirement AND user PIN setting
+        if ((pinRequired || user.pinEnabled) && user.pinCode) {
           return res.status(200).json({
             message: "PIN verification required",
             requiresPin: true,
@@ -5925,6 +5926,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('PIN login verification error:', error);
       res.status(500).json({ message: "PIN verification failed" });
+    }
+  });
+
+  // PIN disable/reset endpoint
+  app.post("/api/users/:id/pin/disable", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+
+      if (!password) {
+        return res.status(400).json({ message: "Password is required to disable PIN" });
+      }
+
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid password" });
+      }
+
+      // Disable PIN
+      await db.update(users).set({
+        pin_enabled: false,
+        pin_code: null
+      }).where(eq(users.id, id));
+
+      // Get updated user
+      const updatedUser = await storage.getUser(id);
+      const { password: _, ...userResponse } = updatedUser;
+
+      res.json({ success: true, user: userResponse });
+    } catch (error) {
+      console.error('PIN disable error:', error);
+      res.status(500).json({ message: "Failed to disable PIN" });
+    }
+  });
+
+  // Get system settings for admin-to-user sync
+  app.get("/api/system-settings", async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      const settingsMap: any = {};
+      
+      settings.forEach(setting => {
+        if (!settingsMap[setting.category]) {
+          settingsMap[setting.category] = {};
+        }
+        settingsMap[setting.category][setting.key] = {
+          value: setting.value,
+          description: setting.description
+        };
+      });
+
+      res.json(settingsMap);
+    } catch (error) {
+      console.error('System settings error:', error);
+      res.status(500).json({ message: "Failed to load system settings" });
     }
   });
 

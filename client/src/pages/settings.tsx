@@ -53,6 +53,8 @@ export default function SettingsPage() {
   const [pinSetupStep, setPinSetupStep] = useState<'create' | 'confirm'>('create');
   const [pinValue, setPinValue] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
+  const [isPinDisable, setIsPinDisable] = useState(false);
+  const [disablePinPassword, setDisablePinPassword] = useState('');
 
   // Profile editing states
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -327,7 +329,8 @@ export default function SettingsPage() {
       const response = await apiRequest("POST", `/api/users/${user?.id}/pin/setup`, { pin });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      login(data.user);
       setSettings({ ...settings, pinEnabled: true });
       setIsPinSetup(false);
       setPinValue('');
@@ -341,6 +344,30 @@ export default function SettingsPage() {
       toast({
         title: "PIN Setup Failed",
         description: error.message || "Unable to set PIN",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const disablePinMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const response = await apiRequest("POST", `/api/users/${user?.id}/pin/disable`, { password });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      login(data.user);
+      setSettings({ ...settings, pinEnabled: false });
+      setIsPinDisable(false);
+      setDisablePinPassword('');
+      toast({
+        title: "PIN Disabled",
+        description: "Your PIN has been disabled successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Disable Failed",
+        description: error.message || "Unable to disable PIN",
         variant: "destructive",
       });
     },
@@ -974,6 +1001,55 @@ export default function SettingsPage() {
                         </div>
                       </>
                     )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            {settings.pinEnabled && (
+              <Dialog open={isPinDisable} onOpenChange={setIsPinDisable}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="destructive">
+                    Reset PIN
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Reset PIN</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <p className="text-sm text-muted-foreground">
+                      Enter your password to disable and reset your PIN.
+                    </p>
+                    <div>
+                      <Label>Password</Label>
+                      <Input
+                        type="password"
+                        placeholder="Enter your password"
+                        value={disablePinPassword}
+                        onChange={(e) => setDisablePinPassword(e.target.value)}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setIsPinDisable(false);
+                          setDisablePinPassword('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={!disablePinPassword || disablePinMutation.isPending}
+                        onClick={() => disablePinMutation.mutate(disablePinPassword)}
+                      >
+                        {disablePinMutation.isPending ? 'Disabling...' : 'Disable PIN'}
+                      </Button>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
