@@ -1012,25 +1012,29 @@ export default function SettingsPage() {
                     Reset PIN
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-sm">
                   <DialogHeader>
-                    <DialogTitle>Reset PIN</DialogTitle>
+                    <DialogTitle className="text-destructive">Reset Your PIN</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
-                    <p className="text-sm text-muted-foreground">
-                      Enter your password to disable and reset your PIN.
-                    </p>
+                    <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                      <p className="text-sm text-destructive font-medium">
+                        ⚠️ This will disable your PIN protection. You'll need to set a new one to use PIN authentication.
+                      </p>
+                    </div>
                     <div>
-                      <Label>Password</Label>
+                      <Label htmlFor="disable-pin-password">Enter your password to confirm</Label>
                       <Input
+                        id="disable-pin-password"
                         type="password"
-                        placeholder="Enter your password"
+                        placeholder="••••••••"
                         value={disablePinPassword}
                         onChange={(e) => setDisablePinPassword(e.target.value)}
                         className="mt-2"
+                        autoFocus
                       />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pt-4">
                       <Button
                         variant="outline"
                         className="flex-1"
@@ -1047,7 +1051,7 @@ export default function SettingsPage() {
                         disabled={!disablePinPassword || disablePinMutation.isPending}
                         onClick={() => disablePinMutation.mutate(disablePinPassword)}
                       >
-                        {disablePinMutation.isPending ? 'Disabling...' : 'Disable PIN'}
+                        {disablePinMutation.isPending ? 'Disabling...' : 'Reset PIN'}
                       </Button>
                     </div>
                   </div>

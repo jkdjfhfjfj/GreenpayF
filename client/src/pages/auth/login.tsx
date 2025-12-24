@@ -27,6 +27,8 @@ export default function LoginPage() {
   const [requiresPin, setRequiresPin] = useState(false);
   const [pinCode, setPinCode] = useState("");
   const [tempLoginData, setTempLoginData] = useState<any>(null);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -81,6 +83,13 @@ export default function LoginPage() {
       }
     },
     onError: (error: any) => {
+      // Check for maintenance mode response
+      if (error.message?.includes("maintenance")) {
+        setMaintenanceMode(true);
+        setMaintenanceMessage(error.message || "System is under maintenance. Please try again later.");
+        return;
+      }
+      
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password. Please try again.",

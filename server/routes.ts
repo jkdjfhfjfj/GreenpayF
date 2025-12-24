@@ -5,7 +5,7 @@ import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
 import { insertUserSchema, insertKycDocumentSchema, insertTransactionSchema, insertPaymentRequestSchema, insertRecipientSchema, insertSupportTicketSchema, insertConversationSchema, insertMessageSchema, users, systemLogs, admins, kycDocuments, virtualCards, recipients, transactions, paymentRequests, chatMessages, notifications, supportTickets, conversations, messages, adminLogs, systemSettings, apiConfigurations } from "@shared/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -286,6 +286,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/login", optionalApiKey, async (req, res) => {
     try {
+      // Check maintenance mode FIRST - block all login attempts
+      const maintenanceSetting = await storage.getSystemSetting('platform', 'maintenance_mode');
+      if (maintenanceSetting?.value === 'true') {
+        return res.status(503).json({ 
+          message: "System is under maintenance",
+          maintenanceMode: true,
+          maintenanceMessage: (await storage.getSystemSetting('platform', 'maintenance_message'))?.value || "System maintenance in progress"
+        });
+      }
+
       const { email, password } = loginSchema.parse(req.body);
       
       const user = await storage.getUserByEmail(email);
