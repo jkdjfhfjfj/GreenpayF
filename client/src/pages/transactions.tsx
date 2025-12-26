@@ -551,6 +551,12 @@ export default function TransactionsPage() {
                               <span className="truncate">{transaction.description}</span>
                             </>
                           )}
+                          {transaction.status === 'failed' && transaction.metadata?.status_reason && (
+                            <>
+                              <span>•</span>
+                              <span className="text-red-500 truncate">({transaction.metadata.status_reason})</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
