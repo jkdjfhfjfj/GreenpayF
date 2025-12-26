@@ -312,24 +312,31 @@ export default function VirtualCardPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
-                      <img src="/attached_assets/generated_images/m-pesa_safaricom_mobile_money_logo.png" alt="M-Pesa" className="w-8 h-8 object-contain" />
+                      <img src="/attached_assets/images_(6)_1766711928513.png" alt="M-Pesa" className="w-full h-full object-contain" />
                     </div>
                     <span className="text-[10px] font-bold">M-PESA</span>
                     <span className="text-[8px] text-muted-foreground">Instant STK Push</span>
                   </div>
                   <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
-                      <img src="/attached_assets/generated_images/visa_and_mastercard_payment_logos.png" alt="Visa/MC" className="w-10 h-10 object-contain" />
+                      <img src="/attached_assets/images_(7)_1766711928551.png" alt="Visa" className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[10px] font-bold">VISA/MC</span>
+                    <span className="text-[10px] font-bold">VISA</span>
                     <span className="text-[8px] text-muted-foreground">Global Acceptance</span>
                   </div>
                   <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
-                      <img src="/attached_assets/generated_images/payhero_payment_gateway_logo.png" alt="PayHero" className="w-8 h-8 object-contain" />
+                      <img src="/attached_assets/images_(8)_1766711928429.png" alt="Mastercard" className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-[10px] font-bold">PAYHERO</span>
-                    <span className="text-[8px] text-muted-foreground">Local Gateway</span>
+                    <span className="text-[10px] font-bold">MASTERCARD</span>
+                    <span className="text-[8px] text-muted-foreground">Secure Payments</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
+                      <img src="/attached_assets/images_(5)_1766711928476.png" alt="NCBA" className="w-full h-full object-contain" />
+                    </div>
+                    <span className="text-[10px] font-bold">NCBA LOOP</span>
+                    <span className="text-[8px] text-muted-foreground">Banking Partner</span>
                   </div>
                 </div>
                 <p className="mt-4 text-[10px] text-muted-foreground leading-relaxed">
