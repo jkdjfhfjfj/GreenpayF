@@ -75,6 +75,7 @@ export const transactions = pgTable("transactions", {
   recipientId: varchar("recipient_id").references(() => users.id),
   recipientDetails: jsonb("recipient_details"), // name, phone, email, bank details
   status: text("status").default("pending"), // pending, processing, completed, failed, cancelled
+  failureReason: text("failure_reason"),
   fee: decimal("fee", { precision: 10, scale: 2 }).default("0.00"),
   exchangeRate: decimal("exchange_rate", { precision: 10, scale: 4 }),
   description: text("description"),

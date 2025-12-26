@@ -1319,9 +1319,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: paymentData.status,
         message: 'STK Push sent to your phone. Please enter your M-Pesa PIN to complete payment.'
       });
+
+      // Create a transaction record for tracking
+      await storage.createTransaction({
+        userId,
+        type: "card_purchase",
+        amount: usdAmount.toString(),
+        currency: "USD",
+        status: "pending",
+        paystackReference: paymentData.reference || paymentData.CheckoutRequestID,
+        description: "Virtual Card Purchase",
+        metadata: { 
+          phoneNumber: user.phone,
+          status_reason: "Awaiting M-Pesa payment confirmation"
+        }
+      });
     } catch (error) {
       console.error('Card payment initialization error:', error);
       res.status(500).json({ message: "Error initializing card payment" });
+    }
+  });
+
+  // PayHero callback to handle card activation and transaction status
+  app.post("/api/payments/payhero/callback", async (req, res) => {
+    try {
+      const { CheckoutRequestID, ResultCode, ResultDesc, ExternalReference } = req.body;
+      
+      const transaction = await db.query.transactions.findFirst({
+        where: eq(transactions.paystackReference, ExternalReference || CheckoutRequestID)
+      });
+
+      if (!transaction) {
+        console.error(`[PayHero] Transaction not found for ref: ${ExternalReference || CheckoutRequestID}`);
+        return res.sendStatus(200);
+      }
+
+      if (ResultCode === 0) {
+        await storage.updateTransactionStatus(transaction.id, "completed");
+        await storage.updateTransactionMetadata(transaction.id, {
+          ...((transaction.metadata as object) || {}),
+          status_reason: "M-Pesa payment successful",
+          checkoutRequestId: CheckoutRequestID
+        });
+
+        if (transaction.type === 'card_purchase') {
+          const { virtualCardService } = await import('./services/virtual-card');
+          await virtualCardService.generateCard(transaction.userId);
+          await storage.updateUser(transaction.userId, { hasVirtualCard: true });
+          
+          notificationService.sendNotification({
+            userId: transaction.userId,
+            title: "Virtual Card Activated",
+            message: "Your virtual card has been successfully generated and is ready for use.",
+            type: "success"
+          }).catch(err => console.error('Notification error:', err));
+        }
+      } else {
+        await storage.updateTransactionStatus(transaction.id, "failed");
+        await storage.updateTransactionMetadata(transaction.id, {
+          ...((transaction.metadata as object) || {}),
+          status_reason: ResultDesc || "M-Pesa payment failed or cancelled",
+          resultCode: ResultCode
+        });
+
+        notificationService.sendNotification({
+          userId: transaction.userId,
+          title: "Payment Failed",
+          message: `Your card purchase payment failed: ${ResultDesc}`,
+          type: "error"
+        }).catch(err => console.error('Notification error:', err));
+      }
+
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('[PayHero Callback Error]:', error);
+      res.sendStatus(500);
     }
   });
 

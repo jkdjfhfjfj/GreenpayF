@@ -306,6 +306,38 @@ export default function VirtualCardPage() {
                 </motion.div>
               </div>
 
+              {/* Partner Logos and Info */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Our Trusted Partners</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
+                      <img src="/attached_assets/generated_images/m-pesa_safaricom_mobile_money_logo.png" alt="M-Pesa" className="w-8 h-8 object-contain" />
+                    </div>
+                    <span className="text-[10px] font-bold">M-PESA</span>
+                    <span className="text-[8px] text-muted-foreground">Instant STK Push</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
+                      <img src="/attached_assets/generated_images/visa_and_mastercard_payment_logos.png" alt="Visa/MC" className="w-10 h-10 object-contain" />
+                    </div>
+                    <span className="text-[10px] font-bold">VISA/MC</span>
+                    <span className="text-[8px] text-muted-foreground">Global Acceptance</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
+                      <img src="/attached_assets/generated_images/payhero_payment_gateway_logo.png" alt="PayHero" className="w-8 h-8 object-contain" />
+                    </div>
+                    <span className="text-[10px] font-bold">PAYHERO</span>
+                    <span className="text-[8px] text-muted-foreground">Local Gateway</span>
+                  </div>
+                </div>
+                <p className="mt-4 text-[10px] text-muted-foreground leading-relaxed">
+                  We partner with industry leaders to ensure your transactions are safe, 
+                  encrypted, and processed instantly across 200+ countries.
+                </p>
+              </div>
+
               {/* Auto Payment Button */}
               {paymentMethod === 'auto' && (
                 <motion.div
