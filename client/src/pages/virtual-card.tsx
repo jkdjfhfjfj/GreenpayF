@@ -309,35 +309,11 @@ export default function VirtualCardPage() {
               {/* Partner Logos and Info */}
               <div className="mt-6 pt-6 border-t border-border">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Our Trusted Partners</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
-                      <img src="/attached_assets/images_(6)_1766711928513.png" alt="M-Pesa" className="w-full h-full object-contain" />
-                    </div>
-                    <span className="text-[10px] font-bold">M-PESA</span>
-                    <span className="text-[8px] text-muted-foreground">Instant STK Push</span>
-                  </div>
-                  <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
-                      <img src="/attached_assets/images_(7)_1766711928551.png" alt="Visa" className="w-full h-full object-contain" />
-                    </div>
-                    <span className="text-[10px] font-bold">VISA</span>
-                    <span className="text-[8px] text-muted-foreground">Global Acceptance</span>
-                  </div>
-                  <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
-                      <img src="/attached_assets/images_(8)_1766711928429.png" alt="Mastercard" className="w-full h-full object-contain" />
-                    </div>
-                    <span className="text-[10px] font-bold">MASTERCARD</span>
-                    <span className="text-[8px] text-muted-foreground">Secure Payments</span>
-                  </div>
-                  <div className="flex flex-col items-center p-3 bg-muted/30 rounded-lg">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm overflow-hidden">
-                      <img src="/attached_assets/images_(5)_1766711928476.png" alt="NCBA" className="w-full h-full object-contain" />
-                    </div>
-                    <span className="text-[10px] font-bold">NCBA LOOP</span>
-                    <span className="text-[8px] text-muted-foreground">Banking Partner</span>
-                  </div>
+                <div className="flex items-center justify-center gap-6 opacity-80 grayscale hover:grayscale-0 transition-all duration-300">
+                  <img src="/attached_assets/images_(6)_1766711928513.png" alt="M-Pesa" className="h-6 w-auto object-contain" />
+                  <img src="/attached_assets/images_(7)_1766711928551.png" alt="Visa" className="h-4 w-auto object-contain" />
+                  <img src="/attached_assets/images_(8)_1766711928429.png" alt="Mastercard" className="h-6 w-auto object-contain" />
+                  <img src="/attached_assets/images_(5)_1766711928476.png" alt="NCBA" className="h-5 w-auto object-contain" />
                 </div>
                 <p className="mt-4 text-[10px] text-muted-foreground leading-relaxed">
                   We partner with industry leaders to ensure your transactions are safe, 
