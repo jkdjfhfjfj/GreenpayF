@@ -306,42 +306,6 @@ export default function VirtualCardPage() {
                 </motion.div>
               </div>
 
-              {/* Partner Logos and Info */}
-              <div className="mt-6 pt-6 border-t border-border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Our Trusted Partners In Kenya</p>
-                <div className="flex items-center justify-center gap-6 transition-all duration-300">
-                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_6_jdajcc.png" alt="M-Pesa" className="h-6 w-auto object-contain" />
-                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_7_gglpsr.png" alt="Visa" className="h-4 w-auto object-contain" />
-                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_8_dqu9rs.png" alt="Mastercard" className="h-6 w-auto object-contain" />
-                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_5_oo3tuy.png" alt="NCBA" className="h-5 w-auto object-contain" />
-                </div>
-                <p className="mt-4 text-[10px] text-muted-foreground leading-relaxed">
-                  We partner with industry leaders to ensure your transactions are safe, 
-                  encrypted, and processed instantly across 200+ countries.
-                </p>
-              </div>
-
-              {/* Auto Payment Button */}
-              {paymentMethod === 'auto' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-2"
-                >
-                  <Button
-                    onClick={() => purchaseCardMutation.mutate()}
-                    className="w-full text-lg py-3 bg-green-600 hover:bg-green-700"
-                    disabled={purchaseCardMutation.isPending}
-                    data-testid="button-purchase-card"
-                  >
-                    {purchaseCardMutation.isPending ? "Processing..." : `Pay with M-Pesa - $${discountPrice}`}
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Secure payment powered by PayHero
-                  </p>
-                </motion.div>
-              )}
-
               {/* Manual Payment Instructions */}
               {paymentMethod === 'manual' && (
                 <motion.div
@@ -383,6 +347,21 @@ export default function VirtualCardPage() {
                   </Button>
                 </motion.div>
               )}
+
+              {/* Partner Logos and Info */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Our Trusted Partners In Kenya</p>
+                <div className="flex items-center justify-center gap-6 transition-all duration-300">
+                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_6_jdajcc.png" alt="M-Pesa" className="h-6 w-auto object-contain" />
+                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_7_gglpsr.png" alt="Visa" className="h-4 w-auto object-contain" />
+                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_8_dqu9rs.png" alt="Mastercard" className="h-6 w-auto object-contain" />
+                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_5_oo3tuy.png" alt="NCBA" className="h-5 w-auto object-contain" />
+                </div>
+                <p className="mt-4 text-[10px] text-muted-foreground leading-relaxed">
+                  We partner with industry leaders to ensure your transactions are safe, 
+                  encrypted, and processed instantly across 200+ countries.
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>
