@@ -308,12 +308,12 @@ export default function VirtualCardPage() {
 
               {/* Partner Logos and Info */}
               <div className="mt-6 pt-6 border-t border-border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Our Trusted Partners</p>
-                <div className="flex items-center justify-center gap-6 opacity-80 grayscale hover:grayscale-0 transition-all duration-300">
-                  <img src="/attached_assets/mpesa.png" alt="M-Pesa" className="h-6 w-auto object-contain" />
-                  <img src="/attached_assets/visa.png" alt="Visa" className="h-4 w-auto object-contain" />
-                  <img src="/attached_assets/mastercard.png" alt="Mastercard" className="h-6 w-auto object-contain" />
-                  <img src="/attached_assets/ncba.png" alt="NCBA" className="h-5 w-auto object-contain" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Our Trusted Partners In Kenya</p>
+                <div className="flex items-center justify-center gap-6 transition-all duration-300">
+                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_6_jdajcc.png" alt="M-Pesa" className="h-6 w-auto object-contain" />
+                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_7_gglpsr.png" alt="Visa" className="h-4 w-auto object-contain" />
+                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_8_dqu9rs.png" alt="Mastercard" className="h-6 w-auto object-contain" />
+                  <img src="https://res.cloudinary.com/dyzalgxnu/image/upload/v1766714659/images_5_oo3tuy.png" alt="NCBA" className="h-5 w-auto object-contain" />
                 </div>
                 <p className="mt-4 text-[10px] text-muted-foreground leading-relaxed">
                   We partner with industry leaders to ensure your transactions are safe, 
