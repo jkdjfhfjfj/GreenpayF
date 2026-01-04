@@ -605,7 +605,7 @@ function UserManagementDialog({
           <div className="flex justify-end">
             <Button
               onClick={() => onUpdateBalance(user)}
-              disabled={isLoading || !balanceUpdate}
+              disabled={isLoading}
               className="w-full"
               data-testid="button-update-balance"
             >
