@@ -58,12 +58,12 @@ export default function SignupPage() {
       return response.json();
     },
     onSuccess: (data) => {
-      login(data.user);
+      // login(data.user); // Removed auto-login
       toast({
         title: "Account created!",
-        description: "Welcome to GreenPay! Complete your profile to get started.",
+        description: "Your account has been created successfully. Please log in.",
       });
-      setLocation("/dashboard");
+      setLocation("/login");
     },
     onError: () => {
       toast({
