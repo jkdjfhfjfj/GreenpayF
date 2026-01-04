@@ -282,11 +282,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       (req.session as any).userId = user.id;
       (req.session as any).user = { id: user.id, email: user.email };
       
+      // Force session save to ensure it's written before response
       req.session.save((saveErr) => {
         if (saveErr) {
           console.error('Session save error after signup:', saveErr);
+          return res.status(500).json({ message: "Failed to create session" });
         }
-        res.json({ user: { ...userResponse, isPhoneVerified: true, isEmailVerified: true } });
+        console.log(`[Signup] Auto-login successful for user ${user.id}`);
+        res.json({ 
+          user: { ...userResponse, isPhoneVerified: true, isEmailVerified: true },
+          success: true
+        });
       });
     } catch (error) {
       console.error('Signup error:', error);
