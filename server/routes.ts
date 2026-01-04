@@ -277,7 +277,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Remove password from response
       const { password, ...userResponse } = user;
-      res.json({ user: { ...userResponse, isPhoneVerified: true, isEmailVerified: true } });
+      
+      // Auto-login after signup: set session data
+      (req.session as any).userId = user.id;
+      (req.session as any).user = { id: user.id, email: user.email };
+      
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error after signup:', saveErr);
+        }
+        res.json({ user: { ...userResponse, isPhoneVerified: true, isEmailVerified: true } });
+      });
     } catch (error) {
       console.error('Signup error:', error);
       res.status(400).json({ message: "Invalid user data" });

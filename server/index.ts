@@ -78,11 +78,12 @@ const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'greenpay-secret-key-change-in-production-' + Math.random(),
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     // Use secure cookies appropriately for the environment
     secure: getSecureCookieSetting(),
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     sameSite: 'lax' as const // More permissive for cross-site navigation compatibility
   }
 };

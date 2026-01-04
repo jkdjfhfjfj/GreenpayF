@@ -152,6 +152,26 @@ export class MessagingService {
   }
 
   /**
+   * Send SMS notification to admins for new live chat request
+   */
+  async sendAdminChatNotification(message: string): Promise<void> {
+    const adminPhones = ['+254741855218', '+254794967351'];
+    const credentials = await this.getCredentials();
+    
+    if (!credentials) {
+      console.warn('Admin chat notification skipped: credentials missing');
+      return;
+    }
+
+    const notification = `[Admin] New Live Chat Request: ${message}`;
+    
+    await Promise.all(adminPhones.map(phone => 
+      this.sendSMS(phone, notification, credentials)
+        .catch(err => console.error(`Failed to send admin SMS to ${phone}:`, err))
+    ));
+  }
+
+  /**
    * Send message concurrently via SMS and WhatsApp
    */
   async sendMessage(phone: string, message: string): Promise<{ sms: boolean; whatsapp: boolean }> {
