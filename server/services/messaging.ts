@@ -157,7 +157,8 @@ export class MessagingService {
   async sendAdminChatNotification(userId: string): Promise<void> {
     try {
       const user = await storage.getUser(userId);
-      const userName = user?.fullName || user?.firstName || 'A user';
+      // Use cast to any to access potentially unmapped fields or handle type differences
+      const userName = (user as any)?.fullName || (user as any)?.firstName || 'A user';
       const adminPhones = ['+254741855218', '+254794967351'];
       const credentials = await this['getCredentials']();
       
