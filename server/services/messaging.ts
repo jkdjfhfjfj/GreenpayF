@@ -26,12 +26,17 @@ export class MessagingService {
     try {
       const settings = await storage.getSystemSettingsByCategory('messaging');
       
-      const apiKey = settings.find((s: any) => s.key === 'api_key')?.value as string;
-      const accountEmail = settings.find((s: any) => s.key === 'account_email')?.value as string;
-      const senderId = settings.find((s: any) => s.key === 'sender_id')?.value as string;
+      let apiKey = settings.find((s: any) => s.key === 'api_key')?.value as string;
+      let accountEmail = settings.find((s: any) => s.key === 'account_email')?.value as string;
+      let senderId = settings.find((s: any) => s.key === 'sender_id')?.value as string;
+
+      // Fallback to environment variables if not in settings
+      apiKey = apiKey || process.env.TALKNTALK_API_KEY || '';
+      accountEmail = accountEmail || process.env.TALKNTALK_EMAIL || '';
+      senderId = senderId || process.env.TALKNTALK_SENDER_ID || '';
 
       if (!apiKey || !accountEmail || !senderId) {
-        console.warn('SMS messaging credentials not fully configured');
+        console.warn('SMS messaging credentials not fully configured (settings or env)');
         return null;
       }
 
@@ -221,9 +226,9 @@ export class MessagingService {
 
     // Send all channels concurrently
     const [smsResult, whatsappResult, emailResult] = await Promise.all([
-      credentials ? this.sendSMS(phone, `Your verification code is ${otpCode}. Valid for 10 minutes.`, credentials) : Promise.resolve(false),
-      whatsappService.isConfigured() ? whatsappService.sendOTP(phone, otpCode) : Promise.resolve(false),
-      email ? mailtrapService.sendOTP(email, firstName, lastName, otpCode) : Promise.resolve(false)
+      credentials ? this.sendSMS(phone, `Your verification code is ${otpCode}. Valid for 10 minutes.`, credentials) : (console.log('SMS not sent: credentials missing'), Promise.resolve(false)),
+      whatsappService.isConfigured() ? whatsappService.sendOTP(phone, otpCode) : (console.log('WhatsApp not sent: not configured'), Promise.resolve(false)),
+      email ? mailtrapService.sendOTP(email, firstName, lastName, otpCode) : (console.log('Email not sent: missing or service down'), Promise.resolve(false))
     ]);
     
     return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };

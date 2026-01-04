@@ -7398,28 +7398,44 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   // Track active admin connections only
   const activeAdminConnections = new Map<string, { socket: WebSocket, adminId: string }>();
 
-  chatWss.on('connection', (ws, request) => {
+  chatWss.on('connection', (ws, req) => {
     console.log('New WebSocket connection established');
     
+    // Determine if this is an admin connection
+    const session = (req as any).session;
+    const isAdmin = !!session?.admin?.id;
+    const userId = isAdmin ? 'admin' : session?.userId;
+
     ws.on('message', async (data) => {
       try {
-        const message = JSON.parse(data.toString());
-        
-        switch (message.type) {
-          case 'admin_register':
-            // Only allow admin registration for monitoring
-            if (message.isAdmin && message.adminId) {
-              activeAdminConnections.set(message.adminId, {
+        const parsed = JSON.parse(data.toString());
+        if (parsed.type === 'register') {
+          (ws as any).userId = parsed.userId || userId;
+          (ws as any).isAdmin = parsed.isAdmin || isAdmin;
+          console.log(`Registered connection: ${(ws as any).userId} (Admin: ${(ws as any).isAdmin})`);
+          
+          if ((ws as any).isAdmin) {
+             activeAdminConnections.set((ws as any).userId, {
                 socket: ws,
-                adminId: message.adminId
+                adminId: (ws as any).userId
               });
-              console.log(`Admin ${message.adminId} registered for live chat monitoring`);
+          }
+          return;
+        }
+        
+        switch (parsed.type) {
+          case 'admin_register':
+            if (parsed.isAdmin && parsed.adminId) {
+              activeAdminConnections.set(parsed.adminId, {
+                socket: ws,
+                adminId: parsed.adminId
+              });
+              console.log(`Admin ${parsed.adminId} registered for live chat monitoring`);
             }
             break;
             
           default:
-            // All other message types are handled by REST API
-            console.log(`WebSocket message type '${message.type}' ignored - use REST API instead`);
+            console.log(`WebSocket message type '${parsed.type}' ignored - use REST API instead`);
             break;
         }
       } catch (error) {

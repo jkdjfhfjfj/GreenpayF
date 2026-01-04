@@ -60,8 +60,8 @@ export class WhatsAppService {
       const dbToken = tokenSetting?.value ? this.extractStringValue(tokenSetting.value) : '';
       const dbPhoneId = phoneSetting?.value ? this.extractStringValue(phoneSetting.value) : '';
       
-      this.accessToken = dbToken || process.env.WHATSAPP_ACCESS_TOKEN || '';
-      this.phoneNumberId = dbPhoneId || process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+      this.accessToken = dbToken || process.env.WHAPP_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || '';
+      this.phoneNumberId = dbPhoneId || process.env.WHAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_NUMBER_ID || '';
       
       console.log('[WhatsApp] Credentials load result:', {
         hasTokenFromDb: !!dbToken,

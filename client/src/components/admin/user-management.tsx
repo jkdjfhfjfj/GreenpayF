@@ -319,7 +319,10 @@ export default function UserManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono">${user.balance || "0.00"}</span>
+                        <div className="flex flex-col">
+                          <span className="font-mono">${user.balance || "0.00"}</span>
+                          <span className="text-xs text-gray-500 font-mono">KES {(user as any).kesBalance || "0.00"}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
@@ -516,6 +519,8 @@ export default function UserManagement() {
 
 function UserDetailsDialog({ user }: { user: User }) {
   const [balanceUpdate, setBalanceUpdate] = useState("");
+  const [kesBalanceUpdate, setKesBalanceUpdate] = useState("");
+  const [selectedCurrency, setSelectedCurrency] = useState<"USD" | "KES">("USD");
   const [updateType, setUpdateType] = useState<"add" | "subtract" | "set">("add");
   const [transactionDetails, setTransactionDetails] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -523,7 +528,8 @@ function UserDetailsDialog({ user }: { user: User }) {
   const queryClient = useQueryClient();
 
   const onUpdateBalance = async (user: User) => {
-    if (!balanceUpdate || !transactionDetails) {
+    const amountStr = selectedCurrency === "USD" ? balanceUpdate : kesBalanceUpdate;
+    if (!amountStr || !transactionDetails) {
       toast({
         title: "Error",
         description: "Please enter both amount and transaction details",
@@ -535,9 +541,10 @@ function UserDetailsDialog({ user }: { user: User }) {
     setIsLoading(true);
     try {
       const response = await apiRequest("PUT", `/api/admin/users/${user.id}/balance`, {
-        amount: balanceUpdate,
+        amount: parseFloat(amountStr),
         type: updateType,
         details: transactionDetails,
+        currency: selectedCurrency,
       });
 
       if (response.ok) {
@@ -547,6 +554,7 @@ function UserDetailsDialog({ user }: { user: User }) {
         });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
         setBalanceUpdate("");
+        setKesBalanceUpdate("");
         setTransactionDetails("");
       }
     } catch (error) {
@@ -850,12 +858,17 @@ function UserDetailsDialog({ user }: { user: User }) {
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
           <div className="mb-4">
             <Label>Current Balance</Label>
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-              ${user.balance || "0.00"}
+            <div className="flex flex-col">
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                ${user.balance || "0.00"}
+              </div>
+              <div className="text-xl font-semibold text-gray-500">
+                KES {(user as any).kesBalance || "0.00"}
+              </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <Label htmlFor="update-type">Action</Label>
               <Select value={updateType} onValueChange={(value: "add" | "subtract" | "set") => setUpdateType(value)}>
@@ -863,21 +876,37 @@ function UserDetailsDialog({ user }: { user: User }) {
                   <SelectValue placeholder="Select action" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="add">Add Balance</SelectItem>
-                  <SelectItem value="subtract">Subtract Balance</SelectItem>
-                  <SelectItem value="set">Set Balance</SelectItem>
+                  <SelectItem value="add">Add</SelectItem>
+                  <SelectItem value="subtract">Subtract</SelectItem>
+                  <SelectItem value="set">Set</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="currency-type">Currency</Label>
+              <Select value={selectedCurrency} onValueChange={(value: "USD" | "KES") => setSelectedCurrency(value)}>
+                <SelectTrigger data-testid="select-currency-type">
+                  <SelectValue placeholder="Currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="KES">KES (KSh)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <div>
-              <Label htmlFor="balance-amount">Amount ($)</Label>
+            <div className="md:col-span-2">
+              <Label htmlFor="balance-amount">Amount</Label>
               <Input
                 id="balance-amount"
                 type="number"
                 step="0.01"
-                value={balanceUpdate}
-                onChange={(e) => setBalanceUpdate(e.target.value)}
+                value={selectedCurrency === "USD" ? balanceUpdate : kesBalanceUpdate}
+                onChange={(e) => {
+                  if (selectedCurrency === "USD") setBalanceUpdate(e.target.value);
+                  else setKesBalanceUpdate(e.target.value);
+                }}
                 placeholder="0.00"
                 data-testid="input-balance-amount"
               />
