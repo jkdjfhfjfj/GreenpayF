@@ -753,7 +753,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reset password - Verify code and update password (works with both phone and email)
   app.post("/api/auth/reset-password-email", async (req, res) => {
     try {
       const { email, code, newPassword } = req.body;
@@ -897,6 +896,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         title: "Support Chat",
         adminId: null
       });
+
+      // Notify admin about new live chat request via SMS
+      try {
+        const { messagingService } = await import('./services/messaging');
+        await messagingService.sendAdminChatNotification(userId);
+      } catch (smsError) {
+        console.error('Failed to send admin chat notification:', smsError);
+      }
 
       console.log(`[CONVERSATION PRIVACY] Created new conversation ${newConversation.id.substring(0, 8)}... for user ${userId.substring(0, 8)}...`);
       res.json(newConversation);
