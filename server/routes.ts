@@ -835,11 +835,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Verify reset code
-      const isValid = await storage.verifyUserOtp(user.id, code);
-      
-      if (!isValid) {
-        return res.status(400).json({ message: "Invalid or expired reset code" });
+      // Verify reset code from database (no session check)
+      if (!user.otpCode || user.otpCode !== code) {
+        return res.status(400).json({ message: "Invalid reset code" });
+      }
+
+      // Check OTP expiry
+      const otpExpiry = user.otpExpiry ? new Date(user.otpExpiry) : null;
+      if (!otpExpiry || otpExpiry < new Date()) {
+        return res.status(400).json({ message: "Reset code has expired" });
       }
 
       // Hash new password
@@ -852,10 +856,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserOtp(user.id, null, null);
       
       // Send confirmation message
-      messagingService.sendMessage(
-        user.phone,
-        "Your password has been reset successfully. You can now log in with your new password."
-      ).catch(err => console.error('Password reset notification error:', err));
+      const { mailtrapService } = await import('./services/mailtrap');
+      Promise.all([
+        messagingService.sendMessage(
+          user.phone,
+          "Your password has been reset successfully. You can now log in with your new password."
+        ),
+        user.email ? mailtrapService.sendTemplate(user.email, '7711c72e-431b-4fb9-bea9-9738d4d8bfe7', {
+          first_name: user.firstName || 'User',
+          last_name: user.lastName || '',
+          message: 'Your password has been reset successfully. You can now log in.'
+        }) : Promise.resolve(false)
+      ]).catch(err => console.error('Password reset notification error:', err));
       
       res.json({ 
         success: true,
@@ -913,7 +925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/messages/:conversationId", requireAuth, async (req, res) => {
+  app.get("/api/messages/:conversationId", async (req, res) => {
     try {
       const { conversationId } = req.params;
       const userId = (req.session as any)?.userId;

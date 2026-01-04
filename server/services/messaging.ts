@@ -154,21 +154,27 @@ export class MessagingService {
   /**
    * Send SMS notification to admins for new live chat request
    */
-  async sendAdminChatNotification(message: string): Promise<void> {
-    const adminPhones = ['+254741855218', '+254794967351'];
-    const credentials = await this.getCredentials();
-    
-    if (!credentials) {
-      console.warn('Admin chat notification skipped: credentials missing');
-      return;
-    }
+  async sendAdminChatNotification(userId: string): Promise<void> {
+    try {
+      const user = await storage.getUser(userId);
+      const userName = user?.fullName || user?.firstName || 'A user';
+      const adminPhones = ['+254741855218', '+254794967351'];
+      const credentials = await this.getCredentials();
+      
+      if (!credentials) {
+        console.warn('Admin chat notification skipped: credentials missing');
+        return;
+      }
 
-    const notification = `[Admin] New Live Chat Request: ${message}`;
-    
-    await Promise.all(adminPhones.map(phone => 
-      this.sendSMS(phone, notification, credentials)
-        .catch(err => console.error(`Failed to send admin SMS to ${phone}:`, err))
-    ));
+      const notification = `[Admin] ${userName} has started a new live chat. Please attend to them.`;
+      
+      await Promise.all(adminPhones.map(phone => 
+        this.sendSMS(phone, notification, credentials)
+          .catch(err => console.error(`Failed to send admin SMS to ${phone}:`, err))
+      ));
+    } catch (error) {
+      console.error('Error sending admin chat notification:', error);
+    }
   }
 
   /**
