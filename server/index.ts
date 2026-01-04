@@ -28,8 +28,9 @@ const pgSession = ConnectPgSimple(session);
 // Create PostgreSQL connection pool
 let sessionStore;
 if (process.env.DATABASE_URL) {
+  const connectionString = process.env.DATABASE_URL.replace(/^"(.*)"$/, '$1').trim();
   const pgPool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   });
   

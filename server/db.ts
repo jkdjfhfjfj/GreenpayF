@@ -11,6 +11,7 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const connectionString = process.env.DATABASE_URL.replace(/^"(.*)"$/, '$1');
+// Clean the DATABASE_URL and ensure it is not used as a partial object in Pool
+const connectionString = process.env.DATABASE_URL.replace(/^"(.*)"$/, '$1').trim();
 export const pool = new Pool({ connectionString });
 export const db = drizzle({ client: pool, schema });
