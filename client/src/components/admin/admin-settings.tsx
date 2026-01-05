@@ -69,7 +69,12 @@ export default function AdminSettings() {
       });
       setNotifications(settings.notifications);
       setWhatsapp(settings.whatsapp);
-      setGeneral(settings.general);
+      setGeneral({
+        ...settings.general,
+        welcome_bonus_amount: settings.general.welcome_bonus_amount || "5.00",
+        dashboard_announcement: settings.general.dashboard_announcement || "",
+        show_announcement: settings.general.show_announcement !== undefined ? settings.general.show_announcement : false
+      });
     }
   }, [settings, isLoaded]);
 
@@ -585,11 +590,21 @@ export default function AdminSettings() {
                   General Settings
                 </CardTitle>
                 <CardDescription>
-                  Platform-wide settings and configuration
+                  Platform-wide settings, bonuses, and announcements
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="welcome_bonus">Welcome Bonus Amount ($)</Label>
+                    <Input
+                      id="welcome_bonus"
+                      type="number"
+                      step="0.01"
+                      value={general.welcome_bonus_amount}
+                      onChange={(e) => setGeneral({ ...general, welcome_bonus_amount: e.target.value })}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="platform_name">Platform Name</Label>
                     <Input
@@ -599,6 +614,33 @@ export default function AdminSettings() {
                       data-testid="input-platform-name"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Show Dashboard Announcement</Label>
+                      <p className="text-sm text-gray-500">Display a message to all users on their dashboard</p>
+                    </div>
+                    <Switch
+                      checked={general.show_announcement === true || general.show_announcement === 'true'}
+                      onCheckedChange={(checked) => setGeneral({ ...general, show_announcement: checked })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="announcement_text">Announcement Message</Label>
+                    <Textarea
+                      id="announcement_text"
+                      placeholder="Enter info to display to users..."
+                      value={general.dashboard_announcement}
+                      onChange={(e) => setGeneral({ ...general, dashboard_announcement: e.target.value })}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t pt-4">
                   <div className="space-y-2">
                     <Label htmlFor="support_email">Support Email</Label>
                     <Input
@@ -618,6 +660,7 @@ export default function AdminSettings() {
                       data-testid="input-default-currency"
                     />
                   </div>
+                </div>
                   <div className="space-y-2">
                     <Label htmlFor="session_timeout">Session Timeout (minutes)</Label>
                     <Input
