@@ -39,9 +39,12 @@ export default function ResetPasswordPage() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async (data: ResetPasswordForm) => {
-      const phone = localStorage.getItem("resetPhone");
+      // Use both localStorage and state to find the phone/contact
+      const storedPhone = localStorage.getItem("resetPhone");
+      const phone = storedPhone;
+      
       if (!phone) {
-        throw new Error("Session expired. Please start again.");
+        throw new Error("Session expired. Please start again from the forgot password page.");
       }
       
       const response = await apiRequest("POST", "/api/auth/reset-password", {

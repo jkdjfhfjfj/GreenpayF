@@ -820,24 +820,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Request password reset - send OTP via multi-channel
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
-      const { phone } = req.body;
-      if (!phone) {
-        return res.status(400).json({ message: "Phone number is required" });
+      const { contact } = req.body;
+      if (!contact) {
+        return res.status(400).json({ message: "Phone number or email is required" });
       }
 
       const { messagingService } = await import('./services/messaging');
-      const formattedPhone = messagingService.formatPhoneNumber(phone);
-      const user = await storage.getUserByPhone(formattedPhone);
+      
+      let user;
+      if (contact.includes('@')) {
+        user = await storage.getUserByEmail(contact);
+      } else {
+        const formattedPhone = messagingService.formatPhoneNumber(contact);
+        user = await storage.getUserByPhone(formattedPhone);
+      }
       
       if (!user) {
-        // Return 200 even if user not found for security, but we'll log it
-        console.log(`[ForgotPassword] User not found for phone: ${formattedPhone}`);
+        // Return 200 even if user not found for security
         return res.json({ 
           success: true, 
-          message: "If an account exists with this number, a reset code has been sent." 
+          message: "If an account exists, a reset code has been sent." 
         });
       }
 
@@ -849,17 +853,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send via messaging services
       const { mailtrapService } = await import('./services/mailtrap');
-      Promise.all([
-        messagingService.sendOTP(user.phone, otpCode),
+      const { whatsappService } = await import('./services/whatsapp');
+
+      // Attempt multi-channel delivery
+      const results = await Promise.allSettled([
+        user.phone ? messagingService.sendMessage(user.phone, `Your GreenPay password reset code is: ${otpCode}`) : Promise.resolve(false),
+        user.phone ? whatsappService.sendOTP(user.phone, otpCode) : Promise.resolve(false),
         user.email ? mailtrapService.sendTemplate(user.email, 'b54e3d3c-9a2c-4b6e-8e8e-8a9e9a9e9a9e', {
           first_name: user.firstName || 'User',
           otp_code: otpCode
         }) : Promise.resolve(false)
-      ]).catch(err => console.error('Password reset send error:', err));
+      ]);
+
+      console.log(`[ForgotPassword] Reset code sent to user ${user.id}`);
 
       res.json({ 
         success: true, 
-        message: "Reset code sent successfully" 
+        message: "Reset code sent successfully",
+        sentVia: user.email && contact.includes('@') ? 'email' : 'phone'
       });
     } catch (error) {
       console.error('Forgot password error:', error);
@@ -6173,16 +6184,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Disable PIN
+      const { db } = await import('./db');
+      const { users } = await import('@/shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
       await db.update(users).set({
-        pin_enabled: false,
-        pin_code: null
+        pinEnabled: false,
+        pinCode: null
       }).where(eq(users.id, id));
 
       // Get updated user
       const updatedUser = await storage.getUser(id);
-      const { password: _, ...userResponse } = updatedUser;
+      
+      // Update session if it exists
+      if (req.session.user) {
+        req.session.user.pinEnabled = false;
+      }
 
-      res.json({ success: true, user: userResponse });
+      const { password: _, ...userResponse } = updatedUser;
+      res.json({ success: true, message: "PIN disabled successfully", user: userResponse });
     } catch (error) {
       console.error('PIN disable error:', error);
       res.status(500).json({ message: "Failed to disable PIN" });

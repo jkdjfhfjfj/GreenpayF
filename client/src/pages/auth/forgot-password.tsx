@@ -34,6 +34,10 @@ export default function ForgotPasswordPage() {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Store contact for the next step (reset-password)
+        localStorage.setItem("resetPhone", contact.trim());
+        
         setSuccess(true);
         setSentVia(data.sentVia || data.contact);
         toast({
