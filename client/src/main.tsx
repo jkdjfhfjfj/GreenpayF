@@ -37,13 +37,15 @@ if (storedVersion && storedVersion !== APP_VERSION) {
 // Error boundary for the whole app to prevent white screen
 window.addEventListener('error', (event) => {
   if (event.message.includes('Loading chunk') || 
-      event.message.includes('CSS_CHUNK_LOAD_FAILED')) {
-    const lastChunkError = parseInt(sessionStorage.getItem("last_chunk_error") || "0");
-    // Only auto-reload once for chunk errors per session to avoid loops
-    if (Date.now() - lastChunkError > 30000) {
-      sessionStorage.setItem("last_chunk_error", Date.now().toString());
-      console.warn('Assets failed to load, attempting reload...');
-      window.location.reload();
+      event.message.includes('CSS_CHUNK_LOAD_FAILED') ||
+      event.message.includes('Unexpected token') ||
+      event.message.includes('is not a function')) {
+    const lastCriticalError = parseInt(sessionStorage.getItem("last_critical_error") || "0");
+    // Only auto-reset once per minute for critical errors to avoid loops
+    if (Date.now() - lastCriticalError > 60000) {
+      sessionStorage.setItem("last_critical_error", Date.now().toString());
+      console.warn('Critical error detected, forcing full reset and reload...');
+      window.location.href = window.location.origin + "/?clear_cache=1&s=1";
     }
   }
 });
