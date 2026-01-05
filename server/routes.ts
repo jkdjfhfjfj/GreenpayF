@@ -820,6 +820,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Request password reset - send OTP via multi-channel
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      const { messagingService } = await import('./services/messaging');
+      const formattedPhone = messagingService.formatPhoneNumber(phone);
+      const user = await storage.getUserByPhone(formattedPhone);
+      
+      if (!user) {
+        // Return 200 even if user not found for security, but we'll log it
+        console.log(`[ForgotPassword] User not found for phone: ${formattedPhone}`);
+        return res.json({ 
+          success: true, 
+          message: "If an account exists with this number, a reset code has been sent." 
+        });
+      }
+
+      const otpCode = messagingService.generateOTP();
+      const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+      // Store OTP in database
+      await storage.updateUserOtp(user.id, otpCode, otpExpiry);
+
+      // Send via messaging services
+      const { mailtrapService } = await import('./services/mailtrap');
+      Promise.all([
+        messagingService.sendOTP(user.phone, otpCode),
+        user.email ? mailtrapService.sendTemplate(user.email, 'b54e3d3c-9a2c-4b6e-8e8e-8a9e9a9e9a9e', {
+          first_name: user.firstName || 'User',
+          otp_code: otpCode
+        }) : Promise.resolve(false)
+      ]).catch(err => console.error('Password reset send error:', err));
+
+      res.json({ 
+        success: true, 
+        message: "Reset code sent successfully" 
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: "Failed to process request" });
+    }
+  });
+
   // Reset password - Verify code and update password
   app.post("/api/auth/reset-password", async (req, res) => {
     try {
@@ -5805,17 +5852,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check PIN if required by admin settings
+      // Check PIN if required by admin settings OR if user has it enabled
       const settings = await storage.getSystemSettings();
-      const pinRequired = settings.some(s => s.key === "pin_required" && s.value === "true");
+      const pinRequiredByAdmin = settings.some(s => s.key === "pin_required" && s.value === "true");
       
-      if (pinRequired && fromUser.pinEnabled) {
+      if ((pinRequiredByAdmin || fromUser.pinEnabled) && fromUser.pinCode) {
         if (!pin) {
           return res.status(400).json({ message: "PIN required", requiresPin: true });
         }
         
         // Verify PIN
-        const isPinValid = await bcrypt.compare(pin, fromUser.pinCode || "");
+        const isPinValid = await bcrypt.compare(pin, fromUser.pinCode);
         if (!isPinValid) {
           return res.status(401).json({ message: "Invalid PIN", success: false });
         }
@@ -5931,6 +5978,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Transfer error:', error);
       res.status(500).json({ message: "Error processing transfer" });
+    }
+  });
+
+  app.post("/api/auth/reset-pin", async (req, res) => {
+    try {
+      const { phone, code, newPin } = req.body;
+      
+      if (!phone || !code || !newPin) {
+        return res.status(400).json({ message: "Phone, code, and new PIN are required" });
+      }
+
+      if (!/^\d{4}$/.test(newPin)) {
+        return res.status(400).json({ message: "PIN must be 4 digits" });
+      }
+
+      const { messagingService } = await import('./services/messaging');
+      const formattedPhone = messagingService.formatPhoneNumber(phone);
+      const user = await storage.getUserByPhone(formattedPhone);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify reset code
+      const isValid = await storage.verifyUserOtp(user.id, code);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      // Hash and update PIN
+      const hashedPin = await bcrypt.hash(newPin, 10);
+      await storage.updateUser(user.id, { 
+        pinCode: hashedPin,
+        pinEnabled: true 
+      });
+
+      // Clear OTP
+      await storage.updateUserOtp(user.id, null, null);
+
+      res.json({ success: true, message: "PIN reset successful" });
+    } catch (error) {
+      console.error('Reset PIN error:', error);
+      res.status(500).json({ message: "Failed to reset PIN" });
     }
   });
 
