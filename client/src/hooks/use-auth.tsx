@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { User } from "@shared/schema";
+import { getStorageSafe, setStorageSafe } from "@/lib/safe-storage";
 
 interface AuthContextType {
   user: User | null;
@@ -18,20 +19,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for stored user data on app load
-    const storedUser = localStorage.getItem("greenpay_user");
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        // Load stored settings
-        if (userData?.darkMode) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      } catch (error) {
-        console.error("Failed to parse stored user data:", error);
-        localStorage.removeItem("greenpay_user");
+    const userData = getStorageSafe<User | null>("greenpay_user", null);
+    if (userData) {
+      setUser(userData);
+      // Load stored settings
+      if (userData?.darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
       }
     }
     setIsLoading(false);
@@ -39,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (userData: User) => {
     setUser(userData);
-    localStorage.setItem("greenpay_user", JSON.stringify(userData));
+    setStorageSafe("greenpay_user", userData);
   };
 
   const logout = () => {
@@ -55,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData.user);
-        localStorage.setItem("greenpay_user", JSON.stringify(userData.user));
+        setStorageSafe("greenpay_user", userData.user);
       }
     } catch (error) {
       console.error("Failed to refresh user data:", error);

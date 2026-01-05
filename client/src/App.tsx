@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { WhatsAppSupportFAB } from "@/components/whatsapp-support-fab";
+import { getStorageSafe } from "@/lib/safe-storage";
 import NotFound from "@/pages/not-found";
 import SplashPage from "@/pages/splash";
 import LoginPage from "@/pages/auth/login";
@@ -81,7 +82,7 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
   const [, setLocation] = useLocation();
   
   // Check if admin is authenticated
-  const adminAuth = localStorage.getItem("adminAuth");
+  const adminAuth = getStorageSafe<any>("adminAuth", null);
   
   if (!adminAuth) {
     // Redirect to admin login if not authenticated
@@ -89,16 +90,9 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
     return null;
   }
   
-  try {
-    const admin = JSON.parse(adminAuth);
-    if (!admin || !admin.role || admin.role !== 'admin') {
-      setLocation("/admin/login");
-      return null;
-    }
-  } catch (error) {
-    // Invalid admin data, redirect to login
-    localStorage.removeItem("adminAuth");
+  if (!adminAuth.role || adminAuth.role !== 'admin') {
     setLocation("/admin/login");
+    localStorage.removeItem("adminAuth");
     return null;
   }
   
