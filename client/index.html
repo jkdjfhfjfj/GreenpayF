@@ -198,6 +198,17 @@
   <body>
     <div id="root"></div>
     <script>
+      // Force reload if page hangs on blank screen
+      window.onload = function() {
+        setTimeout(() => {
+          const root = document.getElementById('root');
+          if (root && root.innerHTML === "") {
+            console.log("App failed to render. Attempting hard reload...");
+            window.location.href = window.location.origin + "/?clear_cache=1&s=1";
+          }
+        }, 3000);
+      };
+
       // Global error handler to catch boot crashes
       window.addEventListener('error', function(e) {
         console.error('Runtime error caught:', e.error);

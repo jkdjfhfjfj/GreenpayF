@@ -87,8 +87,8 @@ app.use((req, res, next) => {
 
   // Automatic "Clear-Site-Data" for the root path to ensure fresh loads
   // We use a specific cookie-based check to prevent reload loops
+  // REMOVED Clear-Site-Data to prevent hanging in some browsers
   if (req.path === '/' && !req.query.s && !req.cookies?.['cache_cleared']) {
-    res.setHeader('Clear-Site-Data', '"cache", "storage", "executionContexts"');
     res.cookie('cache_cleared', '1', { maxAge: 3600000, httpOnly: true, sameSite: 'lax' });
   }
 
