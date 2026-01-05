@@ -6204,7 +6204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Disable PIN
       const { db } = await import('./db');
-      const { users } = await import('@/shared/schema');
+      const { users } = await import('../shared/schema');
       const { eq } = await import('drizzle-orm');
       
       await db.update(users).set({
