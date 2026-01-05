@@ -839,18 +839,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserByPhone(formattedPhone);
       
       if (!user) {
+        console.error(`[ResetPassword] User not found for phone: ${formattedPhone}`);
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Verify reset code from database (no session check)
-      if (!user.otpCode || user.otpCode !== code) {
-        return res.status(400).json({ message: "Invalid reset code" });
-      }
-
-      // Check OTP expiry
-      const otpExpiry = user.otpExpiry ? new Date(user.otpExpiry) : null;
-      if (!otpExpiry || otpExpiry < new Date()) {
-        return res.status(400).json({ message: "Reset code has expired" });
+      // Verify reset code directly from database (no session check)
+      const isValid = await storage.verifyUserOtp(user.id, code);
+      if (!isValid) {
+        console.error(`[ResetPassword] Invalid or expired code for user ${user.id}`);
+        return res.status(400).json({ message: "Invalid or expired reset code" });
       }
 
       // Hash new password
@@ -876,6 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }) : Promise.resolve(false)
       ]).catch(err => console.error('Password reset notification error:', err));
       
+      console.log(`[ResetPassword] Success for user ${user.id}`);
       res.json({ 
         success: true,
         message: "Password reset successful" 
@@ -1011,6 +1009,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         senderId: senderId!,
         senderType
       } as any);
+
+      // If sender is admin, notify user via SMS
+      if (senderType === 'admin') {
+        try {
+          const { messagingService } = await import('./services/messaging');
+          const user = await storage.getUser(conversation.userId);
+          if (user && user.phone) {
+            const domain = process.env.REPLIT_DOMAINS || 'greenpay.app';
+            const loginUrl = `https://${domain.split(',')[0]}/login`;
+            const notification = `You have a new message from GreenPay support. Login to reply: ${loginUrl}`;
+            await messagingService.sendMessage(user.phone, notification);
+          }
+        } catch (smsError) {
+          console.error('Failed to send user chat notification:', smsError);
+        }
+      }
 
       res.json({ message });
     } catch (error) {

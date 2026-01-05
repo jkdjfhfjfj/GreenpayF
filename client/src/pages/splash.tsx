@@ -47,26 +47,26 @@ export default function SplashPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const handleNext = () => {
+    // Clear all local data to ensure a fresh session and prevent white screens whenever root is accessed
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear all cookies
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i];
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+      }
+    } catch (e) {
+      console.error("Error clearing storage:", e);
+    }
+
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
-      // Clear all local data to ensure a fresh session and prevent white screens
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Clear all cookies
-        const cookies = document.cookie.split(";");
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i];
-          const eqPos = cookie.indexOf("=");
-          const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-        }
-      } catch (e) {
-        console.error("Error clearing storage:", e);
-      }
-
       // Add a small delay to ensure storage is cleared before redirect
       setTimeout(() => {
         setLocation("/signup");
