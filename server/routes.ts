@@ -6028,77 +6028,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear OTP
       await storage.updateUserOtp(user.id, null, null);
 
+      // Log activity
+      console.log(`[ResetPIN] Success for user ${user.id}`);
+      
       res.json({ success: true, message: "PIN reset successful" });
     } catch (error) {
       console.error('Reset PIN error:', error);
       res.status(500).json({ message: "Failed to reset PIN" });
-    }
-  });
-
-  // PIN management endpoints
-  app.post("/api/users/:id/pin/setup", requireAuth, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { pin } = req.body;
-
-      if (!pin || pin.length !== 4) {
-        return res.status(400).json({ message: "PIN must be 4 digits" });
-      }
-
-      if (!/^\d{4}$/.test(pin)) {
-        return res.status(400).json({ message: "PIN must contain only numbers" });
-      }
-
-      const user = await storage.getUser(id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Hash the PIN
-      const hashedPin = await bcrypt.hash(pin, 10);
-
-      // Update user with PIN
-      await storage.updateUser(id, { 
-        pinCode: hashedPin,
-        pinEnabled: true
-      });
-
-      res.json({ message: "PIN set successfully" });
-    } catch (error) {
-      console.error('PIN setup error:', error);
-      res.status(500).json({ message: "Failed to set PIN" });
-    }
-  });
-
-  app.post("/api/users/:id/pin/verify", requireAuth, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { pin } = req.body;
-
-      if (!pin || pin.length !== 4) {
-        return res.status(400).json({ message: "Invalid PIN", success: false });
-      }
-
-      const user = await storage.getUser(id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found", success: false });
-      }
-
-      // Check if PIN is enabled
-      if (!user.pinEnabled || !user.pinCode) {
-        return res.status(400).json({ message: "PIN not set up", success: false });
-      }
-
-      // Verify PIN
-      const isPinValid = await bcrypt.compare(pin, user.pinCode);
-      if (!isPinValid) {
-        return res.status(401).json({ message: "Invalid PIN", success: false });
-      }
-
-      res.json({ success: true, message: "PIN verified" });
-    } catch (error) {
-      console.error('PIN verification error:', error);
-      res.status(500).json({ message: "PIN verification failed", success: false });
     }
   });
 
