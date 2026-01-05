@@ -4,7 +4,7 @@ import App from "./App";
 import "./index.css";
 
 // Check if we need to clear state due to version mismatch or white screen issues
-const APP_VERSION = "1.0.2"; // Incremented version
+const APP_VERSION = "1.0.3"; // Incremented version
 const storedVersion = localStorage.getItem("app_version");
 
 // Detect if we're in a crash loop (more than 3 reloads in 10 seconds)
@@ -13,11 +13,8 @@ const lastReload = parseInt(sessionStorage.getItem("last_reload") || "0");
 const now = Date.now();
 
 if (now - lastReload < 10000 && reloadCount > 3) {
-  console.error("Crash loop detected. Clearing all data.");
-  localStorage.clear();
-  sessionStorage.clear();
-  sessionStorage.setItem("last_reload", now.toString());
-  sessionStorage.setItem("reload_count", "0");
+  console.error("Crash loop detected. Stopping automatic reloads.");
+  // Don't reload anymore, just log the error
 } else {
   if (now - lastReload > 10000) {
     sessionStorage.setItem("reload_count", "1");
@@ -28,9 +25,10 @@ if (now - lastReload < 10000 && reloadCount > 3) {
 }
 
 if (storedVersion && storedVersion !== APP_VERSION) {
+  // Only clear and reload once per version update
+  localStorage.setItem("app_version", APP_VERSION);
   localStorage.clear();
   sessionStorage.clear();
-  localStorage.setItem("app_version", APP_VERSION);
   window.location.reload();
 } else if (!storedVersion) {
   localStorage.setItem("app_version", APP_VERSION);
@@ -39,13 +37,14 @@ if (storedVersion && storedVersion !== APP_VERSION) {
 // Error boundary for the whole app to prevent white screen
 window.addEventListener('error', (event) => {
   if (event.message.includes('Loading chunk') || 
-      event.message.includes('CSS_CHUNK_LOAD_FAILED') || 
-      event.message.includes('Unexpected token') ||
-      event.message.includes('is not a function')) {
-    console.warn('Critical error detected, attempting data clear and reload...');
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.reload();
+      event.message.includes('CSS_CHUNK_LOAD_FAILED')) {
+    const lastChunkError = parseInt(sessionStorage.getItem("last_chunk_error") || "0");
+    // Only auto-reload once for chunk errors per session to avoid loops
+    if (Date.now() - lastChunkError > 30000) {
+      sessionStorage.setItem("last_chunk_error", Date.now().toString());
+      console.warn('Assets failed to load, attempting reload...');
+      window.location.reload();
+    }
   }
 });
 
