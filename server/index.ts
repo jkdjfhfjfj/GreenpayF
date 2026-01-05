@@ -73,6 +73,20 @@ const getSecureCookieSetting = (): boolean | 'auto' => {
   return isProduction; // Standard boolean setting
 };
 
+// Middleware to prevent caching and handle service worker / white screen issues
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  
+  // Clear site data if a specific query param is present or on certain conditions
+  if (req.query.clear_cache === '1') {
+    res.setHeader('Clear-Site-Data', '"cache", "storage", "executionContexts"');
+  }
+  next();
+});
+
 const sessionConfig = {
   store: sessionStore,
   secret: process.env.SESSION_SECRET || 'greenpay-secret-key-change-in-production-' + Math.random(),
