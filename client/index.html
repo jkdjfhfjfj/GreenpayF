@@ -197,6 +197,42 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Global error handler to catch boot crashes
+      window.addEventListener('error', function(e) {
+        console.error('Runtime error caught:', e.error);
+        // Only trigger auto-clear if it's a critical boot error (root is empty)
+        setTimeout(() => {
+          const root = document.getElementById('root');
+          if (root && root.innerHTML === "") {
+            console.warn('App failed to boot. Clearing storage...');
+            localStorage.clear();
+            sessionStorage.clear();
+            // Clear all cookies
+            document.cookie.split(";").forEach(function(c) {
+              document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            window.location.reload();
+          }
+        }, 1000);
+      });
+
+      // Fail-safe: If root is empty after 5 seconds, clear and reload
+      setTimeout(() => {
+        const root = document.getElementById('root');
+        if (root && root.innerHTML === "") {
+          console.error("App failed to load within 5s. Force resetting site data...");
+          localStorage.clear();
+          sessionStorage.clear();
+          if ('caches' in window) {
+            caches.keys().then(names => {
+              for (let name of names) caches.delete(name);
+            });
+          }
+          window.location.reload();
+        }
+      }, 5000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
