@@ -884,20 +884,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { phone, code, newPassword } = req.body;
       
       if (!phone || !code || !newPassword) {
-        return res.status(400).json({ message: "Phone, code, and new password are required" });
+        return res.status(400).json({ message: "Contact, code, and new password are required" });
       }
 
       if (newPassword.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
       }
 
-      // Find user by phone
       const { messagingService } = await import('./services/messaging');
-      const formattedPhone = messagingService.formatPhoneNumber(phone);
-      const user = await storage.getUserByPhone(formattedPhone);
+      
+      let user;
+      if (phone.includes('@')) {
+        user = await storage.getUserByEmail(phone);
+      } else {
+        const formattedPhone = messagingService.formatPhoneNumber(phone);
+        user = await storage.getUserByPhone(formattedPhone);
+      }
       
       if (!user) {
-        console.error(`[ResetPassword] User not found for phone: ${formattedPhone}`);
+        console.error(`[ResetPassword] User not found for contact: ${phone}`);
         return res.status(404).json({ message: "User not found" });
       }
 
@@ -6005,10 +6010,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { messagingService } = await import('./services/messaging');
-      const formattedPhone = messagingService.formatPhoneNumber(phone);
-      const user = await storage.getUserByPhone(formattedPhone);
+      
+      let user;
+      if (phone.includes('@')) {
+        user = await storage.getUserByEmail(phone);
+      } else {
+        const formattedPhone = messagingService.formatPhoneNumber(phone);
+        user = await storage.getUserByPhone(formattedPhone);
+      }
 
       if (!user) {
+        console.error(`[ResetPIN] User not found for contact: ${phone}`);
         return res.status(404).json({ message: "User not found" });
       }
 
