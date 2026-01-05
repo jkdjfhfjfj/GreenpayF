@@ -88,7 +88,7 @@ app.use((req, res, next) => {
   // Automatic "Clear-Site-Data" for the root path to ensure fresh loads
   // This will clear cache and storage on every fresh visit to the home page
   if (req.path === '/' && !req.query.s) {
-    res.setHeader('Clear-Site-Data', '"cache"');
+    res.setHeader('Clear-Site-Data', '"cache", "storage", "executionContexts"');
   }
 
   // Clear site data if a specific query param is present or on certain conditions
