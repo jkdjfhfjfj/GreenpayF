@@ -75,13 +75,6 @@ export default function DepositPage() {
 
   const paymentMethods = [
     {
-      id: "card",
-      name: "Credit/Debit Card",
-      icon: "/attached_assets/images_(10)_1767703864998.png",
-      description: "Instant deposit (Visa, Mastercard, Amex)",
-      fee: "2.9% + $0.30",
-    },
-    {
       id: "mpesa",
       name: "M-Pesa",
       icon: "/attached_assets/images_(11)_1767703865189.png",
@@ -96,6 +89,17 @@ export default function DepositPage() {
       fee: "1.5%",
     },
     {
+      id: "card",
+      name: "Debit/Credit Card",
+      icons: [
+        "/attached_assets/images_(5)_1767703865516.jpeg", // Visa
+        "/attached_assets/images_(6)_1766711928513.png", // Mastercard
+        "/attached_assets/images_(7)_1766711928551.png"  // Amex
+      ],
+      description: "Visa, Mastercard, American Express",
+      fee: "2.9% + $0.30",
+    },
+    {
       id: "bank_transfer",
       name: "Bank Transfer",
       icon: "/attached_assets/images_(9)_1767703865615.png",
@@ -106,16 +110,16 @@ export default function DepositPage() {
 
   const [usdAmount, setUsdAmount] = useState("");
   const [kesAmount, setKesAmount] = useState<number | null>(null);
+  const [exchangeRate, setExchangeRate] = useState(129);
 
-  // Conversion logic (Mock or real API)
+  // Conversion logic
   useEffect(() => {
     if (usdAmount && parseFloat(usdAmount) > 0) {
-      // Assuming 1 USD = 129 KES for now
-      setKesAmount(parseFloat(usdAmount) * 129);
+      setKesAmount(parseFloat(usdAmount) * exchangeRate);
     } else {
       setKesAmount(null);
     }
-  }, [usdAmount]);
+  }, [usdAmount, exchangeRate]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -179,8 +183,14 @@ export default function DepositPage() {
 
                 {kesAmount !== null && (
                   <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
-                    <p className="text-sm text-muted-foreground">Approximate KES Amount:</p>
-                    <p className="text-lg font-bold text-primary">KSh {formatNumber(kesAmount)}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Exchange Rate:</span>
+                      <span className="text-sm font-medium">1 USD = {exchangeRate} KES</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-sm text-muted-foreground">Approximate KES:</span>
+                      <span className="text-lg font-bold text-primary">KSh {formatNumber(kesAmount)}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -217,12 +227,24 @@ export default function DepositPage() {
                           }`}
                           data-testid={`payment-method-${method.id}`}
                         >
-                          <div className="w-16 h-10 bg-white border border-border rounded-lg flex items-center justify-center mr-4 p-1 overflow-hidden">
-                            <img src={method.icon} alt={method.name} className="max-w-full max-h-full object-contain" />
+                          <div className="flex items-center gap-2 mr-4">
+                            {method.icons ? (
+                              <div className="flex -space-x-2">
+                                {method.icons.map((icon, idx) => (
+                                  <div key={idx} className="w-10 h-8 bg-white border border-border rounded shadow-sm flex items-center justify-center p-1 overflow-hidden">
+                                    <img src={icon} alt={`${method.name} ${idx}`} className="max-w-full max-h-full object-contain" />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="w-16 h-10 bg-white border border-border rounded-lg flex items-center justify-center p-1 overflow-hidden">
+                                <img src={method.icon} alt={method.name} className="max-w-full max-h-full object-contain" />
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1">
                             <p className="font-medium">{method.name}</p>
-                            <p className="text-sm text-muted-foreground">{method.description}</p>
+                            <p className="text-xs text-muted-foreground">{method.description}</p>
                           </div>
                           {field.value === method.id && (
                             <span className="material-icons text-primary">check_circle</span>
@@ -270,12 +292,50 @@ export default function DepositPage() {
               </motion.div>
             )}
 
+            {/* Summary */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-card p-4 rounded-xl border border-border elevation-1"
+            >
+              <h3 className="font-semibold mb-3">Transaction Summary</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">USD Amount</span>
+                  <span className="font-medium">${form.watch("amount") || "0.00"}</span>
+                </div>
+                {kesAmount !== null && (
+                  <div className="flex justify-between text-primary font-semibold">
+                    <span>Expected KES</span>
+                    <span>KSh {formatNumber(kesAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Processing Fee</span>
+                  <span className="font-medium">
+                    {selectedMethod === "bank_transfer" ? "Free" : 
+                     selectedMethod === "card" ? "$0.30 + 2.9%" : "1.5%"}
+                  </span>
+                </div>
+                <hr className="border-border" />
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total Payable</span>
+                  <span>${form.watch("amount") || "0.00"}</span>
+                </div>
+              </div>
+            </motion.div>
+
             {/* Footer Attribution */}
-            <div className="flex flex-col items-center justify-center space-y-2 pt-4 opacity-60">
-              <div className="flex items-center gap-4 text-xs">
-                <span>Powered by Paystack</span>
-                <div className="w-px h-3 bg-muted-foreground/30" />
-                <span>NCBA Loop</span>
+            <div className="flex flex-col items-center justify-center space-y-2 pt-4 opacity-80">
+              <div className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  Powered by <span className="text-primary font-bold">Paystack</span>
+                </span>
+                <div className="w-px h-3 bg-border" />
+                <span className="flex items-center gap-1">
+                  Secured by <span className="text-primary font-bold">NCBA Loop</span>
+                </span>
               </div>
             </div>
 
@@ -287,7 +347,7 @@ export default function DepositPage() {
               <Button
                 type="submit"
                 className="w-full h-12 text-lg font-bold"
-                disabled={depositMutation.isPending}
+                disabled={depositMutation.isPending || !form.watch("amount")}
                 data-testid="button-confirm-deposit"
               >
                 {depositMutation.isPending ? "Processing..." : `Deposit $${form.watch("amount") || "0.00"}`}
