@@ -47,9 +47,9 @@ export default function DepositPage() {
     mutationFn: async (data: DepositForm) => {
       // Initialize payment with Paystack
       const response = await apiRequest("POST", "/api/deposit/initialize-payment", {
-        userId: user?.id,
         amount: data.amount,
-        currency: data.currency,
+        currency: "USD",
+        paymentMethod: data.paymentMethod,
       });
       const result = await response.json();
       
@@ -77,41 +77,50 @@ export default function DepositPage() {
     {
       id: "card",
       name: "Credit/Debit Card",
-      icon: "credit_card",
-      description: "Instant deposit with your card",
+      icon: "/attached_assets/generated_images/visa_and_mastercard_payment_logos.png",
+      description: "Instant deposit (Visa, Mastercard, Amex)",
       fee: "2.9% + $0.30",
     },
     {
-      id: "bank",
+      id: "mpesa",
+      name: "M-Pesa",
+      icon: "/attached_assets/generated_images/m-pesa_safaricom_mobile_money_logo.png",
+      description: "Instant mobile money deposit",
+      fee: "1.5%",
+    },
+    {
+      id: "airtel",
+      name: "Airtel Money",
+      icon: "/attached_assets/generated_images/m-pesa_safaricom_mobile_money_logo.png", // Use a placeholder or general mobile money icon if Airtel specific is missing
+      description: "Instant mobile money deposit",
+      fee: "1.5%",
+    },
+    {
+      id: "bank_transfer",
       name: "Bank Transfer",
-      icon: "account_balance",
-      description: "Direct bank transfer (3-5 business days)",
+      icon: "/attached_assets/generated_images/payhero_payment_gateway_logo.png",
+      description: "Manual transfer to NCBA Loop",
       fee: "Free",
     },
-    {
-      id: "paypal",
-      name: "PayPal",
-      icon: "account_balance_wallet",
-      description: "Pay with your PayPal account",
-      fee: "3.4% + $0.30",
-    },
-    {
-      id: "crypto",
-      name: "Cryptocurrency",
-      icon: "currency_bitcoin",
-      description: "Deposit with Bitcoin, Ethereum, or USDC",
-      fee: "1% network fee",
-    },
   ];
+
+  const [usdAmount, setUsdAmount] = useState("");
+  const [kesAmount, setKesAmount] = useState<number | null>(null);
+
+  // Conversion logic (Mock or real API)
+  useEffect(() => {
+    if (usdAmount && parseFloat(usdAmount) > 0) {
+      // Assuming 1 USD = 129 KES for now
+      setKesAmount(parseFloat(usdAmount) * 129);
+    } else {
+      setKesAmount(null);
+    }
+  }, [usdAmount]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <WavyHeader
-        
-        
-        size="sm"
-      />
+      <WavyHeader size="sm" />
 
       <div className="p-6 space-y-6">
         {/* Current Balance */}
@@ -138,65 +147,42 @@ export default function DepositPage() {
               transition={{ delay: 0.2 }}
               className="bg-card p-4 rounded-xl border border-border elevation-1"
             >
-              <h3 className="font-semibold mb-4">How much would you like to add?</h3>
+              <h3 className="font-semibold mb-4">How much USD would you like to add?</h3>
               
-              <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="grid grid-cols-1 gap-4 mb-4">
                 <FormField
                   control={form.control}
-                  name="currency"
+                  name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-currency">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="USD">$ USD</SelectItem>
-                          <SelectItem value="KES">KSh KES</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-                <div className="col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                           <Input
                             {...field}
                             type="number"
                             step="0.01"
                             placeholder="0.00"
-                            className="text-lg"
+                            className="pl-8 text-lg"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              setUsdAmount(e.target.value);
+                            }}
                             data-testid="input-amount"
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Quick Amount Buttons */}
-              <div className="grid grid-cols-4 gap-2">
-                {["50", "100", "250", "500"].map((amount) => (
-                  <motion.button
-                    key={amount}
-                    type="button"
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => form.setValue("amount", amount)}
-                    className="p-3 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
-                    data-testid={`quick-amount-${amount}`}
-                  >
-                    ${amount}
-                  </motion.button>
-                ))}
+                {kesAmount !== null && (
+                  <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+                    <p className="text-sm text-muted-foreground">Approximate KES Amount:</p>
+                    <p className="text-lg font-bold text-primary">KSh {formatNumber(kesAmount)}</p>
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -216,7 +202,7 @@ export default function DepositPage() {
                 name="paymentMethod"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="divide-y divide-border">
+                    <div className="grid grid-cols-1 divide-y divide-border">
                       {paymentMethods.map((method) => (
                         <motion.button
                           key={method.id}
@@ -231,13 +217,12 @@ export default function DepositPage() {
                           }`}
                           data-testid={`payment-method-${method.id}`}
                         >
-                          <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center mr-4">
-                            <span className="material-icons text-muted-foreground">{method.icon}</span>
+                          <div className="w-16 h-10 bg-white border border-border rounded-lg flex items-center justify-center mr-4 p-1 overflow-hidden">
+                            <img src={method.icon} alt={method.name} className="max-w-full max-h-full object-contain" />
                           </div>
                           <div className="flex-1">
                             <p className="font-medium">{method.name}</p>
                             <p className="text-sm text-muted-foreground">{method.description}</p>
-                            <p className="text-xs text-primary font-medium mt-1">Fee: {method.fee}</p>
                           </div>
                           {field.value === method.id && (
                             <span className="material-icons text-primary">check_circle</span>
@@ -251,79 +236,48 @@ export default function DepositPage() {
               />
             </motion.div>
 
-            {/* Payment Details */}
-            {selectedMethod === "card" && (
+            {/* Bank Transfer Details */}
+            {selectedMethod === "bank_transfer" && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-card p-4 rounded-xl border border-border elevation-1"
               >
-                <h3 className="font-semibold mb-4">Card Details</h3>
-                <div className="space-y-3">
-                  <Input placeholder="Card Number" data-testid="input-card-number" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Input placeholder="MM/YY" data-testid="input-expiry" />
-                    <Input placeholder="CVV" data-testid="input-cvv" />
-                  </div>
-                  <Input placeholder="Cardholder Name" data-testid="input-cardholder" />
-                </div>
-              </motion.div>
-            )}
-
-            {selectedMethod === "bank" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card p-4 rounded-xl border border-border elevation-1"
-              >
-                <h3 className="font-semibold mb-4">Bank Transfer Details</h3>
+                <h3 className="font-semibold mb-4">NCBA Loop Transfer Details</h3>
                 <div className="space-y-3 text-sm">
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium">Bank: GreenPay Bank</p>
-                    <p>Account: 1234567890</p>
-                    <p>Routing: 021000021</p>
-                    <p>Reference: GP-{user?.id?.slice(-8)}</p>
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bank:</span>
+                      <span className="font-bold">NCBA Loop</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Account Name:</span>
+                      <span className="font-bold">Greenpay LTD</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Account Number:</span>
+                      <span className="font-bold font-mono">1234567890</span> {/* Placeholder: replace with actual from card purchase */}
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Reference:</span>
+                      <span className="font-bold text-primary">GP-{user?.id?.slice(-8).toUpperCase()}</span>
+                    </div>
                   </div>
-                  <p className="text-muted-foreground">
-                    Transfer funds to the account above and include the reference number.
-                    Processing time: 3-5 business days.
+                  <p className="text-xs text-muted-foreground italic">
+                    * Please upload proof of payment in the support section after transfer.
                   </p>
                 </div>
               </motion.div>
             )}
 
-            {/* Summary */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-card p-4 rounded-xl border border-border elevation-1"
-            >
-              <h3 className="font-semibold mb-3">Transaction Summary</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">${form.watch("amount") || "0.00"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fee</span>
-                  <span className="font-medium">
-                    {selectedMethod === "bank" ? "Free" : 
-                     selectedMethod === "card" ? "$2.99" : 
-                     selectedMethod === "paypal" ? "$3.49" : 
-                     selectedMethod === "crypto" ? "$1.50" : "TBD"}
-                  </span>
-                </div>
-                <hr className="border-border" />
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>
-                    ${selectedMethod === "bank" ? form.watch("amount") || "0.00" : 
-                      selectedMethod && form.watch("amount") ? formatNumber(parseFloat(form.watch("amount")) + 2.99) : "0.00"}
-                  </span>
-                </div>
+            {/* Footer Attribution */}
+            <div className="flex flex-col items-center justify-center space-y-2 pt-4 opacity-60">
+              <div className="flex items-center gap-4 text-xs">
+                <span>Powered by Paystack</span>
+                <div className="w-px h-3 bg-muted-foreground/30" />
+                <span>NCBA Loop</span>
               </div>
-            </motion.div>
+            </div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -332,11 +286,11 @@ export default function DepositPage() {
             >
               <Button
                 type="submit"
-                className="w-full ripple"
+                className="w-full h-12 text-lg font-bold"
                 disabled={depositMutation.isPending}
                 data-testid="button-confirm-deposit"
               >
-                {depositMutation.isPending ? "Processing..." : `Add $${form.watch("amount") || "0.00"}`}
+                {depositMutation.isPending ? "Processing..." : `Deposit $${form.watch("amount") || "0.00"}`}
               </Button>
             </motion.div>
           </form>

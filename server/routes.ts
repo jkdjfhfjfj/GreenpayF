@@ -1847,57 +1847,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Deposit payment initialization
-  app.post("/api/deposit/initialize-payment", async (req, res) => {
+  app.post("/api/deposit/initialize-payment", requireAuth, async (req, res) => {
     try {
-      const { userId, amount, currency } = req.body;
-      console.log('Deposit payment request - userId:', userId, 'amount:', amount, 'currency:', currency);
+      const { amount, currency, paymentMethod } = req.body;
+      const userId = (req.session as any).userId;
+      
+      console.log('Deposit payment request - userId:', userId, 'amount:', amount, 'currency:', currency, 'method:', paymentMethod);
       
       if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const user = await storage.getUser(userId);
-      console.log('Deposit payment - Found user:', !!user, user?.email);
-      
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Generate unique reference
-      const reference = paystackService.generateReference();
+      // 1. Convert USD to KES
+      let finalAmountKes = parseFloat(amount);
+      let exchangeRate = 129; // Fallback
+
+      try {
+        const rateService = await createExchangeRateService();
+        exchangeRate = await rateService.getRate("USD", "KES");
+      } catch (e) {
+        console.warn("Using fallback exchange rate for deposit initialization");
+      }
       
+      finalAmountKes = parseFloat(amount) * exchangeRate;
+
       // Validate user email
-      if (!user.email || !user.email.includes('@') || !user.email.includes('.')) {
-        return res.status(400).json({ message: "Invalid user email. Please update your profile with a valid email address." });
+      if (!user.email || !user.email.includes('@')) {
+        return res.status(400).json({ message: "Valid email required for payment" });
       }
 
-      // Validate user phone number for M-Pesa
-      if (!user.phone) {
-        return res.status(400).json({ message: "Phone number is required for M-Pesa payments. Please update your profile." });
-      }
-
-      // Validate amount
-      const depositAmount = parseFloat(amount);
-      if (isNaN(depositAmount) || depositAmount <= 0) {
-        return res.status(400).json({ message: "Invalid deposit amount" });
-      }
-
-      // Initialize payment with Paystack in KES currency
+      // 2. Initialize payment with Paystack
+      const reference = paystackService.generateReference();
       const callbackUrl = `${req.protocol}://${req.get('host')}/api/payment-callback?reference=${reference}&type=deposit`;
       
+      const paystackAmount = Math.round(finalAmountKes * 100);
+      
+      // Determine channels based on method
+      let channels = ['card', 'mobile_money'];
+      if (paymentMethod === 'card') channels = ['card'];
+      if (paymentMethod === 'mpesa' || paymentMethod === 'airtel') channels = ['mobile_money'];
+
       const paymentData = await paystackService.initializePayment(
         user.email,
-        depositAmount,
+        parseFloat(finalAmountKes.toFixed(2)),
         reference,
-        'KES', // Use KES currency
-        user.phone, // Use registered phone number for M-Pesa
-        callbackUrl // Callback URL for tracking
+        'KES',
+        user.phone || undefined,
+        callbackUrl
       );
       
       if (!paymentData.status) {
         return res.status(400).json({ message: paymentData.message });
       }
       
+      // 3. Create a pending transaction record
+      await storage.createTransaction({
+        userId,
+        type: 'deposit',
+        amount: amount.toString(),
+        currency: 'USD',
+        status: 'pending',
+        description: `Deposit via ${paymentMethod}`,
+        fee: '0.00',
+        exchangeRate: exchangeRate.toString(),
+        paystackReference: reference,
+        metadata: {
+          paymentMethod,
+          kesAmount: finalAmountKes.toFixed(2),
+          exchangeRate
+        }
+      });
+
       res.json({ 
         authorizationUrl: paymentData.data.authorization_url,
         reference: reference
