@@ -130,6 +130,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Handle manual deposit proof upload
+  app.post("/api/deposit/manual-proof", requireAuth, upload.single('proof'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No proof file uploaded" });
+      }
+
+      const userId = (req.session as any).userId;
+      const { amount, currency, reference } = req.body;
+
+      // Upload to Cloudinary
+      const uploadResult = await cloudinaryStorage.uploadFile(
+        req.file.buffer,
+        `deposits/${userId}/${Date.now()}_${req.file.originalname}`,
+        req.file.mimetype
+      );
+
+      // Create a pending transaction
+      const transaction = await storage.createTransaction({
+        userId,
+        amount: amount || "0",
+        currency: currency || "USD",
+        type: 'deposit',
+        status: 'pending',
+        description: `Manual deposit proof uploaded. Ref: ${reference || 'N/A'}`,
+        reference: reference || `MAN-${Date.now()}`,
+        metadata: {
+          proofUrl: uploadResult.url,
+          originalName: req.file.originalname,
+          uploadDate: new Date().toISOString()
+        }
+      });
+
+      // Notify admins
+      await storage.createAdminLog({
+        adminId: 1, // System admin
+        action: 'MANUAL_DEPOSIT_PROOF',
+        details: `User ${userId} uploaded proof for ${amount} ${currency}. Ref: ${reference}`,
+        ipAddress: req.ip || '0.0.0.0',
+        userAgent: req.headers['user-agent'] || 'Unknown'
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Proof uploaded successfully. Our team will verify and credit your account shortly.",
+        transactionId: transaction.id
+      });
+    } catch (error) {
+      console.error('Manual proof upload error:', error);
+      res.status(500).json({ message: "Failed to upload proof. Please try again." });
+    }
+  });
+
   const requireAdminAuth = (req: any, res: any, next: any) => {
     // Check if admin is authenticated (has valid session)
     const adminId = req.session?.admin?.id;

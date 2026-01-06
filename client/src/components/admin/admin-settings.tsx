@@ -660,7 +660,6 @@ export default function AdminSettings() {
                       data-testid="input-default-currency"
                     />
                   </div>
-                </div>
                   <div className="space-y-2">
                     <Label htmlFor="session_timeout">Session Timeout (minutes)</Label>
                     <Input

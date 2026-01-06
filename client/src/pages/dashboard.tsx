@@ -172,8 +172,32 @@ export default function DashboardPage() {
     setLocation(action.path);
   };
 
+  const { settings, isLoaded } = useSystemSettings();
+  const showAnnouncement = isLoaded && (settings?.general?.show_announcement === true || settings?.general?.show_announcement === 'true');
+  const announcementText = settings?.general?.dashboard_announcement;
+
   return (
     <div className="min-h-screen bg-background pb-20">
+      <div className="max-w-md mx-auto px-4 pt-6">
+        {/* Dashboard Announcement */}
+        {showAnnouncement && announcementText && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex items-start gap-3 mb-6"
+          >
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-primary">Announcement</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                {announcementText}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </div>
       {/* Top Navigation with Wavy Background */}
       <div className="relative overflow-hidden rounded-b-3xl">
         {/* Layered Wavy Background SVG - Green top, Dark bottom */}

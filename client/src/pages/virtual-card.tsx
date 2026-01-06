@@ -321,15 +321,56 @@ export default function VirtualCardPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <span className="text-muted-foreground">Paybill Number:</span>
-                      <span className="font-mono font-semibold">{manualPaymentSettings?.paybill || "247"}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold">{manualPaymentSettings?.paybill || "247"}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6" 
+                          onClick={() => {
+                            navigator.clipboard.writeText(manualPaymentSettings?.paybill || "247");
+                            toast({ title: "Copied", description: "Paybill number copied" });
+                          }}
+                        >
+                          <span className="material-icons text-xs">content_copy</span>
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <span className="text-muted-foreground">Account Number:</span>
-                      <span className="font-mono font-semibold">{manualPaymentSettings?.account || "4664"}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold">{manualPaymentSettings?.account || "4664"}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6" 
+                          onClick={() => {
+                            navigator.clipboard.writeText(manualPaymentSettings?.account || "4664");
+                            toast({ title: "Copied", description: "Account number copied" });
+                          }}
+                        >
+                          <span className="material-icons text-xs">content_copy</span>
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span className="text-muted-foreground">Amount:</span>
-                      <span className="font-semibold">KES {kesAmountData?.kesAmount ? Math.round(kesAmountData.kesAmount).toLocaleString() : '...'}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">KES {kesAmountData?.kesAmount ? Math.round(kesAmountData.kesAmount).toLocaleString() : '...'}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6" 
+                          onClick={() => {
+                            if (kesAmountData?.kesAmount) {
+                              navigator.clipboard.writeText(Math.round(kesAmountData.kesAmount).toString());
+                              toast({ title: "Copied", description: "Amount copied" });
+                            }
+                          }}
+                        >
+                          <span className="material-icons text-xs">content_copy</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                   <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
