@@ -1846,7 +1846,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Deposit payment initialization
+  // Payment callback/webhook for verification
+  app.get("/api/payment-callback", async (req, res) => {
+    try {
+      const { reference, type } = req.query;
+      console.log(`Payment callback received: ref=${reference}, type=${type}`);
+
+      if (!reference) {
+        return res.status(400).send("Reference missing");
+      }
+
+      const verification = await paystackService.verifyPayment(reference as string);
+      
+      if (verification.status && verification.data.status === 'success') {
+        const transaction = await db.query.transactions.findFirst({
+          where: eq(transactions.paystackReference, reference as string)
+        });
+
+        if (transaction && transaction.status === 'pending') {
+          // 1. Update transaction status
+          await storage.updateTransactionStatus(transaction.id, 'completed');
+          
+          // 2. Credit user balance
+          const user = await storage.getUser(transaction.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance || '0');
+            const depositAmount = parseFloat(transaction.amount);
+            const newBalance = (currentBalance + depositAmount).toFixed(2);
+            
+            await storage.updateUser(user.id, { balance: newBalance });
+            
+            // 3. Send notification
+            await notificationService.sendNotification({
+              userId: user.id,
+              title: "Deposit Successful",
+              message: `Your deposit of $${depositAmount} has been credited to your wallet.`,
+              type: "transaction"
+            });
+            
+            console.log(`User ${user.id} credited with $${depositAmount}. New balance: ${newBalance}`);
+          }
+        }
+        
+        // Redirect to dashboard with success message
+        return res.redirect('/dashboard?deposit=success');
+      } else {
+        console.warn(`Payment verification failed for ref=${reference}:`, verification.message);
+        return res.redirect('/deposit?error=payment_failed');
+      }
+    } catch (error) {
+      console.error('Payment callback error:', error);
+      res.redirect('/deposit?error=server_error');
+    }
+  });
+
+  // Verify deposit payment initialization
   app.post("/api/deposit/initialize-payment", requireAuth, async (req, res) => {
     try {
       const { amount, currency, paymentMethod } = req.body;
@@ -1936,45 +1990,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify deposit payment
   app.post("/api/deposit/verify-payment", async (req, res) => {
     try {
-      const { reference, userId, amount, currency } = req.body;
-      
-      // Verify payment with Paystack
+      const { reference } = req.body;
+      if (!reference) return res.status(400).json({ message: "Reference required" });
+
       const verification = await paystackService.verifyPayment(reference);
       
-      if (!verification.status || verification.data.status !== 'success') {
-        return res.status(400).json({ message: "Payment verification failed" });
+      if (verification.status && verification.data.status === 'success') {
+        const transaction = await db.query.transactions.findFirst({
+          where: eq(transactions.paystackReference, reference)
+        });
+
+        if (transaction && transaction.status === 'pending') {
+          await storage.updateTransactionStatus(transaction.id, 'completed');
+          const user = await storage.getUser(transaction.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance || '0');
+            const depositAmount = parseFloat(transaction.amount);
+            const newBalance = (currentBalance + depositAmount).toFixed(2);
+            await storage.updateUser(user.id, { balance: newBalance });
+            
+            await notificationService.sendNotification({
+              userId: user.id,
+              title: "Deposit Successful",
+              message: `Your deposit of $${depositAmount} has been credited to your wallet.`,
+              type: "transaction"
+            });
+          }
+        }
+        
+        return res.json({ status: 'success', message: 'Payment verified and credited' });
       }
       
-      // Create transaction record
-      const transaction = await storage.createTransaction({
-        userId,
-        type: 'deposit',
-        amount: amount.toString(),
-        currency: currency || 'USD',
-        status: 'completed',
-        description: `Deposit via Paystack - ${reference}`,
-        fee: '0.00',
-        paystackReference: reference
-      });
-
-      // Get user again to ensure balance is current
-      const updatedUser = await storage.getUser(userId);
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Update user balance
-      const currentBalance = parseFloat(updatedUser.balance || "0");
-      const newBalance = currentBalance + depositAmount;
-      await storage.updateUser(userId, { balance: newBalance.toFixed(2) });
-      
-      res.json({ 
-        message: "Deposit successful",
-        transaction
-      });
+      res.status(400).json({ status: 'failed', message: verification.data?.gateway_response || 'Payment not successful' });
     } catch (error) {
-      console.error('Deposit verification error:', error);
-      res.status(500).json({ message: "Error verifying deposit" });
+      console.error('Verify payment error:', error);
+      res.status(500).json({ message: "Error verifying payment" });
     }
   });
 

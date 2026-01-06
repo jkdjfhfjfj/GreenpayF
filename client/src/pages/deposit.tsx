@@ -121,6 +121,27 @@ export default function DepositPage() {
     }
   }, [usdAmount, exchangeRate]);
 
+  // Check for payment status on redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const depositStatus = params.get('deposit');
+    const error = params.get('error');
+
+    if (depositStatus === 'success') {
+      toast({
+        title: "Deposit Successful",
+        description: "Your account has been credited successfully.",
+      });
+      refreshUser();
+    } else if (error) {
+      toast({
+        title: "Payment Failed",
+        description: error === 'payment_failed' ? "The payment was declined or cancelled." : "An error occurred during payment processing.",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
