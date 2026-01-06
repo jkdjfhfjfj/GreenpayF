@@ -77,28 +77,28 @@ export default function DepositPage() {
     {
       id: "card",
       name: "Credit/Debit Card",
-      icon: "/attached_assets/generated_images/visa_and_mastercard_payment_logos.png",
+      icon: "/attached_assets/images_(10)_1767703864998.png",
       description: "Instant deposit (Visa, Mastercard, Amex)",
       fee: "2.9% + $0.30",
     },
     {
       id: "mpesa",
       name: "M-Pesa",
-      icon: "/attached_assets/generated_images/m-pesa_safaricom_mobile_money_logo.png",
+      icon: "/attached_assets/images_(11)_1767703865189.png",
       description: "Instant mobile money deposit",
       fee: "1.5%",
     },
     {
       id: "airtel",
       name: "Airtel Money",
-      icon: "/attached_assets/generated_images/m-pesa_safaricom_mobile_money_logo.png", // Use a placeholder or general mobile money icon if Airtel specific is missing
+      icon: "/attached_assets/images_(12)_1767703865310.png",
       description: "Instant mobile money deposit",
       fee: "1.5%",
     },
     {
       id: "bank_transfer",
       name: "Bank Transfer",
-      icon: "/attached_assets/generated_images/payhero_payment_gateway_logo.png",
+      icon: "/attached_assets/images_(9)_1767703865615.png",
       description: "Manual transfer to NCBA Loop",
       fee: "Free",
     },
@@ -256,7 +256,7 @@ export default function DepositPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Account Number:</span>
-                      <span className="font-bold font-mono">1234567890</span> {/* Placeholder: replace with actual from card purchase */}
+                      <span className="font-bold font-mono">1006123456</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Reference:</span>
