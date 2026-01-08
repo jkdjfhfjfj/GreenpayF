@@ -94,7 +94,7 @@ export default function DepositPage() {
       icons: [
         "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/images_(12)_1767703865310.png", // Visa
         "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/download_1767703865404.png", // Mastercard
-        "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/images_(5)_1767703865516.jpeg"  // Amex
+        "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/images%20(14).png"  // Amex
       ],
       description: "Visa, Mastercard, American Express",
       fee: "2.9% + $0.30",
