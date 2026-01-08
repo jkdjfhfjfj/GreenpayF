@@ -364,7 +364,7 @@ export default function DepositPage() {
                     </p>
                     <Button
                       type="button"
-                      onClick={() => setLocation('/support')}
+                      onClick={() => setLocation('/live-chat')}
                       variant="outline"
                       className="w-full"
                     >
@@ -411,15 +411,17 @@ export default function DepositPage() {
             </motion.div>
 
             {/* Footer Attribution */}
-            <div className="flex flex-col items-center justify-center space-y-2 pt-4 opacity-80">
-              <div className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  Powered by <span className="text-primary font-bold">Paystack</span>
-                </span>
-                <div className="w-px h-3 bg-border" />
-                <span className="flex items-center gap-1">
-                  Secured by <span className="text-primary font-bold">NCBA Loop</span>
-                </span>
+            <div className="flex flex-col items-center justify-center space-y-3 pt-6 pb-2">
+              <div className="flex items-center gap-6 px-6 py-2 bg-muted/50 rounded-full border border-border/50">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Powered by</span>
+                  <span className="text-primary font-bold text-sm tracking-tight">Paystack</span>
+                </div>
+                <div className="w-px h-4 bg-border" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Secured by</span>
+                  <span className="text-primary font-bold text-sm tracking-tight">NCBA Loop</span>
+                </div>
               </div>
             </div>
 
