@@ -77,14 +77,14 @@ export default function DepositPage() {
     {
       id: "mpesa",
       name: "M-Pesa",
-      icon: "/attached_assets/images_(11)_1767703865189.png",
+      icon: "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/images_(6)_1766711441274.png",
       description: "Instant mobile money deposit",
       fee: "1.5%",
     },
     {
       id: "airtel",
       name: "Airtel Money",
-      icon: "/attached_assets/images_(12)_1767703865310.png",
+      icon: "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/images_(11)_1767702478094.png",
       description: "Instant mobile money deposit",
       fee: "1.5%",
     },
@@ -92,9 +92,9 @@ export default function DepositPage() {
       id: "card",
       name: "Debit/Credit Card",
       icons: [
-        "/attached_assets/images_(5)_1767703865516.jpeg", // Visa
-        "/attached_assets/images_(6)_1766711928513.png", // Mastercard
-        "/attached_assets/images_(7)_1766711928551.png"  // Amex
+        "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/images_(12)_1767703865310.png", // Visa
+        "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/download_1767703865404.png", // Mastercard
+        "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/images_(5)_1767703865516.jpeg"  // Amex
       ],
       description: "Visa, Mastercard, American Express",
       fee: "2.9% + $0.30",
@@ -102,7 +102,7 @@ export default function DepositPage() {
     {
       id: "bank_transfer",
       name: "Bank Transfer",
-      icon: "/attached_assets/images_(9)_1767703865615.png",
+      icon: "https://raw.githubusercontent.com/jkdjfhfjfj/International-Transfers---Greenpay/refs/heads/main/attached_assets/images_(9)_1767703865615.png",
       description: "Manual transfer to NCBA Loop",
       fee: "Free",
     },
