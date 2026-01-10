@@ -2776,7 +2776,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Find user with matching biometric credential
-      const allUsers = await storage.getAllUsers({ limit: 1000 });
+      const allUsers = await storage.getAllUsers();
       const users = Array.isArray(allUsers) ? allUsers : (allUsers?.users || []);
       
       const user = users.find((u: any) => {
@@ -2793,15 +2793,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (!user) {
-        return res.status(401).json({ message: "Biometric credential not found" });
+        return res.status(401).json({ message: "No passkey found for this device. Please log in with your email and password first, then enable biometric login in settings." });
       }
 
-      // Create session
-      const tokenData = { userId: user.id };
-      const token = Buffer.from(JSON.stringify(tokenData)).toString("base64");
-      
-      const { password, ...userResponse } = user;
-      res.json({ success: true, user: userResponse, token });
+      // Establish session
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Session regeneration error:', err);
+          return res.status(500).json({ message: "Session error" });
+        }
+
+        (req.session as any).userId = user.id;
+        (req.session as any).user = { id: user.id, email: user.email };
+
+        storage.createLoginHistory({
+          userId: user.id,
+          ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'Unknown',
+          userAgent: req.headers['user-agent'] || 'Unknown',
+          deviceType: req.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop',
+          browser: req.headers['user-agent']?.split('/')[0] || 'Unknown',
+          location: (req.headers['cf-ipcountry'] as string) || 'Unknown',
+          status: 'success',
+        }).catch(err => console.error('Login history error:', err));
+
+        const { password: _, ...userResponse } = user;
+        
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save error:', saveErr);
+            return res.status(500).json({ message: "Session save error" });
+          }
+          res.json({ success: true, user: userResponse });
+        });
+      });
     } catch (error) {
       console.error('Biometric login error:', error);
       res.status(500).json({ message: "Error during biometric login" });
