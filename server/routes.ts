@@ -2715,7 +2715,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         biometricCredentialId: JSON.stringify({ credentialId })
       });
       
-      res.json({ success: true, message: "Biometric authentication enabled" });
+      const updatedUser = await storage.getUser(userId);
+      const { password: _, ...userResponse } = updatedUser || {};
+      res.json({ success: true, message: "Biometric authentication enabled", user: userResponse });
     } catch (error) {
       console.error('Biometric setup error:', error);
       res.status(500).json({ message: "Error setting up biometric authentication" });

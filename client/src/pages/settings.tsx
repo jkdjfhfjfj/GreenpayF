@@ -1341,6 +1341,45 @@ export default function SettingsPage() {
           </Dialog>
         )}
 
+        {/* Security Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="space-y-3"
+        >
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Security</h3>
+          
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            className="bg-card p-4 rounded-xl border border-border flex items-center justify-between elevation-1"
+          >
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                <span className="material-icons text-primary">fingerprint</span>
+              </div>
+              <div>
+                <p className="font-medium">Biometric Login</p>
+                <p className="text-sm text-muted-foreground">FaceID or Fingerprint</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={settings.biometricEnabled}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setupFingerprintMutation.mutate();
+                  } else {
+                    disableBiometricMutation.mutate();
+                  }
+                }}
+                disabled={setupFingerprintMutation.isPending || disableBiometricMutation.isPending}
+                data-testid="switch-biometric"
+              />
+            </div>
+          </motion.div>
+        </motion.div>
+
         {/* Notifications */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}

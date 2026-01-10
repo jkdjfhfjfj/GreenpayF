@@ -135,17 +135,15 @@ export default function LoginPage() {
       }
 
       try {
-        const challenge = crypto.getRandomValues(new Uint8Array(32));
-        
-        // Simple approach: let browser discover credentials automatically
-        const assertionOptions: PublicKeyCredentialRequestOptions = {
-          challenge,
-          timeout: 60000,
-          userVerification: "preferred",
-        };
-
+        // We'll first check if the user has a credential stored in their browser for our RP ID
+        // The browser will show the passkey picker
         const assertion = await navigator.credentials.get({
-          publicKey: assertionOptions,
+          publicKey: {
+            challenge: crypto.getRandomValues(new Uint8Array(32)),
+            timeout: 60000,
+            userVerification: "preferred",
+            rpId: window.location.hostname,
+          }
         }) as PublicKeyCredential | null;
 
         if (!assertion) {
@@ -155,8 +153,19 @@ export default function LoginPage() {
         const response = await apiRequest("POST", "/api/auth/biometric/login", {
           credentialId: assertion.id,
         });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          // Provide more helpful guidance
+          if (response.status === 401 && errorData.message.includes("No passkey found")) {
+             throw new Error(errorData.message);
+          }
+          throw new Error(errorData.message || "Login failed");
+        }
+        
         return response.json();
       } catch (error: any) {
+        console.error("Biometric login error details:", error);
         throw error;
       }
     },

@@ -158,6 +158,7 @@ var init_schema = __esm({
       // name, phone, email, bank details
       status: text("status").default("pending"),
       // pending, processing, completed, failed, cancelled
+      failureReason: text("failure_reason"),
       fee: decimal("fee", { precision: 10, scale: 2 }).default("0.00"),
       exchangeRate: decimal("exchange_rate", { precision: 10, scale: 4 }),
       description: text("description"),
@@ -699,10 +700,15 @@ var init_schema = __esm({
 });
 
 // server/db.ts
+var db_exports = {};
+__export(db_exports, {
+  db: () => db,
+  pool: () => pool
+});
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import ws from "ws";
-var pool, db;
+var connectionString, pool, db;
 var init_db = __esm({
   "server/db.ts"() {
     "use strict";
@@ -713,7 +719,8 @@ var init_db = __esm({
         "DATABASE_URL must be set. Did you forget to provision a database?"
       );
     }
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    connectionString = process.env.DATABASE_URL.replace(/^"(.*)"$/, "$1").trim();
+    pool = new Pool({ connectionString });
     db = drizzle({ client: pool, schema: schema_exports });
   }
 });
@@ -3061,8 +3068,8 @@ var init_whatsapp = __esm({
           const phoneSetting = await storage.getSystemSetting("messaging", "whatsapp_phone_number_id");
           const dbToken = tokenSetting?.value ? this.extractStringValue(tokenSetting.value) : "";
           const dbPhoneId = phoneSetting?.value ? this.extractStringValue(phoneSetting.value) : "";
-          this.accessToken = dbToken || process.env.WHATSAPP_ACCESS_TOKEN || "";
-          this.phoneNumberId = dbPhoneId || process.env.WHATSAPP_PHONE_NUMBER_ID || "";
+          this.accessToken = dbToken || process.env.WHAPP_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || "";
+          this.phoneNumberId = dbPhoneId || process.env.WHAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_NUMBER_ID || "";
           console.log("[WhatsApp] Credentials load result:", {
             hasTokenFromDb: !!dbToken,
             hasTokenFromEnv: !!process.env.WHATSAPP_ACCESS_TOKEN,
@@ -4390,11 +4397,14 @@ var init_messaging = __esm({
       async getCredentials() {
         try {
           const settings = await storage.getSystemSettingsByCategory("messaging");
-          const apiKey = settings.find((s) => s.key === "api_key")?.value;
-          const accountEmail = settings.find((s) => s.key === "account_email")?.value;
-          const senderId = settings.find((s) => s.key === "sender_id")?.value;
+          let apiKey = settings.find((s) => s.key === "api_key")?.value;
+          let accountEmail = settings.find((s) => s.key === "account_email")?.value;
+          let senderId = settings.find((s) => s.key === "sender_id")?.value;
+          apiKey = apiKey || process.env.TALKNTALK_API_KEY || "";
+          accountEmail = accountEmail || process.env.TALKNTALK_EMAIL || "";
+          senderId = senderId || process.env.TALKNTALK_SENDER_ID || "";
           if (!apiKey || !accountEmail || !senderId) {
-            console.warn("SMS messaging credentials not fully configured");
+            console.warn("SMS messaging credentials not fully configured (settings or env)");
             return null;
           }
           return { apiKey, accountEmail, senderId };
@@ -4486,6 +4496,27 @@ var init_messaging = __esm({
         }
       }
       /**
+       * Send SMS notification to admins for new live chat request
+       */
+      async sendAdminChatNotification(userId) {
+        try {
+          const user = await storage.getUser(userId);
+          const userName = user?.fullName || user?.firstName || "A user";
+          const adminPhones = ["+254741855218", "+254794967351"];
+          const credentials = await this["getCredentials"]();
+          if (!credentials) {
+            console.warn("Admin chat notification skipped: credentials missing");
+            return;
+          }
+          const notification = `[Admin] ${userName} has started a new live chat. Please attend to them.`;
+          await Promise.all(adminPhones.map(
+            (phone) => this["sendSMS"](phone, notification, credentials).catch((err) => console.error(`Failed to send admin SMS to ${phone}:`, err))
+          ));
+        } catch (error) {
+          console.error("Error sending admin chat notification:", error);
+        }
+      }
+      /**
        * Send message concurrently via SMS and WhatsApp
        */
       async sendMessage(phone, message) {
@@ -4535,9 +4566,9 @@ var init_messaging = __esm({
         const firstName = userName?.split(" ")[0] || "User";
         const lastName = userName?.split(" ").slice(1).join(" ") || "";
         const [smsResult, whatsappResult, emailResult] = await Promise.all([
-          credentials ? this.sendSMS(phone, `Your verification code is ${otpCode}. Valid for 10 minutes.`, credentials) : Promise.resolve(false),
-          whatsappService.isConfigured() ? whatsappService.sendOTP(phone, otpCode) : Promise.resolve(false),
-          email ? mailtrapService3.sendOTP(email, firstName, lastName, otpCode) : Promise.resolve(false)
+          credentials ? this.sendSMS(phone, `Your verification code is ${otpCode}. Valid for 10 minutes.`, credentials) : (console.log("SMS not sent: credentials missing"), Promise.resolve(false)),
+          whatsappService.isConfigured() ? whatsappService.sendOTP(phone, otpCode) : (console.log("WhatsApp not sent: not configured"), Promise.resolve(false)),
+          email ? mailtrapService3.sendOTP(email, firstName, lastName, otpCode) : (console.log("Email not sent: missing or service down"), Promise.resolve(false))
         ]);
         return { sms: smsResult, whatsapp: whatsappResult, email: emailResult };
       }
@@ -5002,7 +5033,7 @@ init_schema();
 init_exchange_rate();
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { desc as desc2 } from "drizzle-orm";
+import { desc as desc2, eq as eq3 } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt2 from "bcrypt";
 import multer from "multer";
@@ -6140,6 +6171,50 @@ async function registerRoutes(app2) {
     }
     next();
   };
+  app2.post("/api/deposit/manual-proof", requireAuth, upload.single("proof"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No proof file uploaded" });
+      }
+      const userId = req.session.userId;
+      const { amount, currency, reference } = req.body;
+      const uploadResult = await cloudinaryStorage2.uploadFile(
+        req.file.buffer,
+        `deposits/${userId}/${Date.now()}_${req.file.originalname}`,
+        req.file.mimetype
+      );
+      const transaction = await storage.createTransaction({
+        userId,
+        amount: amount || "0",
+        currency: currency || "USD",
+        type: "deposit",
+        status: "pending",
+        description: `Manual deposit proof uploaded. Ref: ${reference || "N/A"}`,
+        reference: reference || `MAN-${Date.now()}`,
+        metadata: {
+          proofUrl: uploadResult.url,
+          originalName: req.file.originalname,
+          uploadDate: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      });
+      await storage.createAdminLog({
+        adminId: 1,
+        // System admin
+        action: "MANUAL_DEPOSIT_PROOF",
+        details: `User ${userId} uploaded proof for ${amount} ${currency}. Ref: ${reference}`,
+        ipAddress: req.ip || "0.0.0.0",
+        userAgent: req.headers["user-agent"] || "Unknown"
+      });
+      res.json({
+        success: true,
+        message: "Proof uploaded successfully. Our team will verify and credit your account shortly.",
+        transactionId: transaction.id
+      });
+    } catch (error) {
+      console.error("Manual proof upload error:", error);
+      res.status(500).json({ message: "Failed to upload proof. Please try again." });
+    }
+  });
   const requireAdminAuth = (req, res, next) => {
     const adminId = req.session?.admin?.id;
     console.log(`[ADMIN AUTH] Session check - hasSession: ${!!req.session}, hasAdminId: ${!!adminId}`);
@@ -6240,7 +6315,18 @@ async function registerRoutes(app2) {
         }
       }
       const { password, ...userResponse } = user;
-      res.json({ user: { ...userResponse, isPhoneVerified: true, isEmailVerified: true } });
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Session save error after signup:", saveErr);
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        console.log(`[Signup] Account created successfully for user ${user.id}`);
+        res.json({
+          user: { ...userResponse, isPhoneVerified: true, isEmailVerified: true },
+          success: true,
+          redirectToLogin: true
+        });
+      });
     } catch (error) {
       console.error("Signup error:", error);
       res.status(400).json({ message: "Invalid user data" });
@@ -6248,6 +6334,14 @@ async function registerRoutes(app2) {
   });
   app2.post("/api/auth/login", optionalApiKey, async (req, res) => {
     try {
+      const maintenanceSetting = await storage.getSystemSetting("platform", "maintenance_mode");
+      if (maintenanceSetting?.value === "true") {
+        return res.status(503).json({
+          message: "System is under maintenance",
+          maintenanceMode: true,
+          maintenanceMessage: (await storage.getSystemSetting("platform", "maintenance_message"))?.value || "System maintenance in progress"
+        });
+      }
       const { email, password } = loginSchema.parse(req.body);
       const user = await storage.getUserByEmail(email);
       if (!user) {
@@ -6302,7 +6396,7 @@ async function registerRoutes(app2) {
       }
       if (!otpRequired) {
         console.log("OTP disabled by admin");
-        if (pinRequired && user.pinEnabled) {
+        if ((pinRequired || user.pinEnabled) && user.pinCode) {
           return res.status(200).json({
             message: "PIN verification required",
             requiresPin: true,
@@ -6610,32 +6704,92 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to reset password" });
     }
   });
+  app2.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { contact } = req.body;
+      if (!contact) {
+        return res.status(400).json({ message: "Phone number or email is required" });
+      }
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      let user;
+      if (contact.includes("@")) {
+        user = await storage.getUserByEmail(contact);
+      } else {
+        const formattedPhone = messagingService3.formatPhoneNumber(contact);
+        user = await storage.getUserByPhone(formattedPhone);
+      }
+      if (!user) {
+        return res.json({
+          success: true,
+          message: "If an account exists, a reset code has been sent."
+        });
+      }
+      const otpCode = messagingService3.generateOTP();
+      const otpExpiry = new Date(Date.now() + 15 * 60 * 1e3);
+      await storage.updateUserOtp(user.id, otpCode, otpExpiry);
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      const { whatsappService: whatsappService2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+      const results = await Promise.allSettled([
+        user.phone ? messagingService3.sendMessage(user.phone, `Your GreenPay password reset code is: ${otpCode}`) : Promise.resolve(false),
+        user.phone ? whatsappService2.sendOTP(user.phone, otpCode) : Promise.resolve(false),
+        user.email ? mailtrapService3.sendTemplate(user.email, "b54e3d3c-9a2c-4b6e-8e8e-8a9e9a9e9a9e", {
+          first_name: user.firstName || "User",
+          otp_code: otpCode
+        }) : Promise.resolve(false)
+      ]);
+      console.log(`[ForgotPassword] Reset code sent to user ${user.id}`);
+      res.json({
+        success: true,
+        message: "Reset code sent successfully",
+        sentVia: user.email && contact.includes("@") ? "email" : "phone"
+      });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to process request" });
+    }
+  });
   app2.post("/api/auth/reset-password", async (req, res) => {
     try {
       const { phone, code, newPassword } = req.body;
       if (!phone || !code || !newPassword) {
-        return res.status(400).json({ message: "Phone, code, and new password are required" });
+        return res.status(400).json({ message: "Contact, code, and new password are required" });
       }
       if (newPassword.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
       }
       const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
-      const formattedPhone = messagingService3.formatPhoneNumber(phone);
-      const user = await storage.getUserByPhone(formattedPhone);
+      let user;
+      if (phone.includes("@")) {
+        user = await storage.getUserByEmail(phone);
+      } else {
+        const formattedPhone = messagingService3.formatPhoneNumber(phone);
+        user = await storage.getUserByPhone(formattedPhone);
+      }
       if (!user) {
+        console.error(`[ResetPassword] User not found for contact: ${phone}`);
         return res.status(404).json({ message: "User not found" });
       }
       const isValid = await storage.verifyUserOtp(user.id, code);
       if (!isValid) {
+        console.error(`[ResetPassword] Invalid or expired code for user ${user.id}`);
         return res.status(400).json({ message: "Invalid or expired reset code" });
       }
       const hashedPassword = await bcrypt2.hash(newPassword, 10);
       await storage.updateUserPassword(user.id, hashedPassword);
       await storage.updateUserOtp(user.id, null, null);
-      messagingService3.sendMessage(
-        user.phone,
-        "Your password has been reset successfully. You can now log in with your new password."
-      ).catch((err) => console.error("Password reset notification error:", err));
+      const { mailtrapService: mailtrapService3 } = await Promise.resolve().then(() => (init_mailtrap(), mailtrap_exports));
+      Promise.all([
+        messagingService3.sendMessage(
+          user.phone,
+          "Your password has been reset successfully. You can now log in with your new password."
+        ),
+        user.email ? mailtrapService3.sendTemplate(user.email, "7711c72e-431b-4fb9-bea9-9738d4d8bfe7", {
+          first_name: user.firstName || "User",
+          last_name: user.lastName || "",
+          message: "Your password has been reset successfully. You can now log in."
+        }) : Promise.resolve(false)
+      ]).catch((err) => console.error("Password reset notification error:", err));
+      console.log(`[ResetPassword] Success for user ${user.id}`);
       res.json({
         success: true,
         message: "Password reset successful"
@@ -6665,6 +6819,12 @@ async function registerRoutes(app2) {
         title: "Support Chat",
         adminId: null
       });
+      try {
+        const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+        await messagingService3.sendAdminChatNotification(userId);
+      } catch (smsError) {
+        console.error("Failed to send admin chat notification:", smsError);
+      }
       console.log(`[CONVERSATION PRIVACY] Created new conversation ${newConversation.id.substring(0, 8)}... for user ${userId.substring(0, 8)}...`);
       res.json(newConversation);
     } catch (error) {
@@ -6672,7 +6832,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to get or create conversation" });
     }
   });
-  app2.get("/api/messages/:conversationId", requireAuth, async (req, res) => {
+  app2.get("/api/messages/:conversationId", async (req, res) => {
     try {
       const { conversationId } = req.params;
       const userId = req.session?.userId;
@@ -6729,6 +6889,20 @@ async function registerRoutes(app2) {
         senderId,
         senderType
       });
+      if (senderType === "admin") {
+        try {
+          const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+          const user = await storage.getUser(conversation.userId);
+          if (user && user.phone) {
+            const domain = process.env.REPLIT_DOMAINS || "greenpay.app";
+            const loginUrl = `https://${domain.split(",")[0]}/login`;
+            const notification = `You have a new message from GreenPay support. Login to reply: ${loginUrl}`;
+            await messagingService3.sendMessage(user.phone, notification);
+          }
+        } catch (smsError) {
+          console.error("Failed to send user chat notification:", smsError);
+        }
+      }
       res.json({ message });
     } catch (error) {
       console.error("Create message error:", error);
@@ -7001,9 +7175,70 @@ async function registerRoutes(app2) {
         status: paymentData.status,
         message: "STK Push sent to your phone. Please enter your M-Pesa PIN to complete payment."
       });
+      await storage.createTransaction({
+        userId,
+        type: "card_purchase",
+        amount: usdAmount.toString(),
+        currency: "USD",
+        status: "pending",
+        paystackReference: paymentData.reference || paymentData.CheckoutRequestID,
+        description: "Virtual Card Purchase",
+        metadata: {
+          phoneNumber: user.phone,
+          status_reason: "Awaiting M-Pesa payment confirmation"
+        }
+      });
     } catch (error) {
       console.error("Card payment initialization error:", error);
       res.status(500).json({ message: "Error initializing card payment" });
+    }
+  });
+  app2.post("/api/payments/payhero/callback", async (req, res) => {
+    try {
+      const { CheckoutRequestID, ResultCode, ResultDesc, ExternalReference } = req.body;
+      const transaction = await db.query.transactions.findFirst({
+        where: eq3(transactions.paystackReference, ExternalReference || CheckoutRequestID)
+      });
+      if (!transaction) {
+        console.error(`[PayHero] Transaction not found for ref: ${ExternalReference || CheckoutRequestID}`);
+        return res.sendStatus(200);
+      }
+      if (ResultCode === 0) {
+        await storage.updateTransactionStatus(transaction.id, "completed");
+        await storage.updateTransactionMetadata(transaction.id, {
+          ...transaction.metadata || {},
+          status_reason: "M-Pesa payment successful",
+          checkoutRequestId: CheckoutRequestID
+        });
+        if (transaction.type === "card_purchase") {
+          const { virtualCardService } = await import("./services/virtual-card");
+          await virtualCardService.generateCard(transaction.userId);
+          await storage.updateUser(transaction.userId, { hasVirtualCard: true });
+          notificationService.sendNotification({
+            userId: transaction.userId,
+            title: "Virtual Card Activated",
+            message: "Your virtual card has been successfully generated and is ready for use.",
+            type: "success"
+          }).catch((err) => console.error("Notification error:", err));
+        }
+      } else {
+        await storage.updateTransactionStatus(transaction.id, "failed");
+        await storage.updateTransactionMetadata(transaction.id, {
+          ...transaction.metadata || {},
+          status_reason: ResultDesc || "M-Pesa payment failed or cancelled",
+          resultCode: ResultCode
+        });
+        notificationService.sendNotification({
+          userId: transaction.userId,
+          title: "Payment Failed",
+          message: `Your card purchase payment failed: ${ResultDesc}`,
+          type: "error"
+        }).catch((err) => console.error("Notification error:", err));
+      }
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("[PayHero Callback Error]:", error);
+      res.sendStatus(500);
     }
   });
   app2.put("/api/users/:id/profile", async (req, res) => {
@@ -7246,44 +7481,102 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Webhook processing failed" });
     }
   });
-  app2.post("/api/deposit/initialize-payment", async (req, res) => {
+  app2.get("/api/payment-callback", async (req, res) => {
     try {
-      const { userId, amount, currency } = req.body;
-      console.log("Deposit payment request - userId:", userId, "amount:", amount, "currency:", currency);
+      const { reference, type } = req.query;
+      console.log(`Payment callback received: ref=${reference}, type=${type}`);
+      if (!reference) {
+        return res.status(400).send("Reference missing");
+      }
+      const verification = await paystackService.verifyPayment(reference);
+      if (verification.status && verification.data.status === "success") {
+        const transaction = await db.query.transactions.findFirst({
+          where: eq3(transactions.paystackReference, reference)
+        });
+        if (transaction && transaction.status === "pending") {
+          await storage.updateTransactionStatus(transaction.id, "completed");
+          const user = await storage.getUser(transaction.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance || "0");
+            const depositAmount = parseFloat(transaction.amount);
+            const newBalance = (currentBalance + depositAmount).toFixed(2);
+            await storage.updateUser(user.id, { balance: newBalance });
+            await notificationService.sendNotification({
+              userId: user.id,
+              title: "Deposit Successful",
+              message: `Your deposit of $${depositAmount} has been credited to your wallet.`,
+              type: "transaction"
+            });
+            console.log(`User ${user.id} credited with $${depositAmount}. New balance: ${newBalance}`);
+          }
+        }
+        return res.redirect("/dashboard?deposit=success");
+      } else {
+        console.warn(`Payment verification failed for ref=${reference}:`, verification.message);
+        return res.redirect("/deposit?error=payment_failed");
+      }
+    } catch (error) {
+      console.error("Payment callback error:", error);
+      res.redirect("/deposit?error=server_error");
+    }
+  });
+  app2.post("/api/deposit/initialize-payment", requireAuth, async (req, res) => {
+    try {
+      const { amount, currency, paymentMethod } = req.body;
+      const userId = req.session.userId;
+      console.log("Deposit payment request - userId:", userId, "amount:", amount, "currency:", currency, "method:", paymentMethod);
       if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
+        return res.status(401).json({ message: "Authentication required" });
       }
       const user = await storage.getUser(userId);
-      console.log("Deposit payment - Found user:", !!user, user?.email);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+      let finalAmountKes = parseFloat(amount);
+      let exchangeRate = 129;
+      try {
+        const rateService = await createExchangeRateService();
+        exchangeRate = await rateService.getRate("USD", "KES");
+      } catch (e) {
+        console.warn("Using fallback exchange rate for deposit initialization");
+      }
+      finalAmountKes = parseFloat(amount) * exchangeRate;
+      if (!user.email || !user.email.includes("@")) {
+        return res.status(400).json({ message: "Valid email required for payment" });
+      }
       const reference = paystackService.generateReference();
-      if (!user.email || !user.email.includes("@") || !user.email.includes(".")) {
-        return res.status(400).json({ message: "Invalid user email. Please update your profile with a valid email address." });
-      }
-      if (!user.phone) {
-        return res.status(400).json({ message: "Phone number is required for M-Pesa payments. Please update your profile." });
-      }
-      const depositAmount2 = parseFloat(amount);
-      if (isNaN(depositAmount2) || depositAmount2 <= 0) {
-        return res.status(400).json({ message: "Invalid deposit amount" });
-      }
       const callbackUrl = `${req.protocol}://${req.get("host")}/api/payment-callback?reference=${reference}&type=deposit`;
+      const paystackAmount = Math.round(finalAmountKes * 100);
+      let channels = ["card", "mobile_money"];
+      if (paymentMethod === "card") channels = ["card"];
+      if (paymentMethod === "mpesa" || paymentMethod === "airtel") channels = ["mobile_money"];
       const paymentData = await paystackService.initializePayment(
         user.email,
-        depositAmount2,
+        parseFloat(finalAmountKes.toFixed(2)),
         reference,
         "KES",
-        // Use KES currency
-        user.phone,
-        // Use registered phone number for M-Pesa
+        user.phone || void 0,
         callbackUrl
-        // Callback URL for tracking
       );
       if (!paymentData.status) {
         return res.status(400).json({ message: paymentData.message });
       }
+      await storage.createTransaction({
+        userId,
+        type: "deposit",
+        amount: amount.toString(),
+        currency: "USD",
+        status: "pending",
+        description: `Deposit via ${paymentMethod}`,
+        fee: "0.00",
+        exchangeRate: exchangeRate.toString(),
+        paystackReference: reference,
+        metadata: {
+          paymentMethod,
+          kesAmount: finalAmountKes.toFixed(2),
+          exchangeRate
+        }
+      });
       res.json({
         authorizationUrl: paymentData.data.authorization_url,
         reference
@@ -7295,40 +7588,40 @@ async function registerRoutes(app2) {
   });
   app2.post("/api/deposit/verify-payment", async (req, res) => {
     try {
-      const { reference, userId, amount, currency } = req.body;
+      const { reference } = req.body;
+      if (!reference) return res.status(400).json({ message: "Reference required" });
       const verification = await paystackService.verifyPayment(reference);
-      if (!verification.status || verification.data.status !== "success") {
-        return res.status(400).json({ message: "Payment verification failed" });
+      if (verification.status && verification.data.status === "success") {
+        const transaction = await db.query.transactions.findFirst({
+          where: eq3(transactions.paystackReference, reference)
+        });
+        if (transaction && transaction.status === "pending") {
+          await storage.updateTransactionStatus(transaction.id, "completed");
+          const user = await storage.getUser(transaction.userId);
+          if (user) {
+            const currentBalance = parseFloat(user.balance || "0");
+            const depositAmount = parseFloat(transaction.amount);
+            const newBalance = (currentBalance + depositAmount).toFixed(2);
+            await storage.updateUser(user.id, { balance: newBalance });
+            await notificationService.sendNotification({
+              userId: user.id,
+              title: "Deposit Successful",
+              message: `Your deposit of $${depositAmount} has been credited to your wallet.`,
+              type: "transaction"
+            });
+          }
+        }
+        return res.json({ status: "success", message: "Payment verified and credited" });
       }
-      const transaction = await storage.createTransaction({
-        userId,
-        type: "deposit",
-        amount: amount.toString(),
-        currency: currency || "USD",
-        status: "completed",
-        description: `Deposit via Paystack - ${reference}`,
-        fee: "0.00",
-        paystackReference: reference
-      });
-      const updatedUser = await storage.getUser(userId);
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      const currentBalance = parseFloat(updatedUser.balance || "0");
-      const newBalance = currentBalance + depositAmount;
-      await storage.updateUser(userId, { balance: newBalance.toFixed(2) });
-      res.json({
-        message: "Deposit successful",
-        transaction
-      });
+      res.status(400).json({ status: "failed", message: verification.data?.gateway_response || "Payment not successful" });
     } catch (error) {
-      console.error("Deposit verification error:", error);
-      res.status(500).json({ message: "Error verifying deposit" });
+      console.error("Verify payment error:", error);
+      res.status(500).json({ message: "Error verifying payment" });
     }
   });
   app2.post("/api/airtime/purchase", optionalApiKey, async (req, res) => {
     try {
-      const { userId, phoneNumber, amount, currency, provider } = req.body;
+      const { userId, phoneNumber, amount, currency, provider, pin } = req.body;
       console.log(`\u{1F4F1} Airtime purchase request - User: ${userId}, Phone: ${phoneNumber}, Amount: ${amount} ${currency}, Provider: ${provider}`);
       if (!userId || !phoneNumber || !amount || !currency || !provider) {
         console.warn(`\u26A0\uFE0F Missing required fields in airtime purchase request`);
@@ -7340,6 +7633,17 @@ async function registerRoutes(app2) {
         return res.status(404).json({ message: "User not found" });
       }
       console.log(`\u{1F464} User ${user.fullName} (${user.email}) - KES Balance: ${user.kesBalance}`);
+      const settings = await storage.getSystemSettings();
+      const pinRequired = settings.some((s) => s.key === "pin_required" && s.value === "true");
+      if (pinRequired && user.pinEnabled) {
+        if (!pin) {
+          return res.status(400).json({ message: "PIN required", requiresPin: true });
+        }
+        const isPinValid = await bcrypt2.compare(pin, user.pinCode || "");
+        if (!isPinValid) {
+          return res.status(401).json({ message: "Invalid PIN", success: false });
+        }
+      }
       const kesBalance = parseFloat(user.kesBalance || "0");
       const purchaseAmount = parseFloat(amount);
       if (kesBalance < purchaseAmount) {
@@ -7810,7 +8114,9 @@ async function registerRoutes(app2) {
         biometricEnabled: true,
         biometricCredentialId: JSON.stringify({ credentialId })
       });
-      res.json({ success: true, message: "Biometric authentication enabled" });
+      const updatedUser = await storage.getUser(userId);
+      const { password: _, ...userResponse } = updatedUser || {};
+      res.json({ success: true, message: "Biometric authentication enabled", user: userResponse });
     } catch (error) {
       console.error("Biometric setup error:", error);
       res.status(500).json({ message: "Error setting up biometric authentication" });
@@ -7859,7 +8165,7 @@ async function registerRoutes(app2) {
       if (!credentialId) {
         return res.status(400).json({ message: "Invalid credential" });
       }
-      const allUsers = await storage.getAllUsers({ limit: 1e3 });
+      const allUsers = await storage.getAllUsers();
       const users2 = Array.isArray(allUsers) ? allUsers : allUsers?.users || [];
       const user = users2.find((u) => {
         try {
@@ -7870,12 +8176,33 @@ async function registerRoutes(app2) {
         }
       });
       if (!user) {
-        return res.status(401).json({ message: "Biometric credential not found" });
+        return res.status(401).json({ message: "No passkey found for this device. Please log in with your email and password first, then enable biometric login in settings." });
       }
-      const tokenData = { userId: user.id };
-      const token = Buffer.from(JSON.stringify(tokenData)).toString("base64");
-      const { password, ...userResponse } = user;
-      res.json({ success: true, user: userResponse, token });
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Session error" });
+        }
+        req.session.userId = user.id;
+        req.session.user = { id: user.id, email: user.email };
+        storage.createLoginHistory({
+          userId: user.id,
+          ipAddress: req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "Unknown",
+          userAgent: req.headers["user-agent"] || "Unknown",
+          deviceType: req.headers["user-agent"]?.includes("Mobile") ? "mobile" : "desktop",
+          browser: req.headers["user-agent"]?.split("/")[0] || "Unknown",
+          location: req.headers["cf-ipcountry"] || "Unknown",
+          status: "success"
+        }).catch((err2) => console.error("Login history error:", err2));
+        const { password: _, ...userResponse } = user;
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Session save error" });
+          }
+          res.json({ success: true, user: userResponse });
+        });
+      });
     } catch (error) {
       console.error("Biometric login error:", error);
       res.status(500).json({ message: "Error during biometric login" });
@@ -10393,7 +10720,7 @@ async function registerRoutes(app2) {
   });
   app2.post("/api/transfer", requireAuth, async (req, res) => {
     try {
-      const { fromUserId, toUserId, amount, currency, description } = req.body;
+      const { fromUserId, toUserId, amount, currency, description, pin } = req.body;
       console.log("=== TRANSFER DEBUG ===");
       console.log("Request Body:", { fromUserId, toUserId, amount, currency });
       if (!fromUserId || !toUserId || !amount || !currency) {
@@ -10413,6 +10740,17 @@ async function registerRoutes(app2) {
       if (!fromUser || !toUser) {
         console.error("[Transfer] User not found - fromUser:", !!fromUser, "toUser:", !!toUser);
         return res.status(404).json({ message: "User not found" });
+      }
+      const settings = await storage.getSystemSettings();
+      const pinRequiredByAdmin = settings.some((s) => s.key === "pin_required" && s.value === "true");
+      if ((pinRequiredByAdmin || fromUser.pinEnabled) && fromUser.pinCode) {
+        if (!pin) {
+          return res.status(400).json({ message: "PIN required", requiresPin: true });
+        }
+        const isPinValid = await bcrypt2.compare(pin, fromUser.pinCode);
+        if (!isPinValid) {
+          return res.status(401).json({ message: "Invalid PIN", success: false });
+        }
       }
       const senderBalance = parseFloat(fromUser.balance || "0");
       const recipientBalance = parseFloat(toUser.balance || "0");
@@ -10500,6 +10838,194 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Transfer error:", error);
       res.status(500).json({ message: "Error processing transfer" });
+    }
+  });
+  app2.post("/api/auth/reset-pin", async (req, res) => {
+    try {
+      const { phone, code, newPin } = req.body;
+      if (!phone || !code || !newPin) {
+        return res.status(400).json({ message: "Phone, code, and new PIN are required" });
+      }
+      if (!/^\d{4}$/.test(newPin)) {
+        return res.status(400).json({ message: "PIN must be 4 digits" });
+      }
+      const { messagingService: messagingService3 } = await Promise.resolve().then(() => (init_messaging(), messaging_exports));
+      let user;
+      if (phone.includes("@")) {
+        user = await storage.getUserByEmail(phone);
+      } else {
+        const formattedPhone = messagingService3.formatPhoneNumber(phone);
+        user = await storage.getUserByPhone(formattedPhone);
+      }
+      if (!user) {
+        console.error(`[ResetPIN] User not found for contact: ${phone}`);
+        return res.status(404).json({ message: "User not found" });
+      }
+      const isValid = await storage.verifyUserOtp(user.id, code);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+      const hashedPin = await bcrypt2.hash(newPin, 10);
+      await storage.updateUser(user.id, {
+        pinCode: hashedPin,
+        pinEnabled: true
+      });
+      await storage.updateUserOtp(user.id, null, null);
+      console.log(`[ResetPIN] Success for user ${user.id}`);
+      res.json({ success: true, message: "PIN reset successful" });
+    } catch (error) {
+      console.error("Reset PIN error:", error);
+      res.status(500).json({ message: "Failed to reset PIN" });
+    }
+  });
+  app2.post("/api/users/:id/pin/setup", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { pin } = req.body;
+      if (!pin || pin.length !== 4) {
+        return res.status(400).json({ message: "PIN must be 4 digits" });
+      }
+      if (!/^\d{4}$/.test(pin)) {
+        return res.status(400).json({ message: "PIN must contain only numbers" });
+      }
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const hashedPin = await bcrypt2.hash(pin, 10);
+      await storage.updateUser(id, {
+        pinCode: hashedPin,
+        pinEnabled: true
+      });
+      const updatedUser = await storage.getUser(id);
+      const { password: _, ...userResponse } = updatedUser;
+      res.json({ message: "PIN set successfully", user: userResponse });
+    } catch (error) {
+      console.error("PIN setup error:", error);
+      res.status(500).json({ message: "Failed to set PIN" });
+    }
+  });
+  app2.post("/api/users/:id/pin/verify", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { pin } = req.body;
+      if (!pin || pin.length !== 4) {
+        return res.status(400).json({ message: "Invalid PIN", success: false });
+      }
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found", success: false });
+      }
+      if (!user.pinEnabled || !user.pinCode) {
+        return res.status(400).json({ message: "PIN not set up", success: false });
+      }
+      const isPinValid = await bcrypt2.compare(pin, user.pinCode);
+      if (!isPinValid) {
+        return res.status(401).json({ message: "Invalid PIN", success: false });
+      }
+      res.json({ success: true, message: "PIN verified" });
+    } catch (error) {
+      console.error("PIN verification error:", error);
+      res.status(500).json({ message: "PIN verification failed", success: false });
+    }
+  });
+  app2.post("/api/auth/verify-pin", async (req, res) => {
+    try {
+      const { userId, pin } = req.body;
+      if (!userId || !pin) {
+        return res.status(400).json({ message: "User ID and PIN are required" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (!user.pinEnabled || !user.pinCode) {
+        return res.status(400).json({ message: "PIN not set up" });
+      }
+      const isPinValid = await bcrypt2.compare(pin, user.pinCode);
+      if (!isPinValid) {
+        return res.status(401).json({ message: "Invalid PIN" });
+      }
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Session error" });
+        }
+        req.session.userId = user.id;
+        req.session.user = { id: user.id, email: user.email };
+        storage.createLoginHistory({
+          userId: user.id,
+          ipAddress: req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "Unknown",
+          userAgent: req.headers["user-agent"] || "Unknown",
+          deviceType: req.headers["user-agent"]?.includes("Mobile") ? "mobile" : "desktop",
+          browser: req.headers["user-agent"]?.split("/")[0] || "Unknown",
+          location: req.headers["cf-ipcountry"] || "Unknown",
+          status: "success"
+        }).catch((err2) => console.error("Login history error:", err2));
+        const { password: _, ...userResponse } = user;
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Session save error" });
+          }
+          res.json({ user: userResponse });
+        });
+      });
+    } catch (error) {
+      console.error("PIN login verification error:", error);
+      res.status(500).json({ message: "PIN verification failed" });
+    }
+  });
+  app2.post("/api/users/:id/pin/disable", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+      if (!password) {
+        return res.status(400).json({ message: "Password is required to disable PIN" });
+      }
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const isPasswordValid = await bcrypt2.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid password" });
+      }
+      const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { eq: eq4 } = await import("drizzle-orm");
+      await db2.update(users2).set({
+        pinEnabled: false,
+        pinCode: null
+      }).where(eq4(users2.id, id));
+      const updatedUser = await storage.getUser(id);
+      if (req.session.user) {
+        req.session.user.pinEnabled = false;
+      }
+      const { password: _, ...userResponse } = updatedUser;
+      res.json({ success: true, message: "PIN disabled successfully", user: userResponse });
+    } catch (error) {
+      console.error("PIN disable error:", error);
+      res.status(500).json({ message: "Failed to disable PIN" });
+    }
+  });
+  app2.get("/api/system-settings", async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      const settingsMap = {};
+      settings.forEach((setting) => {
+        if (!settingsMap[setting.category]) {
+          settingsMap[setting.category] = {};
+        }
+        settingsMap[setting.category][setting.key] = {
+          value: setting.value,
+          description: setting.description
+        };
+      });
+      res.json(settingsMap);
+    } catch (error) {
+      console.error("System settings error:", error);
+      res.status(500).json({ message: "Failed to load system settings" });
     }
   });
   app2.get("/api/notifications/:userId", async (req, res) => {
@@ -11578,23 +12104,38 @@ Sitemap: https://greenpay.world/sitemap.xml`;
   const chatWss = new WebSocketServer({ server: httpServer, path: "/ws" });
   console.log("\u2705 Live support chat WebSocket server initialized on /ws (admin monitoring only)");
   const activeAdminConnections = /* @__PURE__ */ new Map();
-  chatWss.on("connection", (ws2, request) => {
+  chatWss.on("connection", (ws2, req) => {
     console.log("New WebSocket connection established");
+    const session2 = req.session;
+    const isAdmin = !!session2?.admin?.id;
+    const userId = isAdmin ? "admin" : session2?.userId;
     ws2.on("message", async (data) => {
       try {
-        const message = JSON.parse(data.toString());
-        switch (message.type) {
+        const parsed = JSON.parse(data.toString());
+        if (parsed.type === "register") {
+          ws2.userId = parsed.userId || userId;
+          ws2.isAdmin = parsed.isAdmin || isAdmin;
+          console.log(`Registered connection: ${ws2.userId} (Admin: ${ws2.isAdmin})`);
+          if (ws2.isAdmin) {
+            activeAdminConnections.set(ws2.userId, {
+              socket: ws2,
+              adminId: ws2.userId
+            });
+          }
+          return;
+        }
+        switch (parsed.type) {
           case "admin_register":
-            if (message.isAdmin && message.adminId) {
-              activeAdminConnections.set(message.adminId, {
+            if (parsed.isAdmin && parsed.adminId) {
+              activeAdminConnections.set(parsed.adminId, {
                 socket: ws2,
-                adminId: message.adminId
+                adminId: parsed.adminId
               });
-              console.log(`Admin ${message.adminId} registered for live chat monitoring`);
+              console.log(`Admin ${parsed.adminId} registered for live chat monitoring`);
             }
             break;
           default:
-            console.log(`WebSocket message type '${message.type}' ignored - use REST API instead`);
+            console.log(`WebSocket message type '${parsed.type}' ignored - use REST API instead`);
             break;
         }
       } catch (error) {
@@ -12629,8 +13170,9 @@ app.use(express2.urlencoded({ extended: true, limit: "50mb" }));
 var pgSession = ConnectPgSimple(session);
 var sessionStore;
 if (process.env.DATABASE_URL) {
+  const connectionString2 = process.env.DATABASE_URL.replace(/^"(.*)"$/, "$1").trim();
   const pgPool = new Pool2({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: connectionString2,
     ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
   });
   sessionStore = new pgSession({
@@ -12658,17 +13200,34 @@ var getSecureCookieSetting = () => {
   }
   return isProduction;
 };
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  if (isProduction && req.headers["x-forwarded-proto"] !== "https") {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  if (req.path === "/" && !req.query.s && !req.cookies?.["cache_cleared"]) {
+    res.cookie("cache_cleared", "1", { maxAge: 36e5, httpOnly: true, sameSite: "lax" });
+  }
+  if (req.query.clear_cache === "1") {
+    res.setHeader("Clear-Site-Data", '"cache", "storage", "executionContexts"');
+  }
+  next();
+});
 var sessionConfig = {
   store: sessionStore,
   secret: process.env.SESSION_SECRET || "greenpay-secret-key-change-in-production-" + Math.random(),
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     // Use secure cookies appropriately for the environment
     secure: getSecureCookieSetting(),
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1e3,
-    // 24 hours
+    maxAge: 30 * 24 * 60 * 60 * 1e3,
+    // 30 days
     sameSite: "lax"
     // More permissive for cross-site navigation compatibility
   }
