@@ -485,6 +485,31 @@ export const loginHistory = pgTable("login_history", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Announcements table for system-wide announcements and offers
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  type: text("type").default("announcement"), // announcement, offer, promotion
+  imageUrl: text("image_url"),
+  actionUrl: text("action_url"),
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(0),
+  startsAt: timestamp("starts_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+
 // User sessions table for express-session with PostgreSQL store (connect-pg-simple)
 export const userSessions = pgTable("user_sessions", {
   sid: varchar("sid").primaryKey(),
