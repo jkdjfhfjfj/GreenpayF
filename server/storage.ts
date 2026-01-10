@@ -246,6 +246,13 @@ export interface IStorage {
   getBillPaymentsByUserId(userId: string): Promise<BillPayment[]>;
   getBillPayment(id: string): Promise<BillPayment | undefined>;
   updateBillPayment(id: string, updates: Partial<BillPayment>): Promise<BillPayment | undefined>;
+
+  // Announcement operations
+  createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
+  getAnnouncements(): Promise<Announcement[]>;
+  getActiveAnnouncements(): Promise<Announcement[]>;
+  updateAnnouncement(id: string, updates: Partial<Announcement>): Promise<Announcement | undefined>;
+  deleteAnnouncement(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -264,10 +271,83 @@ export class MemStorage implements IStorage {
   private systemSettings: Map<string, SystemSetting> = new Map();
   private adminLogs: Map<string, AdminLog> = new Map();
   private systemLogs: Map<string, SystemLog> = new Map();
+  private announcements: Map<string, Announcement> = new Map();
 
   constructor() {
     // Initialize with mock data for demo
     this.initMockData();
+  }
+
+  private initMockData() {
+    // ... existing mock data code ...
+  }
+
+  // Announcement operations
+  async getAnnouncements(): Promise<Announcement[]> {
+    if (db) {
+      return await db.select().from(announcements).orderBy(desc(announcements.priority));
+    }
+    return Array.from(this.announcements.values()).sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  }
+
+  async getActiveAnnouncements(): Promise<Announcement[]> {
+    const now = new Date();
+    if (db) {
+      return await db.select().from(announcements)
+        .where(
+          and(
+            eq(announcements.isActive, true),
+            or(isNull(announcements.startsAt), lte(announcements.startsAt, now)),
+            or(isNull(announcements.expiresAt), gte(announcements.expiresAt, now))
+          )
+        )
+        .orderBy(desc(announcements.priority));
+    }
+    return Array.from(this.announcements.values())
+      .filter(a => a.isActive && (!a.startsAt || a.startsAt <= now) && (!a.expiresAt || a.expiresAt >= now))
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  }
+
+  async createAnnouncement(insertAnnouncement: InsertAnnouncement): Promise<Announcement> {
+    if (db) {
+      const [announcement] = await db.insert(announcements).values(insertAnnouncement).returning();
+      return announcement;
+    }
+    const id = randomUUID();
+    const announcement: Announcement = {
+      ...insertAnnouncement,
+      id,
+      imageUrl: insertAnnouncement.imageUrl ?? null,
+      actionUrl: insertAnnouncement.actionUrl ?? null,
+      isActive: insertAnnouncement.isActive ?? true,
+      priority: insertAnnouncement.priority ?? 0,
+      startsAt: insertAnnouncement.startsAt ?? new Date(),
+      expiresAt: insertAnnouncement.expiresAt ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.announcements.set(id, announcement);
+    return announcement;
+  }
+
+  async updateAnnouncement(id: string, updates: Partial<Announcement>): Promise<Announcement | undefined> {
+    if (db) {
+      const [announcement] = await db.update(announcements).set(updates).where(eq(announcements.id, id)).returning();
+      return announcement;
+    }
+    const announcement = this.announcements.get(id);
+    if (!announcement) return undefined;
+    const updated = { ...announcement, ...updates, updatedAt: new Date() };
+    this.announcements.set(id, updated);
+    return updated;
+  }
+
+  async deleteAnnouncement(id: string): Promise<void> {
+    if (db) {
+      await db.delete(announcements).where(eq(announcements.id, id));
+      return;
+    }
+    this.announcements.delete(id);
   }
 
   private initMockData() {

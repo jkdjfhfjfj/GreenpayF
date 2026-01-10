@@ -8784,5 +8784,63 @@ Sitemap: https://greenpay.world/sitemap.xml`;
     );
   }, 1000);
 
+  // Announcements API
+  app.get("/api/announcements", async (req, res) => {
+    try {
+      const announcements = await storage.getActiveAnnouncements();
+      res.json({ announcements });
+    } catch (error) {
+      console.error('Fetch announcements error:', error);
+      res.status(500).json({ message: "Failed to fetch announcements" });
+    }
+  });
+
+  app.get("/api/admin/announcements", async (req, res) => {
+    try {
+      const announcements = await storage.getAnnouncements();
+      res.json({ announcements });
+    } catch (error) {
+      console.error('Admin fetch announcements error:', error);
+      res.status(500).json({ message: "Failed to fetch announcements" });
+    }
+  });
+
+  app.post("/api/admin/announcements", async (req, res) => {
+    try {
+      const announcementData = insertAnnouncementSchema.parse(req.body);
+      const announcement = await storage.createAnnouncement(announcementData);
+      res.json({ announcement, message: "Announcement created successfully" });
+    } catch (error) {
+      console.error('Create announcement error:', error);
+      res.status(400).json({ message: "Invalid announcement data" });
+    }
+  });
+
+  app.put("/api/admin/announcements/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const announcement = await storage.updateAnnouncement(id, req.body);
+      if (announcement) {
+        res.json({ announcement, message: "Announcement updated successfully" });
+      } else {
+        res.status(404).json({ message: "Announcement not found" });
+      }
+    } catch (error) {
+      console.error('Update announcement error:', error);
+      res.status(500).json({ message: "Error updating announcement" });
+    }
+  });
+
+  app.delete("/api/admin/announcements/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteAnnouncement(id);
+      res.json({ message: "Announcement deleted successfully" });
+    } catch (error) {
+      console.error('Delete announcement error:', error);
+      res.status(500).json({ message: "Error deleting announcement" });
+    }
+  });
+
   return httpServer;
 }

@@ -172,15 +172,63 @@ export default function DashboardPage() {
     setLocation(action.path);
   };
 
+  const { data: announcementsData } = useQuery({
+    queryKey: ["/api/announcements"],
+  });
+
+  const announcementsList = (announcementsData as any)?.announcements || [];
+
   const { settings, isLoaded } = useSystemSettings();
+
   const showAnnouncement = isLoaded && (settings?.general?.show_announcement === true || settings?.general?.show_announcement === 'true');
   const announcementText = settings?.general?.dashboard_announcement;
 
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="max-w-md mx-auto px-4 pt-6">
-        {/* Dashboard Announcement */}
-        {showAnnouncement && announcementText && (
+        {/* Dynamic Announcements & Offers */}
+        {announcementsList.length > 0 && (
+          <div className="space-y-4 mb-6">
+            {announcementsList.map((announcement: any) => (
+              <motion.div
+                key={announcement.id}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`border p-4 rounded-2xl flex items-start gap-3 ${
+                  announcement.type === 'offer' 
+                    ? 'bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800' 
+                    : 'bg-primary/10 border-primary/20'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                  announcement.type === 'offer' ? 'bg-orange-200' : 'bg-primary/20'
+                }`}>
+                  <Sparkles className={`w-4 h-4 ${announcement.type === 'offer' ? 'text-orange-600' : 'text-primary'}`} />
+                </div>
+                <div className="flex-1">
+                  <p className={`text-sm font-medium ${announcement.type === 'offer' ? 'text-orange-900 dark:text-orange-200' : 'text-primary'}`}>
+                    {announcement.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    {announcement.content}
+                  </p>
+                  {announcement.actionUrl && (
+                    <Button 
+                      variant="link" 
+                      className="p-0 h-auto text-xs mt-2" 
+                      onClick={() => setLocation(announcement.actionUrl)}
+                    >
+                      View Details
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* Dashboard Announcement (System Setting Legacy) */}
+        {showAnnouncement && announcementText && !announcementsList.find((a: any) => a.content === announcementText) && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}

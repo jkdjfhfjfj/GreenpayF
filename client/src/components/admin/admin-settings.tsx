@@ -18,11 +18,14 @@ import {
   MessageCircle,
   Server,
   Lock,
-  Users
+  Users,
+  Megaphone
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminSettings } from "@/hooks/use-admin-settings";
+
+import { AnnouncementManagement } from "./announcement-management";
 
 interface SystemSetting {
   id: string;
@@ -229,6 +232,7 @@ export default function AdminSettings() {
             <TabsTrigger value="security" className="rounded-md px-3">Security</TabsTrigger>
             <TabsTrigger value="notifications" className="rounded-md px-3">Notifications</TabsTrigger>
             <TabsTrigger value="whatsapp" className="rounded-md px-3">WhatsApp</TabsTrigger>
+            <TabsTrigger value="announcements" className="rounded-md px-3">Announcements</TabsTrigger>
             <TabsTrigger value="general" className="rounded-md px-3">General</TabsTrigger>
           </TabsList>
         </ScrollArea>
@@ -576,6 +580,24 @@ export default function AdminSettings() {
                 <Save className="w-4 h-4 mr-2" />
                 Save Notification Settings
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Announcements Tab */}
+        <TabsContent value="announcements">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="w-5 h-5" />
+                Announcements & Offers
+              </CardTitle>
+              <CardDescription>
+                Manage system-wide announcements and special offers shown on the user dashboard
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AnnouncementManagement />
             </CardContent>
           </Card>
         </TabsContent>
