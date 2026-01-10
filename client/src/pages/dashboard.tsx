@@ -179,6 +179,9 @@ export default function DashboardPage() {
   const announcementsList = (announcementsData as any)?.announcements || [];
 
   const { settings, isLoaded } = useSystemSettings();
+  const airtimeBonusAmount = settings?.general?.airtime_bonus_amount || "15";
+  const isAirtimeBonusEnabled = settings?.general?.enable_airtime_bonus !== false && settings?.general?.enable_airtime_bonus !== 'false';
+
 
   const showAnnouncement = isLoaded && (settings?.general?.show_announcement === true || settings?.general?.show_announcement === 'true');
   const announcementText = settings?.general?.dashboard_announcement;
@@ -541,7 +544,7 @@ export default function DashboardPage() {
         )}
 
         {/* Airtime Bonus - one-time claim for all users */}
-        {!user?.hasClaimedAirtimeBonus && (
+        {isAirtimeBonusEnabled && !user?.hasClaimedAirtimeBonus && (
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -554,7 +557,7 @@ export default function DashboardPage() {
                 <div className="flex-1">
                   <p className="font-bold text-purple-900 dark:text-purple-200 text-sm mb-1">🎁 Free Airtime Bonus!</p>
                   <p className="text-xs text-purple-700 dark:text-purple-300">
-                    Claim your one-time KES 15 airtime bonus now!
+                    Claim your one-time KES {airtimeBonusAmount} airtime bonus now!
                   </p>
                 </div>
               </div>

@@ -19,7 +19,8 @@ import {
   Server,
   Lock,
   Users,
-  Megaphone
+  Megaphone,
+  Gift
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -605,6 +606,43 @@ export default function AdminSettings() {
         {/* General Tab */}
         <TabsContent value="general">
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-purple-500" />
+                  Airtime Bonus Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure the one-time airtime bonus for new users
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="airtime_bonus_amount">Bonus Amount (KES)</Label>
+                    <Input
+                      id="airtime_bonus_amount"
+                      type="number"
+                      value={general.airtime_bonus_amount || "15"}
+                      onChange={(e) => setGeneral({ ...general, airtime_bonus_amount: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-8">
+                    <Switch
+                      id="enable_airtime_bonus"
+                      checked={general.enable_airtime_bonus !== false}
+                      onCheckedChange={(checked) => setGeneral({ ...general, enable_airtime_bonus: checked })}
+                    />
+                    <Label htmlFor="enable_airtime_bonus">Enable Bonus Claiming</Label>
+                  </div>
+                </div>
+                <Button onClick={handleSaveGeneral} disabled={updateSettingMutation.isPending}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Bonus Settings
+                </Button>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
