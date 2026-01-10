@@ -2777,26 +2777,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid credential" });
       }
 
-      // Find user with matching biometric credential
+      console.log(`[Biometric Login] Attempting login with credentialId: ${credentialId}`);
+
+      // Find user with matching biometric credential directly using SQL if possible, 
+      // or filter the list more reliably.
       const allUsers = await storage.getAllUsers();
-      const users = Array.isArray(allUsers) ? allUsers : (allUsers?.users || []);
+      const users = Array.isArray(allUsers) ? allUsers : [];
       
       const user = users.find((u: any) => {
+        if (!u.biometricEnabled || !u.biometricCredentialId) return false;
         try {
-          const stored = u.biometricCredentialId ? (
-            typeof u.biometricCredentialId === 'string'
-              ? JSON.parse(u.biometricCredentialId)
-              : u.biometricCredentialId
-          ) : null;
-          return stored && stored.credentialId === credentialId && u.biometricEnabled;
-        } catch {
-          return false;
+          const stored = typeof u.biometricCredentialId === 'string'
+            ? JSON.parse(u.biometricCredentialId)
+            : u.biometricCredentialId;
+          
+          // Match the credential ID
+          return stored && (stored.credentialId === credentialId || u.biometricCredentialId.includes(credentialId));
+        } catch (e) {
+          console.error(`[Biometric Login] Error parsing credential for user ${u.id}:`, e);
+          // Fallback to simple string check if JSON parse fails
+          return typeof u.biometricCredentialId === 'string' && u.biometricCredentialId.includes(credentialId);
         }
       });
       
       if (!user) {
-        return res.status(401).json({ message: "No passkey found for this device. Please log in with your email and password first, then enable biometric login in settings." });
+        console.warn(`[Biometric Login] No user found for credentialId: ${credentialId}`);
+        return res.status(401).json({ 
+          message: "No passkey found for this device in our records. Please ensure you have enabled biometric login in Settings while logged in." 
+        });
       }
+
+      console.log(`[Biometric Login] Success for user: ${user.email}`);
 
       // Establish session
       req.session.regenerate((err) => {

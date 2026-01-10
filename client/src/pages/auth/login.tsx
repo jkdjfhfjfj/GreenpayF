@@ -135,6 +135,8 @@ export default function LoginPage() {
       }
 
       try {
+        console.log("[Biometric] Starting authentication flow...");
+        
         // We'll first check if the user has a credential stored in their browser for our RP ID
         // The browser will show the passkey picker
         const assertion = await navigator.credentials.get({
@@ -150,14 +152,17 @@ export default function LoginPage() {
           throw new Error("Biometric authentication cancelled");
         }
 
+        console.log("[Biometric] Assertion received, credentialId:", assertion.id);
+
         const response = await apiRequest("POST", "/api/auth/biometric/login", {
           credentialId: assertion.id,
         });
         
         if (!response.ok) {
           const errorData = await response.json();
+          console.error("[Biometric] Server login failed:", errorData);
           // Provide more helpful guidance
-          if (response.status === 401 && errorData.message.includes("No passkey found")) {
+          if (response.status === 401 && (errorData.message || "").includes("No passkey found")) {
              throw new Error(errorData.message);
           }
           throw new Error(errorData.message || "Login failed");
